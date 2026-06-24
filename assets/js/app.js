@@ -626,7 +626,7 @@ async function alterStock(id, qty) {
     const row = document.querySelector(`#tbl-inventario tr[data-inv-id="${id}"]`);
     if (!row) { loadInventario(); return; }
 
-    const cell  = row.querySelector('td:nth-child(6) strong');
+    const cell  = row.querySelector('td:nth-child(5) strong');
     cell.textContent = `${qty} un.`;
     cell.style.color = qty > 5 ? '#4ade80' : qty > 0 ? '#fb923c' : '#f87171';
 
