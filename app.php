@@ -193,7 +193,7 @@ $_SESSION['last_activity'] = time();
             <span class="material-icons-round">add</span> Ingresar otro
           </button>
           <button type="button" class="btn-sec" id="ps-editar">
-            <span class="material-icons-round">edit</span> Corregir datos
+            <span class="material-icons-round">edit</span>Me equivoqué, corregir servicio ingresado
           </button>
           <button type="button" class="btn-primary" id="ps-cerrar">
             <span class="material-icons-round">done_all</span> Listo
