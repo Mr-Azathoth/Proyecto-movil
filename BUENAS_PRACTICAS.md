@@ -52,11 +52,25 @@ Si la misma lógica aparece en 2+ lugares, extraerla a una función en `includes
 
 ## 2. Control de versiones (Git)
 
-### Inicializar Git desde el primer día
+### Repositorio
+- **URL:** https://github.com/Mr-Azathoth/Proyecto-movil
+- **Rama principal:** `main`
+- **Inicializado:** 2026-06-24 — commit `a4293fa`
+
+### Flujo de trabajo diario
 ```bash
-git init
-git add .
-git commit -m "feat: estado inicial del proyecto"
+# 1. Ver qué cambió
+git status
+git diff
+
+# 2. Agregar solo los archivos modificados (nunca git add -A sin revisar)
+git add api/reparaciones.php assets/js/app.js   # ejemplo
+
+# 3. Commit con mensaje descriptivo
+git commit -m "feat: descripción del cambio"
+
+# 4. Subir a GitHub
+git push
 ```
 
 ### Estructura de commits (Conventional Commits)
@@ -78,27 +92,41 @@ fix: corregir cálculo de total en presupuesto
 security: reemplazar MD5 por bcrypt en autenticación
 ```
 
-### Archivo .gitignore obligatorio
+### Archivo .gitignore (configurado)
+Los siguientes archivos están excluidos del repositorio:
+
 ```gitignore
-# Configuración sensible
+# Configuración sensible — NUNCA subir
 includes/config.php
 .env
 *.env
 
-# Logs
+# Base de datos (backups y seeds)
+*.sql
 logs/
 *.log
 
 # Archivos del sistema
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Dependencias (si se usan en el futuro)
+# Claude Code (sesiones internas)
+.claude/
+
+# Dependencias (por si se agregan)
 vendor/
 node_modules/
 ```
 
-**Regla de oro:** Nunca hacer commit de credenciales, contraseñas ni datos de conexión a base de datos.
+### Plantilla de configuración
+`includes/config.example.php` está versionado como referencia. Al clonar el proyecto:
+```bash
+cp includes/config.example.php includes/config.php
+# Editar config.php con las credenciales reales
+```
+
+**Regla de oro:** Nunca hacer commit de credenciales, contraseñas ni datos de conexión a base de datos. Verificar siempre con `git status` antes de hacer `git add`.
 
 ### Variables de entorno
 Mover credenciales a un archivo `.env` o a variables de servidor Apache. Nunca hardcodearlas en el código.
