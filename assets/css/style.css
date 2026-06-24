@@ -369,6 +369,19 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 .spin { animation:spinA .8s linear infinite; }
 @keyframes spinA { to{transform:rotate(360deg)} }
 
+/* ── POST-SAVE PANEL ────────────────────────────────────────── */
+#nuevo-post-save   { display:flex; align-items:center; justify-content:center;
+                     min-height:300px; padding:32px; }
+.post-save-body    { display:flex; flex-direction:column; align-items:center;
+                     text-align:center; gap:12px; width:100%; }
+.post-save-icon    { font-size:56px !important; color:#4ade80;
+                     width:56px; height:56px; line-height:1 !important; }
+.post-save-title   { font-size:20px; font-weight:700; color:var(--txt); margin:0; }
+.post-save-sub     { font-size:13px; color:var(--txt2); margin:0 0 4px; }
+.post-save-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+.post-save-actions .btn-sec,
+.post-save-actions .btn-primary { min-width:148px; justify-content:center; }
+
 /* ── TOPBAR ACTIONS ────────────────────────────────────────── */
 .topbar-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
 

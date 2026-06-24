@@ -10,7 +10,7 @@ $_SESSION['last_activity'] = time();
 <title>Reparo</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
+<link rel="stylesheet" href="/reparo/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
 </head>
 <body data-csrf="<?= csrf_token() ?>"
       data-role="<?= htmlspecialchars(ucargo()) ?>"
@@ -182,6 +182,26 @@ $_SESSION['last_activity'] = time();
       <h3>Registrar ingreso de equipo</h3>
       <button class="modal-close" data-modal="modal-nuevo"><span class="material-icons-round">close</span></button>
     </div>
+    <!-- Panel post-guardado (oculto hasta guardar exitosamente) -->
+    <div id="nuevo-post-save" style="display:none">
+      <div class="post-save-body">
+        <span class="material-icons-round post-save-icon">check_circle</span>
+        <h3 class="post-save-title">Servicio <span id="ps-num"></span> registrado</h3>
+        <p class="post-save-sub">¿Qué deseas hacer?</p>
+        <div class="post-save-actions">
+          <button type="button" class="btn-sec" id="ps-nuevo">
+            <span class="material-icons-round">add</span> Ingresar otro
+          </button>
+          <button type="button" class="btn-sec" id="ps-editar">
+            <span class="material-icons-round">edit</span> Corregir datos
+          </button>
+          <button type="button" class="btn-primary" id="ps-cerrar">
+            <span class="material-icons-round">done_all</span> Listo
+          </button>
+        </div>
+      </div>
+    </div>
+
     <form id="form-nuevo">
       <div class="modal-body">
         <p class="section-label">Datos del cliente</p>

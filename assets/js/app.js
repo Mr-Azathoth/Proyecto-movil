@@ -195,6 +195,7 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('active');
   document.body.style.overflow = '';
+  if (id === 'modal-nuevo') _resetModalNuevo?.();
 }
 
 function toast(msg, type='ok') {
@@ -477,17 +478,14 @@ async function submitNuevo(e) {
     const j = await r.json();
 
     if (j.ok) {
-      toast(`✔ ${j.data.msg}`, 'ok');
-      closeModal('modal-nuevo');
-      e.target.reset();
-      _selMarcaNuevo?.reset();
-      _selModeloNuevo?.disable('— Primero selecciona una marca —');
-      _selRepNuevo?.reset();
-      document.getElementById('hid-rep-nuevo').value = '';
-      inpNM.classList.remove('visible'); inpNM.value = '';
-      inpMM.classList.remove('visible'); inpMM.value = '';
-      hidMarca.value = ''; hidModelo.value = '';
+      // Guardar id para panel post-save
+      _lastNuevoId = j.data.id ?? null;
+      // Recargar lista en background
       loadServicios();
+      // Mostrar panel de confirmación
+      document.getElementById('nuevo-post-save').style.display = '';
+      document.getElementById('form-nuevo').style.display       = 'none';
+      document.getElementById('ps-num').textContent             = _lastNuevoId ? `#${_lastNuevoId}` : '';
     } else { toast(j.msg, 'err'); }
   } catch(err) {
     if (err.message !== 'session_expired') toast('Error de red.', 'err');
@@ -748,6 +746,7 @@ let _selMarcaNuevo      = null;
 let _selModeloNuevo     = null;
 let _selRepNuevo        = null; // select repuesto en modal-nuevo
 let _selRepAdicional    = null; // select repuesto adicional en modal-detalle
+let _lastNuevoId        = null; // id del último servicio ingresado (para post-save)
 
 async function fetchMarcas() {
   if (_marcasCache) return _marcasCache;
@@ -843,6 +842,31 @@ function setupMarcaModeloPair() {
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
+// ── Reset modal nuevo ─────────────────────────────────────────
+function _resetModalNuevo() {
+  // Mostrar form, ocultar panel post-save
+  document.getElementById('form-nuevo').style.display       = '';
+  document.getElementById('nuevo-post-save').style.display  = 'none';
+
+  // Reset form fields
+  document.getElementById('form-nuevo').reset();
+  _selMarcaNuevo?.reset();
+  _selModeloNuevo?.disable('— Primero selecciona una marca —');
+  _selRepNuevo?.reset();
+  document.getElementById('hid-rep-nuevo').value = '';
+
+  const inpNM = document.getElementById('inp-marca-nueva-nuevo');
+  const inpMM = document.getElementById('inp-modelo-nuevo-nuevo');
+  if (inpNM) { inpNM.classList.remove('visible'); inpNM.value = ''; }
+  if (inpMM) { inpMM.classList.remove('visible'); inpMM.value = ''; }
+  document.getElementById('hid-marca-nuevo').value  = '';
+  document.getElementById('hid-modelo-nuevo').value = '';
+
+  // Restaurar botón submit
+  const btn = document.getElementById('btn-submit-nuevo');
+  if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">save</span> Registrar ingreso'; }
+}
+
 // ── Exportar ─────────────────────────────────────────────────
 async function openExportModal() {
   // Poblar select de repuestos si aún no tiene opciones
@@ -920,7 +944,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     link.addEventListener('click', () => switchView(link.dataset.view, link));
   });
 
-  document.getElementById('btn-abrir-nuevo')?.addEventListener('click', () => openModal('modal-nuevo'));
+  document.getElementById('btn-abrir-nuevo')?.addEventListener('click', () => {
+    _resetModalNuevo();
+    openModal('modal-nuevo');
+  });
+
+  // Botones post-guardado
+  document.getElementById('ps-nuevo')?.addEventListener('click', () => {
+    _resetModalNuevo();    // limpia form y vuelve a mostrar el formulario
+  });
+
+  document.getElementById('ps-editar')?.addEventListener('click', () => {
+    closeModal('modal-nuevo');
+    _resetModalNuevo();
+    if (_lastNuevoId) {
+      const rep = _repMap.get(_lastNuevoId);
+      if (rep) openDetalle(rep);
+    }
+  });
+
+  document.getElementById('ps-cerrar')?.addEventListener('click', () => {
+    closeModal('modal-nuevo');
+    _resetModalNuevo();
+  });
   document.getElementById('btn-exportar')?.addEventListener('click', openExportModal);
   document.getElementById('btn-exp-csv')?.addEventListener('click', () => doExport('csv'));
   document.getElementById('btn-exp-pdf')?.addEventListener('click', () => doExport('pdf'));
