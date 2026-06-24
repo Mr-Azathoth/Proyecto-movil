@@ -398,7 +398,7 @@ $_SESSION['last_activity'] = time();
      MODAL: Editar repuesto de inventario
 ══════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-edit-repuesto">
-  <div class="modal-box">
+  <div class="modal-box modal-box-sm">
     <div class="modal-hd">
       <h3>Editar repuesto</h3>
       <button class="modal-close" data-modal="modal-edit-repuesto"><span class="material-icons-round">close</span></button>
@@ -414,7 +414,7 @@ $_SESSION['last_activity'] = time();
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="edit-rep-precio" placeholder="0" min="0"></div>
         </div>
-        <div class="fg" style="margin-top:4px"><label>Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
+        <div class="fg" style="max-width:50%;margin-top:4px"><label>Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
       </div>
       <div class="modal-ft">
         <button type="button" class="btn-sec" data-modal="modal-edit-repuesto">Cancelar</button>

@@ -219,6 +219,7 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
   width:100%; max-width:min(980px,96vw); max-height:96vh; display:flex; flex-direction:column;
   box-shadow:0 24px 64px rgba(0,0,0,.6); }
 .modal-box-lg { max-width:min(820px,96vw); }
+.modal-box-sm { max-width:min(480px,96vw) !important; }
 
 .modal-hd { display:flex; align-items:center; justify-content:space-between;
   padding:18px 22px; border-bottom:1px solid var(--border); flex-shrink:0; }
