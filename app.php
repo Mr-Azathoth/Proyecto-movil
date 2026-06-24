@@ -65,7 +65,7 @@ try {
       <label class="logo-file-btn" for="inp-emp-logo">
         <span class="material-icons-round">add_photo_alternate</span>
         <span id="logo-file-lbl">Subir logo</span>
-        <input type="file" id="inp-emp-logo" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none">
+        <input type="file" id="inp-emp-logo" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
       </label>
       <div class="logo-edit-actions">
         <button type="button" class="btn-sm btn-primary" id="btn-logo-save">Guardar</button>
@@ -236,6 +236,7 @@ try {
       <div class="cfg-tabs">
         <button class="cfg-tab active" data-tab="mi-cuenta">Mi cuenta</button>
         <button class="cfg-tab" data-tab="usuarios">Usuarios</button>
+        <button class="cfg-tab" data-tab="suscripcion">Mi suscripción</button>
       </div>
 
       <!-- Panel: Mi cuenta -->
@@ -268,7 +269,7 @@ try {
       </div>
 
       <!-- Panel: Usuarios -->
-      <div class="cfg-panel" id="cfg-usuarios" style="display:none">
+      <div class="cfg-panel hidden" id="cfg-usuarios">
         <div class="cfg-section">
           <h3 class="cfg-section-title">Usuarios de la cuenta</h3>
           <table class="tbl" style="margin-top:8px">
@@ -281,6 +282,87 @@ try {
           </table>
         </div>
       </div>
+
+      <!-- Panel: Suscripción -->
+      <div class="cfg-panel hidden" id="cfg-suscripcion">
+
+        <!-- Plan actual -->
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Plan actual</h3>
+          <div class="subs-card">
+            <div class="subs-card-left">
+              <div class="subs-plan-name" id="subs-plan-nombre">–</div>
+              <div class="subs-meta">
+                <span class="pill" id="subs-estado-badge">–</span>
+                <span class="subs-vence-txt" id="subs-vence-txt">–</span>
+              </div>
+            </div>
+            <div class="subs-dias-wrap" id="subs-dias-wrap">
+              <span class="subs-dias-num" id="subs-dias-num">–</span>
+              <span class="subs-dias-lbl" id="subs-dias-lbl">días restantes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notificación por correo -->
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Notificaciones</h3>
+          <div class="subs-notif-row">
+            <div class="subs-notif-text">
+              <div class="subs-notif-title">Aviso por correo al administrador</div>
+              <div class="subs-notif-sub">Notifica al correo registrado cuando queden 30, 15 y 7 días para el vencimiento</div>
+            </div>
+            <label class="toggle-sw">
+              <input type="checkbox" id="subs-notif-chk">
+              <span class="toggle-sw-track"><span class="toggle-sw-thumb"></span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Planes de suscripción -->
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Seleccionar plan</h3>
+          <p class="cfg-section-sub">Todas las funciones incluidas en cada plan. Suscripción recurrente vía Mercado Pago — cancela cuando quieras.</p>
+          <div class="plan-grid">
+            <?php
+            $planes         = defined('MP_PLANES') ? MP_PLANES : [];
+            $precioMensual  = $planes['1mes']['precio'] ?? 4990;
+            foreach ($planes as $key => $plan):
+                $porMes   = (int) round($plan['precio'] / $plan['meses']);
+                $ahorro   = $plan['meses'] > 1 ? (int) round((1 - $porMes / $precioMensual) * 100) : 0;
+                $featured = ($key === '12meses');
+            ?>
+            <div class="plan-card <?= $featured ? 'plan-card-featured' : '' ?>" data-plan="<?= $key ?>">
+              <?php if ($featured): ?>
+                <div class="plan-badge plan-badge-popular">Mejor valor</div>
+              <?php elseif ($ahorro > 0): ?>
+                <div class="plan-badge plan-badge-ahorro">Ahorra <?= $ahorro ?>%</div>
+              <?php endif; ?>
+              <div class="plan-nombre"><?= $plan['nombre'] ?></div>
+              <div class="plan-precio">$<?= number_format($plan['precio'], 0, ',', '.') ?></div>
+              <div class="plan-por-mes">$<?= number_format($porMes, 0, ',', '.') ?> / mes</div>
+              <button type="button" class="btn-plan" data-plan="<?= $key ?>">
+                <span class="material-icons-round">shopping_cart</span> Suscribirse
+              </button>
+            </div>
+            <?php endforeach; ?>
+          </div>
+          <p class="subs-pay-note">
+            <span class="material-icons-round" style="font-size:14px;vertical-align:middle;margin-right:4px">lock</span>
+            Pago seguro vía Mercado Pago. Tus datos de tarjeta son gestionados por MP, nunca por nosotros.
+          </p>
+        </div>
+
+        <!-- Historial de pagos -->
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Historial de pagos</h3>
+          <div id="subs-historial-wrap">
+            <p class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</p>
+          </div>
+        </div>
+
+      </div><!-- /cfg-suscripcion -->
+
     </div><!-- /view-config -->
 
     <!-- Modal: resetear contraseña de usuario -->

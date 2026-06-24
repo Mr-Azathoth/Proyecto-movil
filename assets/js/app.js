@@ -1020,6 +1020,72 @@ async function loadConfigData() {
   loadUsuarios();
 }
 
+async function loadSuscripcion() {
+  const wrap = document.getElementById('subs-historial-wrap');
+  if (!wrap) return;
+  try {
+    const r = await apiFetch('/reparo/api/suscripcion.php');
+    const j = await r.json();
+    if (!j.ok) return;
+    const d = j.data;
+
+    const el = id => document.getElementById(id);
+
+    if (el('subs-plan-nombre')) el('subs-plan-nombre').textContent = d.plan_tipo || 'Básico';
+
+    if (el('subs-estado-badge')) {
+      const colores = { 'Activo':'pill-green', 'Por vencer':'pill-orange', 'Vencido':'pill-red', 'Pendiente':'pill-orange' };
+      el('subs-estado-badge').className = 'pill ' + (colores[d.plan_estado] || 'pill-gray');
+      el('subs-estado-badge').textContent = d.plan_estado || 'Activo';
+    }
+
+    if (el('subs-vence-txt')) {
+      el('subs-vence-txt').textContent = d.plan_vencimiento
+        ? 'Vence el ' + fmtDate(d.plan_vencimiento)
+        : 'Sin fecha de vencimiento definida';
+    }
+
+    const diasWrap = el('subs-dias-wrap');
+    const diasNum  = el('subs-dias-num');
+    const diasLbl  = el('subs-dias-lbl');
+    if (diasWrap && diasNum && diasLbl) {
+      if (d.dias_restantes === null) {
+        diasNum.textContent  = '∞';
+        diasLbl.textContent  = 'sin vencimiento';
+        diasWrap.className   = 'subs-dias-wrap ok';
+      } else {
+        diasNum.textContent = d.dias_restantes;
+        diasLbl.textContent = d.dias_restantes === 1 ? 'día restante' : 'días restantes';
+        const cls = d.dias_restantes > 30 ? 'ok' : d.dias_restantes > 7 ? 'warn' : 'danger';
+        diasWrap.className = 'subs-dias-wrap ' + cls;
+      }
+    }
+
+    const notifChk = el('subs-notif-chk');
+    if (notifChk) notifChk.checked = !!d.notif_vencimiento;
+
+    if (!d.historial.length) {
+      wrap.innerHTML = `<div class="subs-empty-state">
+        <span class="material-icons-round">receipt_long</span>
+        <span>Sin registros de pago aún</span>
+      </div>`;
+    } else {
+      wrap.innerHTML = `<table class="subs-historial-table">
+        <thead><tr><th>Fecha</th><th>Descripción</th><th>Monto</th><th>Estado</th></tr></thead>
+        <tbody>${d.historial.map(p => {
+          const col = p.estado === 'Pagado' ? 'pill-green' : p.estado === 'Pendiente' ? 'pill-orange' : 'pill-red';
+          return `<tr>
+            <td>${fmtDate(p.fecha)}</td>
+            <td>${esc(p.descripcion)}</td>
+            <td>$${fmt(p.monto)}</td>
+            <td><span class="pill ${col}">${esc(p.estado)}</span></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+  } catch(e) { if (e.message !== 'session_expired') toast('Error al cargar suscripción', 'err'); }
+}
+
 async function loadUsuarios() {
   const tbody = document.getElementById('tbl-usuarios');
   if (!tbody) return;
@@ -1243,10 +1309,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('.cfg-tab').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.cfg-tab').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.cfg-panel').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.cfg-panel').forEach(p => p.classList.add('hidden'));
       btn.classList.add('active');
       const panel = document.getElementById('cfg-' + btn.dataset.tab);
-      if (panel) panel.style.display = '';
+      if (panel) panel.classList.remove('hidden');
+      if (btn.dataset.tab === 'suscripcion') loadSuscripcion();
     });
   });
 
@@ -1360,6 +1427,62 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('reset-pass-confirm').value    = '';
       openModal('modal-reset-pass');
     }
+  });
+
+  // ── Retorno desde pasarela de pago ──────────────────────────
+  const urlParams = new URLSearchParams(window.location.search);
+  const pagoParam = urlParams.get('pago');
+  if (pagoParam === 'ok' || pagoParam === 'suscripcion') {
+    history.replaceState({}, '', '/reparo/app.php');
+    const msg = pagoParam === 'suscripcion'
+      ? '✔ Suscripción activada. El pago se confirmará en breve.'
+      : '✔ Pago exitoso. Suscripción actualizada.';
+    toast(msg, 'ok');
+    const cfgLink = document.querySelector('[data-view="config"]');
+    if (cfgLink) switchView('config', cfgLink);
+    setTimeout(() => document.querySelector('[data-tab="suscripcion"]')?.click(), 150);
+  }
+
+  // ── Seleccionar plan y pagar con Mercado Pago ────────────────
+  document.querySelector('.plan-grid')?.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-plan');
+    if (!btn) return;
+    const plan    = btn.dataset.plan;
+    const txtSpan = btn.querySelector('span:last-child') ?? btn;
+    const allBtns = document.querySelectorAll('.btn-plan');
+
+    allBtns.forEach(b => { b.disabled = true; });
+    const oldText = btn.textContent.trim();
+    btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Procesando...</span>';
+
+    try {
+      const r = await apiFetch('/reparo/api/pago.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metodo: 'mercadopago', plan }),
+      });
+      const j = await r.json();
+      if (j.ok) { window.location.href = j.data.url; return; }
+      toast(j.msg || 'Error al iniciar el pago', 'err');
+    } catch(ex) { if (ex.message !== 'session_expired') toast('Error de conexión', 'err'); }
+
+    allBtns.forEach(b => { b.disabled = false; });
+    btn.innerHTML = '<span class="material-icons-round">shopping_cart</span><span>Suscribirse</span>';
+  });
+
+  // ── Toggle notificación de vencimiento ──────────────────────
+  document.getElementById('subs-notif-chk')?.addEventListener('change', async e => {
+    const checked = e.target.checked;
+    try {
+      const r = await apiFetch('/reparo/api/suscripcion.php', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notif_vencimiento: checked }),
+      });
+      const j = await r.json();
+      if (j.ok) toast(checked ? 'Notificaciones activadas' : 'Notificaciones desactivadas', 'ok');
+      else { toast(j.msg || 'Error', 'err'); e.target.checked = !checked; }
+    } catch(ex) { if (ex.message !== 'session_expired') { toast('Error de red', 'err'); e.target.checked = !checked; } }
   });
 
   // ── Resetear contraseña de otro usuario ─────────────────────

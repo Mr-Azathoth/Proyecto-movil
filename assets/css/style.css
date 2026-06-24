@@ -459,6 +459,8 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 }
 .logo-edit-panel.hidden { display:none !important; }
 #logo-display.hidden   { display:none !important; }
+.cfg-panel.hidden      { display:none !important; }
+input.hidden           { display:none !important; }
 .logo-edit-input {
   background:rgba(255,255,255,0.05); border:1px solid var(--border);
   border-radius:var(--r); padding:9px 12px;
@@ -513,3 +515,104 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
   display:flex; align-items:center; justify-content:center;
 }
 .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+/* ── SUSCRIPCIÓN ─────────────────────────────────────────────── */
+.pill-red { background:rgba(248,81,73,0.15); color:#f85149; }
+
+.subs-card {
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  background:var(--bg3); border-radius:var(--r); padding:20px;
+}
+.subs-card-left { flex:1; min-width:0; }
+.subs-plan-name {
+  font-family:'Outfit',sans-serif; font-size:22px; font-weight:700;
+  margin-bottom:10px;
+}
+.subs-meta    { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.subs-vence-txt { font-size:12px; color:var(--txt2); }
+
+.subs-dias-wrap {
+  text-align:center; background:var(--bg2); border:1px solid var(--border);
+  border-radius:var(--r); padding:14px 22px; flex-shrink:0; min-width:110px;
+  transition:var(--tr);
+}
+.subs-dias-num { display:block; font-family:'Outfit',sans-serif; font-size:30px; font-weight:700; }
+.subs-dias-lbl { display:block; font-size:11px; color:var(--txt2); margin-top:2px; }
+.subs-dias-wrap.ok     .subs-dias-num { color:var(--green); }
+.subs-dias-wrap.warn   .subs-dias-num { color:var(--orange); }
+.subs-dias-wrap.danger .subs-dias-num { color:#f85149; }
+
+/* Toggle switch */
+.toggle-sw         { display:inline-flex; align-items:center; cursor:pointer; flex-shrink:0; }
+.toggle-sw input   { display:none !important; }
+.toggle-sw-track   {
+  width:44px; height:24px; background:rgba(255,255,255,0.12);
+  border-radius:12px; position:relative; transition:var(--tr);
+}
+.toggle-sw input:checked + .toggle-sw-track { background:var(--accent); }
+.toggle-sw-thumb   {
+  position:absolute; top:3px; left:3px; width:18px; height:18px;
+  background:#fff; border-radius:50%; transition:var(--tr);
+  box-shadow:0 1px 3px rgba(0,0,0,.3);
+}
+.toggle-sw input:checked + .toggle-sw-track .toggle-sw-thumb { transform:translateX(20px); }
+
+.subs-notif-row   { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.subs-notif-text  { flex:1; }
+.subs-notif-title { font-size:14px; font-weight:500; color:var(--txt); margin-bottom:3px; }
+.subs-notif-sub   { font-size:12px; color:var(--txt2); line-height:1.5; }
+
+/* Historial de pagos */
+.subs-historial-table { width:100%; border-collapse:collapse; margin-top:4px; }
+.subs-historial-table th {
+  text-align:left; font-size:11px; font-weight:600; color:var(--txt2);
+  text-transform:uppercase; letter-spacing:.04em; padding:0 12px 10px;
+}
+.subs-historial-table td { padding:11px 12px; border-top:1px solid var(--border); font-size:13px; }
+.subs-historial-table tr:hover td { background:rgba(255,255,255,0.02); }
+.subs-empty-state {
+  text-align:center; padding:32px 16px; color:var(--txt3);
+  font-size:13px; display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.subs-empty-state .material-icons-round { font-size:36px; opacity:.25; }
+
+/* Sección sub + nota de seguridad */
+.cfg-section-sub { font-size:13px; color:var(--txt2); margin:-12px 0 20px; }
+.subs-pay-note   { font-size:11px; color:var(--txt3); margin-top:16px; }
+
+/* Tarjetas de plan */
+.plan-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap:12px; margin-bottom:4px;
+}
+.plan-card {
+  position:relative; display:flex; flex-direction:column; align-items:center;
+  gap:8px; padding:20px 16px 16px;
+  background:var(--bg3); border:1px solid var(--border); border-radius:var(--r2);
+  text-align:center; transition:var(--tr);
+}
+.plan-card:hover { border-color:var(--border2); }
+.plan-card-featured {
+  border-color:rgba(47,129,247,0.5);
+  background:linear-gradient(160deg, rgba(47,129,247,0.08) 0%, var(--bg3) 60%);
+}
+.plan-badge {
+  position:absolute; top:-10px; left:50%; transform:translateX(-50%);
+  padding:2px 10px; border-radius:20px; font-size:11px; font-weight:700;
+  white-space:nowrap;
+}
+.plan-badge-popular { background:var(--accent);  color:#fff; }
+.plan-badge-ahorro  { background:var(--green-bg); color:var(--green); border:1px solid rgba(63,185,80,0.3); }
+.plan-nombre  { font-family:'Outfit',sans-serif; font-size:15px; font-weight:600; color:var(--txt); margin-top:4px; }
+.plan-precio  { font-family:'Outfit',sans-serif; font-size:24px; font-weight:800; color:var(--txt); }
+.plan-por-mes { font-size:11px; color:var(--txt3); }
+.btn-plan {
+  display:inline-flex; align-items:center; gap:6px; margin-top:8px;
+  width:100%; justify-content:center;
+  background:var(--accent); border:none; border-radius:var(--r);
+  color:#fff; font-family:'Outfit',sans-serif; font-size:13px; font-weight:600;
+  padding:9px 14px; cursor:pointer; transition:var(--tr);
+}
+.btn-plan:hover:not(:disabled) { background:var(--accent2); transform:translateY(-1px); }
+.btn-plan:disabled { opacity:.6; cursor:not-allowed; transform:none !important; }
