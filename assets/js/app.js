@@ -237,11 +237,18 @@ function switchView(name, el) {
 function openModal(id) {
   document.getElementById(id).classList.add('active');
   document.body.style.overflow = 'hidden';
+  setTimeout(() => {
+    const first = document.getElementById(id).querySelector(
+      'input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
+    );
+    first?.focus();
+  }, 60);
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('active');
   document.body.style.overflow = '';
-  if (id === 'modal-nuevo') _resetModalNuevo?.();
+  if (id === 'modal-nuevo')   _resetModalNuevo?.();
+  if (id === 'modal-detalle') document.querySelector('.tbl-row.row-active')?.classList.remove('row-active');
 }
 
 function toast(msg, type='ok') {
@@ -388,6 +395,9 @@ function openDetalle(rep) {
   _loadRepuestosEditor(rep.id_ingreso);
 
   loadTimeline(rep.id_ingreso);
+  // Resaltar fila activa en la tabla
+  document.querySelector('.tbl-row.row-active')?.classList.remove('row-active');
+  document.querySelector(`.tbl-row[data-id="${rep.id_ingreso}"]`)?.classList.add('row-active');
   openModal('modal-detalle');
 }
 
@@ -1115,6 +1125,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       );
       return;
     }
+  });
+
+  // Escape cierra el modal activo más reciente
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const active = document.querySelector('.modal-bg.active');
+    if (active) closeModal(active.id);
   });
 
   // Doble clic en fila → abre modal de edición (servicios)
