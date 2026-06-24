@@ -2,6 +2,23 @@
 require_once __DIR__.'/includes/config.php';
 requireLogin();
 $_SESSION['last_activity'] = time();
+
+// Cargar datos de la empresa + migración silenciosa de columnas
+$empresa = ['nombre'=>'Reparo','logo_path'=>null,'direccion'=>'','telefono'=>'','correo'=>'','comuna'=>'','region'=>''];
+try {
+    $_db = getDB();
+    try { $_db->exec("ALTER TABLE empresas
+        ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255) DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS direccion VARCHAR(150) DEFAULT '',
+        ADD COLUMN IF NOT EXISTS telefono  VARCHAR(30)  DEFAULT '',
+        ADD COLUMN IF NOT EXISTS correo    VARCHAR(80)  DEFAULT '',
+        ADD COLUMN IF NOT EXISTS comuna    VARCHAR(60)  DEFAULT '',
+        ADD COLUMN IF NOT EXISTS region    VARCHAR(60)  DEFAULT ''");
+    } catch (PDOException $ignored) {}
+    $_st = $_db->prepare("SELECT nombre,logo_path,direccion,telefono,correo,comuna,region FROM empresas WHERE id_empresa=?");
+    $_st->execute([eid()]);
+    if ($_row = $_st->fetch()) $empresa = $_row;
+} catch (PDOException $ignored) {}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -15,16 +32,47 @@ $_SESSION['last_activity'] = time();
 <body data-csrf="<?= csrf_token() ?>"
       data-role="<?= htmlspecialchars(ucargo()) ?>"
       data-user="<?= htmlspecialchars(uname()) ?>"
-      data-nombre="<?= htmlspecialchars(unombre()) ?>">
+      data-nombre="<?= htmlspecialchars(unombre()) ?>"
+      data-uid="<?= uid() ?>">
 
 <div class="app">
 
   <!-- ── SIDEBAR ─────────────────────────────────────── -->
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">R</div>
-      <span class="logo-txt">Reparo</span>
+
+    <!-- Logo / nombre editable (admin) -->
+    <div class="sidebar-logo" id="logo-display">
+      <div class="logo-icon" id="logo-icon-wrap">
+        <?php if(!empty($empresa['logo_path'])): ?>
+          <img class="logo-img" id="logo-img" src="/reparo/<?=htmlspecialchars($empresa['logo_path'])?>" alt="Logo">
+        <?php else: ?>
+          <span id="logo-letra"><?=strtoupper(substr($empresa['nombre'],0,1))?></span>
+        <?php endif; ?>
+      </div>
+      <span class="logo-txt" id="sidebar-nombre"><?=htmlspecialchars($empresa['nombre'])?></span>
+      <?php if(isAdmin()): ?>
+        <button class="btn-logo-edit" id="btn-logo-edit" title="Editar nombre y logo">
+          <span class="material-icons-round">edit</span>
+        </button>
+      <?php endif; ?>
     </div>
+
+    <?php if(isAdmin()): ?>
+    <!-- Panel inline de edición de logo/nombre -->
+    <div class="logo-edit-panel hidden" id="logo-edit-panel">
+      <input class="logo-edit-input" type="text" id="inp-emp-nombre"
+             value="<?=htmlspecialchars($empresa['nombre'])?>" placeholder="Nombre del negocio">
+      <label class="logo-file-btn" for="inp-emp-logo">
+        <span class="material-icons-round">add_photo_alternate</span>
+        <span id="logo-file-lbl">Subir logo</span>
+        <input type="file" id="inp-emp-logo" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none">
+      </label>
+      <div class="logo-edit-actions">
+        <button type="button" class="btn-sm btn-primary" id="btn-logo-save">Guardar</button>
+        <button type="button" class="btn-sm btn-sec"     id="btn-logo-cancel">Cancelar</button>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <nav class="sidebar-nav">
       <a class="nav-link active" data-view="servicios">
@@ -33,6 +81,11 @@ $_SESSION['last_activity'] = time();
       <a class="nav-link" data-view="inventario">
         <span class="material-icons-round">inventory_2</span><span>Inventario</span>
       </a>
+      <?php if(isAdmin()): ?>
+      <a class="nav-link" data-view="config">
+        <span class="material-icons-round">settings</span><span>Configuración</span>
+      </a>
+      <?php endif; ?>
     </nav>
 
     <div class="sidebar-bottom">
@@ -169,6 +222,90 @@ $_SESSION['last_activity'] = time();
         </div>
       </div>
     </div><!-- /view-inventario -->
+
+    <!-- ═══════════════════════════════════════════════════════
+         VIEW: CONFIGURACIÓN (solo admin)
+    ════════════════════════════════════════════════════════ -->
+    <?php if(isAdmin()): ?>
+    <div id="view-config" class="view">
+      <header class="topbar">
+        <div><h1 class="page-title">Configuración</h1></div>
+      </header>
+
+      <!-- Tabs -->
+      <div class="cfg-tabs">
+        <button class="cfg-tab active" data-tab="mi-cuenta">Mi cuenta</button>
+        <button class="cfg-tab" data-tab="usuarios">Usuarios</button>
+      </div>
+
+      <!-- Panel: Mi cuenta -->
+      <div class="cfg-panel active" id="cfg-mi-cuenta">
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Datos de contacto del negocio</h3>
+          <div class="form-grid2">
+            <div class="fg"><label>Dirección</label><input type="text" id="cfg-dir" placeholder="Calle 123, Local 4"></div>
+            <div class="fg"><label>Teléfono</label><input type="text" id="cfg-tel" placeholder="+56 9 1234 5678"></div>
+            <div class="fg"><label>Correo de contacto</label><input type="email" id="cfg-mail" placeholder="contacto@empresa.cl"></div>
+            <div class="fg"><label>Comuna</label><input type="text" id="cfg-comuna" placeholder="Providencia"></div>
+            <div class="fg fg-wide"><label>Región</label><input type="text" id="cfg-region" placeholder="Región Metropolitana"></div>
+          </div>
+          <button type="button" class="btn-primary" id="btn-cfg-empresa">
+            <span class="material-icons-round">save</span> Guardar datos
+          </button>
+        </div>
+
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Cambiar contraseña</h3>
+          <div class="form-grid2" style="max-width:520px">
+            <div class="fg fg-wide"><label>Contraseña actual</label><input type="password" id="cfg-pass-actual" placeholder="••••••••" autocomplete="current-password"></div>
+            <div class="fg"><label>Nueva contraseña</label><input type="password" id="cfg-pass-nueva" placeholder="••••••••" autocomplete="new-password"></div>
+            <div class="fg"><label>Confirmar nueva</label><input type="password" id="cfg-pass-confirm" placeholder="••••••••" autocomplete="new-password"></div>
+          </div>
+          <button type="button" class="btn-primary" id="btn-cfg-pass">
+            <span class="material-icons-round">lock</span> Cambiar contraseña
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel: Usuarios -->
+      <div class="cfg-panel" id="cfg-usuarios" style="display:none">
+        <div class="cfg-section">
+          <h3 class="cfg-section-title">Usuarios de la cuenta</h3>
+          <table class="tbl" style="margin-top:8px">
+            <thead>
+              <tr><th>Nombre</th><th>Usuario</th><th>Cargo</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="tbl-usuarios">
+              <tr><td colspan="4" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /view-config -->
+
+    <!-- Modal: resetear contraseña de usuario -->
+    <div class="modal-bg" id="modal-reset-pass">
+      <div class="modal-box modal-box-sm">
+        <div class="modal-hd">
+          <h3>Cambiar contraseña de <span id="reset-pass-nombre"></span></h3>
+          <button class="modal-close" data-modal="modal-reset-pass"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="reset-pass-uid">
+          <div class="form-grid2" style="max-width:100%">
+            <div class="fg"><label>Nueva contraseña</label><input type="password" id="reset-pass-nueva" placeholder="••••••••" autocomplete="new-password"></div>
+            <div class="fg"><label>Confirmar</label><input type="password" id="reset-pass-confirm" placeholder="••••••••" autocomplete="new-password"></div>
+          </div>
+        </div>
+        <div class="modal-ft">
+          <button type="button" class="btn-sec" data-modal="modal-reset-pass">Cancelar</button>
+          <button type="button" class="btn-primary" id="btn-reset-pass-save">
+            <span class="material-icons-round">lock_reset</span> Guardar contraseña
+          </button>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
 
   </main>
 </div>

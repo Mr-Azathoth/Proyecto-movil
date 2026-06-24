@@ -54,6 +54,7 @@ const CURRENT_USER = {
   user:   document.body.dataset.user   || '',
   nombre: document.body.dataset.nombre || '',
   csrf:   document.body.dataset.csrf   || '',
+  uid:    parseInt(document.body.dataset.uid || '0', 10),
 };
 
 const STATUS_COLORS = {
@@ -230,8 +231,9 @@ function switchView(name, el) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   if (el) el.classList.add('active');
-  if (name === 'servicios') loadServicios();
+  if (name === 'servicios')  loadServicios();
   if (name === 'inventario') loadInventario();
+  if (name === 'config')     loadConfigData();
 }
 
 function openModal(id) {
@@ -999,6 +1001,58 @@ function doExport(formato) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+// CONFIGURACIÓN
+// ═══════════════════════════════════════════════════════════
+async function loadConfigData() {
+  try {
+    const r = await apiFetch('/reparo/api/empresa.php');
+    const j = await r.json();
+    if (!j.ok) return;
+    const d = j.data;
+    const el = id => document.getElementById(id);
+    if (el('cfg-dir'))    el('cfg-dir').value    = d.direccion || '';
+    if (el('cfg-tel'))    el('cfg-tel').value    = d.telefono  || '';
+    if (el('cfg-mail'))   el('cfg-mail').value   = d.correo    || '';
+    if (el('cfg-comuna')) el('cfg-comuna').value = d.comuna    || '';
+    if (el('cfg-region')) el('cfg-region').value = d.region    || '';
+  } catch(e) {}
+  loadUsuarios();
+}
+
+async function loadUsuarios() {
+  const tbody = document.getElementById('tbl-usuarios');
+  if (!tbody) return;
+  try {
+    const r = await apiFetch('/reparo/api/usuarios.php');
+    const j = await r.json();
+    if (!j.ok) { tbody.innerHTML = `<tr><td colspan="4" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
+    const me = CURRENT_USER.user;
+    tbody.innerHTML = j.data.map(u => {
+      const esSelf  = u.user === me;
+      const esAdmin = u.cargo === 'Admin';
+      const badge   = esAdmin
+        ? '<span class="pill pill-blue">Admin</span>'
+        : '<span class="pill pill-orange">Técnico</span>';
+      const nuevoC  = esAdmin ? 'Tecnico' : 'Admin';
+      const lblC    = esAdmin ? 'Pasar a Técnico' : 'Pasar a Admin';
+      const btnCargo = esSelf ? '' :
+        `<button class="btn-sm btn-sec" data-action="toggle-cargo" data-uid="${u.id_usuario}" data-cargo="${nuevoC}">${lblC}</button>`;
+      const btnPass =
+        `<button class="btn-sm btn-sec" data-action="reset-pass" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}">
+           <span class="material-icons-round" style="font-size:15px">lock_reset</span> Contraseña
+         </button>`;
+      const inicial = u.nombre.charAt(0).toUpperCase();
+      return `<tr>
+        <td><div class="usr-cell"><div class="user-av">${inicial}</div><strong>${esc(u.nombre)}</strong></div></td>
+        <td><code class="code-lbl">${esc(u.user)}</code></td>
+        <td>${badge}</td>
+        <td><div class="row-actions">${btnCargo}${btnPass}</div></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('.nav-link[data-view]').forEach(link => {
@@ -1184,4 +1238,149 @@ document.addEventListener('DOMContentLoaded', async () => {
   }).catch(() => {});
 
   loadServicios();
+
+  // ── Configuración: tabs ──────────────────────────────────────
+  document.querySelectorAll('.cfg-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cfg-tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.cfg-panel').forEach(p => p.style.display = 'none');
+      btn.classList.add('active');
+      const panel = document.getElementById('cfg-' + btn.dataset.tab);
+      if (panel) panel.style.display = '';
+    });
+  });
+
+  // ── Sidebar: editar logo y nombre ───────────────────────────
+  document.getElementById('btn-logo-edit')?.addEventListener('click', () => {
+    document.getElementById('logo-display').classList.add('hidden');
+    document.getElementById('logo-edit-panel').classList.remove('hidden');
+    document.getElementById('inp-emp-nombre')?.focus();
+  });
+  document.getElementById('btn-logo-cancel')?.addEventListener('click', () => {
+    document.getElementById('logo-display').classList.remove('hidden');
+    document.getElementById('logo-edit-panel').classList.add('hidden');
+    document.getElementById('inp-emp-logo').value        = '';
+    document.getElementById('logo-file-lbl').textContent = 'Subir logo';
+  });
+  document.getElementById('inp-emp-logo')?.addEventListener('change', e => {
+    const f = e.target.files[0];
+    document.getElementById('logo-file-lbl').textContent = f ? f.name : 'Subir logo';
+  });
+  document.getElementById('btn-logo-save')?.addEventListener('click', async () => {
+    const nombre = document.getElementById('inp-emp-nombre').value.trim();
+    const file   = document.getElementById('inp-emp-logo').files[0];
+    if (!nombre) { toast('El nombre no puede estar vacío.', 'err'); return; }
+    const fd = new FormData();
+    fd.append('nombre', nombre);
+    if (file) fd.append('logo', file);
+    try {
+      const r = await apiFetch('/reparo/api/empresa.php', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.ok) { toast(j.msg, 'err'); return; }
+      // Actualizar sidebar en vivo
+      document.getElementById('sidebar-nombre').textContent = j.data.nombre;
+      const iconWrap = document.getElementById('logo-icon-wrap');
+      if (j.data.logo_path) {
+        iconWrap.innerHTML = `<img class="logo-img" id="logo-img" src="/reparo/${j.data.logo_path}?t=${Date.now()}" alt="Logo">`;
+      } else {
+        iconWrap.innerHTML = `<span id="logo-letra">${j.data.nombre.charAt(0).toUpperCase()}</span>`;
+      }
+      document.getElementById('inp-emp-nombre').value = j.data.nombre;
+      document.getElementById('inp-emp-logo').value   = '';
+      document.getElementById('logo-file-lbl').textContent = 'Subir logo';
+      document.getElementById('logo-display').classList.remove('hidden');
+      document.getElementById('logo-edit-panel').classList.add('hidden');
+      toast('✔ Datos actualizados.', 'ok');
+    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+  });
+
+  // ── Guardar datos de contacto empresa ───────────────────────
+  document.getElementById('btn-cfg-empresa')?.addEventListener('click', async () => {
+    const payload = {
+      direccion: document.getElementById('cfg-dir').value.trim(),
+      telefono:  document.getElementById('cfg-tel').value.trim(),
+      correo:    document.getElementById('cfg-mail').value.trim(),
+      comuna:    document.getElementById('cfg-comuna').value.trim(),
+      region:    document.getElementById('cfg-region').value.trim(),
+    };
+    try {
+      const r = await apiFetch('/reparo/api/empresa.php', {
+        method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+      });
+      const j = await r.json();
+      j.ok ? toast('✔ Datos guardados.', 'ok') : toast(j.msg, 'err');
+    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+  });
+
+  // ── Cambiar propia contraseña ────────────────────────────────
+  document.getElementById('btn-cfg-pass')?.addEventListener('click', async () => {
+    const actual   = document.getElementById('cfg-pass-actual').value;
+    const nueva    = document.getElementById('cfg-pass-nueva').value;
+    const confirm  = document.getElementById('cfg-pass-confirm').value;
+    if (!actual)          { toast('Ingresa tu contraseña actual.', 'err'); return; }
+    if (nueva.length < 6) { toast('La nueva contraseña debe tener al menos 6 caracteres.', 'err'); return; }
+    if (nueva !== confirm) { toast('Las contraseñas no coinciden.', 'err'); return; }
+    try {
+      const r = await apiFetch('/reparo/api/usuarios.php', {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id_usuario: CURRENT_USER.uid, password_actual: actual, password: nueva })
+      });
+      const j = await r.json();
+      if (j.ok) {
+        toast('✔ Contraseña actualizada.', 'ok');
+        document.getElementById('cfg-pass-actual').value  = '';
+        document.getElementById('cfg-pass-nueva').value   = '';
+        document.getElementById('cfg-pass-confirm').value = '';
+      } else { toast(j.msg, 'err'); }
+    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+  });
+
+  // ── Event delegation tabla Usuarios ─────────────────────────
+  document.getElementById('tbl-usuarios')?.addEventListener('click', async e => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const buid = parseInt(btn.dataset.uid);
+
+    if (btn.dataset.action === 'toggle-cargo') {
+      const nuevoCargo = btn.dataset.cargo;
+      try {
+        const r = await apiFetch('/reparo/api/usuarios.php', {
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id_usuario: buid, cargo: nuevoCargo })
+        });
+        const j = await r.json();
+        j.ok ? (toast(`✔ ${j.data.msg}`, 'ok'), loadUsuarios()) : toast(j.msg, 'err');
+      } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+    }
+
+    if (btn.dataset.action === 'reset-pass') {
+      document.getElementById('reset-pass-uid').value        = buid;
+      document.getElementById('reset-pass-nombre').textContent = btn.dataset.nombre;
+      document.getElementById('reset-pass-nueva').value      = '';
+      document.getElementById('reset-pass-confirm').value    = '';
+      openModal('modal-reset-pass');
+    }
+  });
+
+  // ── Resetear contraseña de otro usuario ─────────────────────
+  document.getElementById('btn-reset-pass-save')?.addEventListener('click', async () => {
+    const ruid    = parseInt(document.getElementById('reset-pass-uid').value);
+    const nueva   = document.getElementById('reset-pass-nueva').value;
+    const confirm = document.getElementById('reset-pass-confirm').value;
+    if (nueva.length < 6) { toast('Mínimo 6 caracteres.', 'err'); return; }
+    if (nueva !== confirm) { toast('Las contraseñas no coinciden.', 'err'); return; }
+    try {
+      const r = await apiFetch('/reparo/api/usuarios.php', {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id_usuario: ruid, password: nueva })
+      });
+      const j = await r.json();
+      if (j.ok) {
+        toast('✔ Contraseña actualizada.', 'ok');
+        closeModal('modal-reset-pass');
+        document.getElementById('reset-pass-nueva').value   = '';
+        document.getElementById('reset-pass-confirm').value = '';
+      } else { toast(j.msg, 'err'); }
+    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+  });
 });
