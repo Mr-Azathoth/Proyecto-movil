@@ -1,0 +1,21 @@
+# ── Configuración sensible ────────────────────────────────────
+includes/config.php
+.env
+*.env
+
+# ── Base de datos (backups y seeds locales) ───────────────────
+*.sql
+logs/
+*.log
+
+# ── Archivos del sistema ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Claude Code (sesiones internas) ──────────────────────────
+.claude/
+
+# ── Dependencias (por si se agregan) ─────────────────────────
+vendor/
+node_modules/

@@ -1,0 +1,22 @@
+# ── Bloquear listado de directorios ──────────────────────────
+Options -Indexes
+
+# ── Bloquear acceso directo a archivos sensibles ─────────────
+<FilesMatch "\.(sql|log|env|md|gitignore)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── Bloquear acceso a la carpeta includes/ ───────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^includes/ - [F,L]
+</IfModule>
+
+# ── Ocultar versión del servidor ─────────────────────────────
+ServerSignature Off
+
+# ── Forzar HTTPS en producción (descomentar cuando tengas SSL) ─
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

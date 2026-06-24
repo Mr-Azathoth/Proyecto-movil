@@ -1,0 +1,211 @@
+<?php
+require_once __DIR__ . '/../includes/config.php';
+header('Content-Type: application/json; charset=utf-8');
+guard();
+
+$db     = getDB();
+$eid    = eid();
+$method = $_SERVER['REQUEST_METHOD'];
+
+// Migración silenciosa: añadir columnas si no existen
+try { $db->exec("ALTER TABLE reparaciones ADD COLUMN id_repuesto_usado INT NULL"); } catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE reparaciones ADD COLUMN stock_descontado TINYINT(1) NOT NULL DEFAULT 0"); } catch(PDOException $e) {}
+
+if ($method === 'GET') {
+    $q  = mb_substr(trim($_GET['q'] ?? ''), 0, 100);
+    $st = trim($_GET['status'] ?? '');
+
+    // Validar status si viene filtro
+    if ($st && !in_array($st, VALID_STATUS, true)) {
+        json_err('Estado inválido.');
+    }
+
+    $sql = "SELECT r.*, i.nombre AS nombre_repuesto_usado
+              FROM reparaciones r
+              LEFT JOIN inventario i
+                     ON i.id_repuesto = r.id_repuesto_usado AND i.id_empresa = r.id_empresa
+             WHERE r.id_empresa = ?";
+    $p   = [$eid];
+
+    if ($q) {
+        $sql .= " AND (r.nombre_cliente LIKE ? OR r.marca_ingreso LIKE ? OR r.modelo_ingreso LIKE ? OR r.id_ingreso = ?)";
+        $like = "%" . $q . "%";
+        $p    = array_merge($p, [$like, $like, $like, (int) $q]);
+    }
+    if ($st) {
+        $sql .= " AND r.status = ?";
+        $p[] = $st;
+    }
+    $sql .= " ORDER BY r.id_ingreso DESC";
+
+    $s = $db->prepare($sql);
+    $s->execute($p);
+    json_ok($s->fetchAll());
+}
+
+if ($method === 'POST') {
+    csrf_check();
+
+    $f = [
+        'nombre_cliente'   => trim($_POST['nombre_cliente']   ?? ''),
+        'telefono_cliente' => trim($_POST['telefono_cliente'] ?? ''),
+        'rut_cliente'      => trim($_POST['rut_cliente']      ?? ''),
+        'tipo_ingreso'     => trim($_POST['tipo_ingreso']     ?? 'Telefono'),
+        'marca_ingreso'    => trim($_POST['marca_ingreso']    ?? ''),
+        'modelo_ingreso'   => trim($_POST['modelo_ingreso']   ?? ''),
+        'imei'             => trim($_POST['imei']             ?? ''),
+        'pass_ingreso'     => trim($_POST['pass_ingreso']     ?? 'Sin contraseña'),
+        'daño_ingreso'     => trim($_POST['daño_ingreso']     ?? ''),
+        'valor_ingreso'    => max(0, (int) ($_POST['valor_ingreso'] ?? 0)),
+        'status'           => trim($_POST['status']           ?? 'Ingresado'),
+        'obs'              => trim($_POST['obs']              ?? ''),
+    ];
+
+    // Validaciones
+    if (!$f['nombre_cliente'])                            json_err('El nombre del cliente es obligatorio.');
+    if (strlen($f['nombre_cliente']) > 120)               json_err('Nombre demasiado largo.');
+    if (!$f['telefono_cliente'])                          json_err('El teléfono del cliente es obligatorio.');
+    if (!$f['daño_ingreso'])                              json_err('La descripción de la falla es obligatoria.');
+    if (!in_array($f['status'], VALID_STATUS, true))      json_err('Estado inicial inválido.');
+
+    $tipos_validos = ['Telefono', 'Tablet', 'Notebook', 'Televisor', 'Otro'];
+    if (!in_array($f['tipo_ingreso'], $tipos_validos, true)) $f['tipo_ingreso'] = 'Otro';
+
+    // Repuesto inicial opcional
+    $id_repuesto_inicial = null;
+    if (!empty($_POST['id_repuesto_usado'])) {
+        $id_rp = (int) $_POST['id_repuesto_usado'];
+        $chkRp = $db->prepare("SELECT id_repuesto FROM inventario WHERE id_repuesto = ? AND id_empresa = ?");
+        $chkRp->execute([$id_rp, $eid]);
+        if ($chkRp->fetch()) $id_repuesto_inicial = $id_rp;
+    }
+
+    $db->prepare("INSERT INTO reparaciones
+        (id_empresa, nombre_cliente, telefono_cliente, rut_cliente, tipo_ingreso,
+         marca_ingreso, modelo_ingreso, imei, pass_ingreso, daño_ingreso,
+         valor_ingreso, status, obs, ingresado_por, id_repuesto_usado)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+       ->execute([
+            $eid, $f['nombre_cliente'], $f['telefono_cliente'], $f['rut_cliente'],
+            $f['tipo_ingreso'], $f['marca_ingreso'], $f['modelo_ingreso'], $f['imei'],
+            $f['pass_ingreso'], $f['daño_ingreso'], $f['valor_ingreso'],
+            $f['status'], $f['obs'], uname(), $id_repuesto_inicial,
+        ]);
+    $newId = (int) $db->lastInsertId();
+    log_accion($db, 'nueva_reparacion', $newId);
+
+    $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user)
+                  VALUES (?, ?, '', ?, ?)")
+       ->execute([$eid, $newId, $f['status'], uname()]);
+
+    if ($f['obs']) {
+        $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user)
+                      VALUES (?, ?, ?, ?)")
+           ->execute([$eid, $newId, $f['obs'], uname()]);
+    }
+
+    json_ok(['id' => $newId, 'msg' => "Servicio #{$newId} registrado."]);
+}
+
+if ($method === 'PUT') {
+    csrf_check();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = (int) ($in['id'] ?? 0);
+    if (!$id) json_err('ID inválido.');
+
+    $cur = $db->prepare("SELECT * FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+    $cur->execute([$id, $eid]);
+    $row = $cur->fetch();
+    if (!$row) json_err('Registro no encontrado.', 404);
+
+    $nuevo_status = $in['status'] ?? $row['status'];
+    if (!in_array($nuevo_status, VALID_STATUS, true)) json_err('Estado inválido.');
+
+    $nuevo_valor = $row['valor_ingreso'];
+    if (isAdmin() && isset($in['valor'])) {
+        $nuevo_valor = max(0, (int) $in['valor']);
+    }
+
+    // Repuesto usado (opcional, null = sin repuesto)
+    $id_repuesto_nuevo = isset($in['id_repuesto_usado'])
+        ? ($in['id_repuesto_usado'] ? (int) $in['id_repuesto_usado'] : null)
+        : ($row['id_repuesto_usado'] ?? null);
+
+    $obs_txt = trim($in['obs'] ?? '');
+
+    $db->prepare("UPDATE reparaciones
+                  SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?
+                  WHERE id_ingreso = ? AND id_empresa = ?")
+       ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $id, $eid]);
+
+    // Descuento de stock al pasar a Entregado (solo una vez por repuesto)
+    $ya_descontado = (bool) ($row['stock_descontado'] ?? 0);
+    if ($nuevo_status === 'Entregado' && $row['status'] !== 'Entregado') {
+        // Descontar repuesto inicial
+        if ($id_repuesto_nuevo && !$ya_descontado) {
+            $chk = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto = ? AND id_empresa = ?");
+            $chk->execute([$id_repuesto_nuevo, $eid]);
+            $rep_row = $chk->fetch();
+            if ($rep_row) {
+                $db->prepare("UPDATE inventario SET cantidad = cantidad - 1 WHERE id_repuesto = ? AND id_empresa = ?")
+                   ->execute([$id_repuesto_nuevo, $eid]);
+                $db->prepare("UPDATE reparaciones SET stock_descontado = 1 WHERE id_ingreso = ? AND id_empresa = ?")
+                   ->execute([$id, $eid]);
+                $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
+                   ->execute([$eid, $id, "Repuesto descontado del inventario: {$rep_row['nombre']}", uname()]);
+            }
+        }
+        // Descontar repuestos adicionales (reparacion_repuestos)
+        $adicionales = $db->prepare(
+            "SELECT * FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0"
+        );
+        $adicionales->execute([$id, $eid]);
+        foreach ($adicionales->fetchAll() as $ar) {
+            $db->prepare("UPDATE inventario SET cantidad = cantidad - ? WHERE id_repuesto = ? AND id_empresa = ?")
+               ->execute([(int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid]);
+            $db->prepare("UPDATE reparacion_repuestos SET stock_desc = 1 WHERE id = ?")
+               ->execute([(int)$ar['id']]);
+            $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
+               ->execute([$eid, $id, "Repuesto descontado: {$ar['nombre_snap']} x{$ar['cantidad']}", uname()]);
+        }
+    }
+
+    if ($nuevo_status !== $row['status']) {
+        $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user)
+                      VALUES (?, ?, ?, ?, ?)")
+           ->execute([$eid, $id, $row['status'], $nuevo_status, uname()]);
+        log_accion($db, 'cambio_status', $id);
+    }
+    if (isAdmin() && isset($in['valor']) && $nuevo_valor !== (int)$row['valor_ingreso']) {
+        log_accion($db, 'cambio_valor', $id);
+    }
+
+    if ($obs_txt) {
+        $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user)
+                      VALUES (?, ?, ?, ?)")
+           ->execute([$eid, $id, $obs_txt, uname()]);
+    }
+
+    json_ok(['msg' => 'Guardado.', 'stock_descontado' => (int) ($nuevo_status === 'Reparado' && !$ya_descontado && $id_repuesto_nuevo)]);
+}
+
+if ($method === 'DELETE') {
+    if (!isAdmin()) json_err('Sin permisos.', 403);
+    csrf_check();
+
+    $in = json_decode(file_get_contents('php://input'), true) ?? [];
+    $id = (int) ($in['id'] ?? 0);
+    if (!$id) json_err('ID inválido.');
+
+    $cur = $db->prepare("SELECT id_ingreso FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+    $cur->execute([$id, $eid]);
+    if (!$cur->fetch()) json_err('Registro no encontrado.', 404);
+
+    $db->prepare("DELETE FROM observaciones WHERE id_registro  = ? AND id_empresa = ?")->execute([$id, $eid]);
+    $db->prepare("DELETE FROM historial     WHERE id_reparacion = ? AND id_empresa = ?")->execute([$id, $eid]);
+    $db->prepare("DELETE FROM reparaciones  WHERE id_ingreso    = ? AND id_empresa = ?")->execute([$id, $eid]);
+
+    log_accion($db, 'eliminacion', $id);
+    json_ok(['msg' => "Servicio #{$id} eliminado."]);
+}
