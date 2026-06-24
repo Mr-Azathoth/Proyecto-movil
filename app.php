@@ -157,13 +157,13 @@ $_SESSION['last_activity'] = time();
           <table class="tbl">
             <thead>
               <tr>
-                <th>Código</th><th>Repuesto</th><th>Marca compatible</th>
+                <th>Repuesto</th><th>Marca compatible</th>
                 <th>Modelo compatible</th><th>Precio venta</th><th>Stock</th>
                 <?php if(isAdmin()): ?><th>Acciones</th><?php endif; ?>
               </tr>
             </thead>
             <tbody id="tbl-inventario">
-              <tr><td colspan="7" class="tbl-loading">Carga al abrir vista</td></tr>
+              <tr><td colspan="6" class="tbl-loading">Carga al abrir vista</td></tr>
             </tbody>
           </table>
         </div>
@@ -357,10 +357,12 @@ $_SESSION['last_activity'] = time();
     <form id="form-repuesto">
       <div class="modal-body">
         <div class="form-grid2">
-          <div class="fg"><label>Código <span class="req">*</span></label><input type="text" name="codigo" placeholder="REP-001" required></div>
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" name="nombre" placeholder="Pantalla Samsung A54" required></div>
           <div class="fg"><label>Marca compatible</label><input type="text" name="marca_compatible" placeholder="Samsung" list="dl-marcas-inv"></div>
-          <div class="fg"><label>Modelo compatible</label><input type="text" name="modelo_compatible" placeholder="A54, A53, A52..."></div>
+          <div class="fg fg-wide"><label>Modelos compatibles</label>
+            <div class="tag-input-wrap" id="tag-nuevo-modelo"></div>
+            <input type="hidden" name="modelo_compatible" id="hid-nuevo-modelo">
+          </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" name="precio_venta" placeholder="0" value="0" min="0"></div>
           <div class="fg"><label>Stock inicial</label><input type="number" name="cantidad" placeholder="0" value="0" min="0"></div>
         </div>
@@ -405,10 +407,11 @@ $_SESSION['last_activity'] = time();
       <input type="hidden" id="edit-rep-id">
       <div class="modal-body">
         <div class="form-grid2" id="edit-rep-admin-fields">
-          <div class="fg"><label>Código <span class="req">*</span></label><input type="text" id="edit-rep-codigo" placeholder="REP-001" required></div>
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" id="edit-rep-nombre" placeholder="Pantalla Samsung A54" required></div>
           <div class="fg"><label>Marca compatible</label><input type="text" id="edit-rep-marca" placeholder="Samsung" list="dl-marcas-inv"></div>
-          <div class="fg"><label>Modelo compatible</label><input type="text" id="edit-rep-modelo" placeholder="A54, A53..."></div>
+          <div class="fg fg-wide"><label>Modelos compatibles</label>
+            <div class="tag-input-wrap" id="tag-edit-modelo"></div>
+          </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="edit-rep-precio" placeholder="0" min="0"></div>
         </div>
         <div class="fg" style="margin-top:4px"><label>Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>

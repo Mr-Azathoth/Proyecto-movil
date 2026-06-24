@@ -42,7 +42,6 @@ if ($method === 'POST') {
     csrf_check();
 
     $f = [
-        'codigo'            => trim($_POST['codigo']            ?? ''),
         'nombre'            => trim($_POST['nombre']            ?? ''),
         'marca_compatible'  => trim($_POST['marca_compatible']  ?? ''),
         'modelo_compatible' => trim($_POST['modelo_compatible'] ?? ''),
@@ -50,10 +49,13 @@ if ($method === 'POST') {
         'cantidad'          => max(0, (int) ($_POST['cantidad']     ?? 0)),
     ];
 
-    if (!$f['codigo']) json_err('El código es obligatorio.');
     if (!$f['nombre']) json_err('El nombre es obligatorio.');
-    if (strlen($f['codigo']) > 30) json_err('Código demasiado largo (máx. 30 caracteres).');
     if (strlen($f['nombre']) > 100) json_err('Nombre demasiado largo (máx. 100 caracteres).');
+
+    // Auto-generar código único a partir del nombre
+    $slug   = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $f['nombre']));
+    $prefix = substr($slug, 0, 6) ?: 'REP';
+    $f['codigo'] = $prefix . '-' . substr(uniqid(), -5);
 
     $db->prepare("INSERT INTO inventario
         (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad)
@@ -75,23 +77,20 @@ if ($method === 'PUT') {
     $check->execute([$rid, $eid]);
     if (!$check->fetch()) json_err('Repuesto no encontrado.', 404);
 
-    // Edición completa: solo admin, requiere campo 'codigo' en el payload
-    if (isset($in['codigo'])) {
+    // Edición completa: solo admin, requiere campo 'nombre' en el payload
+    if (isset($in['nombre'])) {
         if (!isAdmin()) json_err('Sin permisos.', 403);
-        $codigo = trim($in['codigo']);
-        $nombre = trim($in['nombre'] ?? '');
+        $nombre = trim($in['nombre']);
         $marca  = trim($in['marca_compatible']  ?? '');
         $modelo = trim($in['modelo_compatible'] ?? '');
         $precio = max(0, (int) ($in['precio_venta'] ?? 0));
         $qty    = max(0, (int) ($in['cantidad']     ?? 0));
-        if (!$codigo) json_err('El código es obligatorio.');
         if (!$nombre) json_err('El nombre es obligatorio.');
-        if (strlen($codigo) > 30)  json_err('Código demasiado largo (máx. 30).');
         if (strlen($nombre) > 100) json_err('Nombre demasiado largo (máx. 100).');
         $db->prepare("UPDATE inventario
-            SET codigo=?, nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?, cantidad=?
+            SET nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?, cantidad=?
             WHERE id_repuesto=? AND id_empresa=?")
-           ->execute([$codigo, $nombre, $marca, $modelo, $precio, $qty, $rid, $eid]);
+           ->execute([$nombre, $marca, $modelo, $precio, $qty, $rid, $eid]);
         json_ok(['msg' => 'Repuesto actualizado.']);
     }
 

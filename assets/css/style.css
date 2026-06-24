@@ -369,6 +369,22 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 .spin { animation:spinA .8s linear infinite; }
 @keyframes spinA { to{transform:rotate(360deg)} }
 
+/* ── TAG INPUT ──────────────────────────────────────────────── */
+.tag-input-wrap  { display:flex; flex-wrap:wrap; gap:5px; align-items:center;
+                   padding:5px 8px; border:1px solid var(--brd); border-radius:7px;
+                   background:var(--inp-bg); cursor:text; min-height:36px; }
+.tag-input-wrap:focus-within { border-color:var(--accent); }
+.tag-chip        { display:inline-flex; align-items:center; gap:3px;
+                   background:var(--accent); color:#fff; border-radius:4px;
+                   font-size:12px; padding:2px 7px; white-space:nowrap; }
+.tag-chip button { background:none; border:none; color:rgba(255,255,255,.75);
+                   cursor:pointer; padding:0; line-height:1; font-size:15px;
+                   display:flex; align-items:center; }
+.tag-chip button:hover { color:#fff; }
+.tag-inp         { border:none; background:none; outline:none; color:var(--txt);
+                   font-size:13px; min-width:90px; flex:1; padding:0; }
+.fg-wide         { grid-column:1/-1; }
+
 /* ── POST-SAVE PANEL ────────────────────────────────────────── */
 #nuevo-post-save   { display:flex; align-items:center; justify-content:center;
                      min-height:300px; padding:32px; }

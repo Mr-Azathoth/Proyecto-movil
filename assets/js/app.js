@@ -2,6 +2,52 @@
 // REPARO — SPA Frontend
 // ═══════════════════════════════════════════════════════════
 
+// ── TagInput: entrada de etiquetas separadas por coma ────────
+class TagInput {
+  constructor(containerId) {
+    this._wrap = document.getElementById(containerId);
+    this._tags = [];
+    if (this._wrap) {
+      this._render();
+      this._wrap.addEventListener('click', e => {
+        const btn = e.target.closest('[data-tag-del]');
+        if (btn) { this._tags.splice(+btn.dataset.tagDel, 1); this._render(); }
+        else this._inp?.focus();
+      });
+    }
+  }
+  setValue(str) { this._tags = str ? str.split(',').map(s => s.trim()).filter(Boolean) : []; this._render(); }
+  getValue()    { return this._tags.join(', '); }
+  _add(raw) {
+    raw.split(',').map(s => s.trim()).filter(Boolean).forEach(t => {
+      if (!this._tags.includes(t)) this._tags.push(t);
+    });
+    this._render();
+  }
+  _render() {
+    if (!this._wrap) return;
+    const wasFocused = document.activeElement === this._inp;
+    this._wrap.innerHTML =
+      this._tags.map((t, i) =>
+        `<span class="tag-chip">${esc(t)}<button type="button" data-tag-del="${i}" tabindex="-1">×</button></span>`
+      ).join('') +
+      `<input class="tag-inp" type="text" placeholder="${this._tags.length ? 'Añadir...' : 'Galaxy A54, A53...'}">`;
+    this._inp = this._wrap.querySelector('.tag-inp');
+    if (wasFocused) this._inp.focus();
+    this._inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        if (this._inp.value.trim()) { this._add(this._inp.value); this._inp.value = ''; }
+      } else if (e.key === 'Backspace' && !this._inp.value && this._tags.length) {
+        this._tags.pop(); this._render(); this._inp.focus();
+      }
+    });
+    this._inp.addEventListener('blur', () => {
+      if (this._inp.value.trim()) { this._add(this._inp.value); this._inp.value = ''; }
+    });
+  }
+}
+
 // Contexto del usuario desde atributos data del <body>
 const CURRENT_USER = {
   role:   document.body.dataset.role   || '',
@@ -527,15 +573,15 @@ async function submitActualizar(e) {
 async function loadInventario() {
   const q     = document.getElementById('search-inv').value;
   const tbody = document.getElementById('tbl-inventario');
-  tbody.innerHTML = `<tr><td colspan="7" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
   try {
     const r = await apiFetch(`/reparo/api/inventario.php?q=${encodeURIComponent(q)}`);
     const j = await r.json();
-    if (!j.ok) { tbody.innerHTML=`<tr><td colspan="7" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
+    if (!j.ok) { tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
     if (!j.data.length) {
       const addBtn = CURRENT_USER.role === 'Admin'
         ? ' <button class="link-btn" data-action="open-modal-repuesto">Agregar el primero</button>' : '';
-      tbody.innerHTML = `<tr><td colspan="7" class="tbl-empty">Sin repuestos registrados.${addBtn}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Sin repuestos registrados.${addBtn}</td></tr>`;
       return;
     }
     const isAdmin = CURRENT_USER.role === 'Admin';
@@ -554,7 +600,6 @@ async function loadInventario() {
         </div>
       </td>`;
       return `<tr data-inv-id="${rep.id_repuesto}">
-        <td><code class="code-lbl">${esc(rep.codigo)}</code></td>
         <td><strong>${esc(rep.nombre)}</strong></td>
         <td>${esc(rep.marca_compatible||'—')}</td>
         <td>${esc(rep.modelo_compatible||'—')}</td>
@@ -565,7 +610,7 @@ async function loadInventario() {
     }).join('');
   } catch(e) {
     if (e.message !== 'session_expired')
-      tbody.innerHTML=`<tr><td colspan="7" class="tbl-empty">Error de red.</td></tr>`;
+      tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">Error de red.</td></tr>`;
   }
 }
 
@@ -631,11 +676,10 @@ function openInvEdit(item) {
   const adminFields = document.getElementById('edit-rep-admin-fields');
   if (isAdmin) {
     adminFields.style.display = '';
-    document.getElementById('edit-rep-codigo').value  = item.codigo;
-    document.getElementById('edit-rep-nombre').value  = item.nombre;
-    document.getElementById('edit-rep-marca').value   = item.marca_compatible  || '';
-    document.getElementById('edit-rep-modelo').value  = item.modelo_compatible || '';
-    document.getElementById('edit-rep-precio').value  = item.precio_venta;
+    document.getElementById('edit-rep-nombre').value = item.nombre;
+    document.getElementById('edit-rep-marca').value  = item.marca_compatible || '';
+    document.getElementById('edit-rep-precio').value = item.precio_venta;
+    _tagModeloEdit.setValue(item.modelo_compatible || '');
   } else {
     adminFields.style.display = 'none';
   }
@@ -649,10 +693,9 @@ async function submitEditRepuesto(e) {
   const id = parseInt(document.getElementById('edit-rep-id').value);
   const payload = { id, cantidad: parseInt(document.getElementById('edit-rep-cantidad').value) || 0 };
   if (isAdmin) {
-    payload.codigo            = document.getElementById('edit-rep-codigo').value.trim();
     payload.nombre            = document.getElementById('edit-rep-nombre').value.trim();
     payload.marca_compatible  = document.getElementById('edit-rep-marca').value.trim();
-    payload.modelo_compatible = document.getElementById('edit-rep-modelo').value.trim();
+    payload.modelo_compatible = _tagModeloEdit.getValue();
     payload.precio_venta      = parseInt(document.getElementById('edit-rep-precio').value) || 0;
   }
   try {
@@ -724,12 +767,18 @@ async function removeRepuestoAdicional(id) {
 
 async function submitRepuesto(e) {
   e.preventDefault();
+  document.getElementById('hid-nuevo-modelo').value = _tagModeloNuevo.getValue();
   const fd = new FormData(e.target);
   try {
     const r = await apiFetch('/reparo/api/inventario.php', {method: 'POST', body: fd});
     const j = await r.json();
-    if (j.ok) { toast('✔ Repuesto agregado.', 'ok'); closeModal('modal-repuesto'); e.target.reset(); loadInventario(); }
-    else toast(j.msg, 'err');
+    if (j.ok) {
+      toast('✔ Repuesto agregado.', 'ok');
+      closeModal('modal-repuesto');
+      e.target.reset();
+      _tagModeloNuevo.setValue('');
+      loadInventario();
+    } else toast(j.msg, 'err');
   } catch(err) {
     if (err.message !== 'session_expired') toast('Error de red.', 'err');
   }
@@ -747,6 +796,8 @@ let _selModeloNuevo     = null;
 let _selRepNuevo        = null; // select repuesto en modal-nuevo
 let _selRepAdicional    = null; // select repuesto adicional en modal-detalle
 let _lastNuevoId        = null; // id del último servicio ingresado (para post-save)
+let _tagModeloNuevo     = null; // TagInput modelos en modal-repuesto (nuevo)
+let _tagModeloEdit      = null; // TagInput modelos en modal-edit-repuesto
 
 async function fetchMarcas() {
   if (_marcasCache) return _marcasCache;
@@ -986,6 +1037,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('form-nuevo')?.addEventListener('submit', submitNuevo);
   document.getElementById('form-actualizar')?.addEventListener('submit', submitActualizar);
   document.getElementById('form-repuesto')?.addEventListener('submit', submitRepuesto);
+
+  // TagInput de modelos compatibles en inventario
+  _tagModeloNuevo = new TagInput('tag-nuevo-modelo');
+  _tagModeloEdit  = new TagInput('tag-edit-modelo');
 
   // SearchableSelect de repuesto en modal-nuevo (ingreso)
   _selRepNuevo = new SearchableSelect('sel-rep-nuevo', {
