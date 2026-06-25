@@ -13,7 +13,7 @@ if (recForm) {
 
     btn.disabled = true;
     btn.textContent = 'Enviando...';
-    err.style.display = 'none';
+    err.setAttribute('hidden', '');
 
     try {
       const fd = new FormData();
@@ -25,13 +25,13 @@ if (recForm) {
         document.getElementById('rec-ok').style.display = 'block';
       } else {
         err.textContent = j.msg || 'Error al procesar la solicitud.';
-        err.style.display = 'block';
+        err.removeAttribute('hidden');
         btn.disabled = false;
         btn.innerHTML = 'Enviar enlace <span class="material-icons-round">send</span>';
       }
     } catch {
       err.textContent = 'Error de red. Verifica tu conexión.';
-      err.style.display = 'block';
+      err.removeAttribute('hidden');
       btn.disabled = false;
       btn.innerHTML = 'Enviar enlace <span class="material-icons-round">send</span>';
     }
@@ -49,16 +49,16 @@ if (rstForm) {
     const pass    = document.getElementById('rst-pass').value;
     const confirm = document.getElementById('rst-confirm').value;
 
-    err.style.display = 'none';
+    err.setAttribute('hidden', '');
 
     if (pass !== confirm) {
       err.textContent = 'Las contraseñas no coinciden.';
-      err.style.display = 'block';
+      err.removeAttribute('hidden');
       return;
     }
     if (pass.length < 6) {
       err.textContent = 'La contraseña debe tener al menos 6 caracteres.';
-      err.style.display = 'block';
+      err.removeAttribute('hidden');
       return;
     }
 
@@ -76,13 +76,13 @@ if (rstForm) {
         window.location.href = '/reparo/index.php?reset=1';
       } else {
         err.textContent = j.msg || 'Error al actualizar la contraseña.';
-        err.style.display = 'block';
+        err.removeAttribute('hidden');
         btn.disabled = false;
         btn.innerHTML = 'Guardar contraseña <span class="material-icons-round">lock_reset</span>';
       }
     } catch {
       err.textContent = 'Error de red.';
-      err.style.display = 'block';
+      err.removeAttribute('hidden');
       btn.disabled = false;
       btn.innerHTML = 'Guardar contraseña <span class="material-icons-round">lock_reset</span>';
     }

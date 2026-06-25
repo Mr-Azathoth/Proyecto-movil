@@ -36,7 +36,7 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
           Enviar enlace <span class="material-icons-round">send</span>
         </button>
       </form>
-      <div id="rec-err" class="alert-err" style="display:none;margin-top:12px;"></div>
+      <div id="rec-err" class="alert-err" hidden style="margin-top:12px;"></div>
     </div>
 
     <div id="rec-ok" style="display:none;text-align:center;padding:12px 0;">

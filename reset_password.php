@@ -55,11 +55,11 @@ $valid = (bool) $st->fetch();
           <label>Confirmar contraseña</label>
           <input type="password" id="rst-confirm" placeholder="Repite la contraseña" required autocomplete="new-password">
         </div>
-        <div id="rst-err" class="alert-err" style="display:none;"></div>
         <button type="submit" class="btn-login" id="rst-btn">
           Guardar contraseña <span class="material-icons-round">lock_reset</span>
         </button>
       </form>
+      <div id="rst-err" class="alert-err" hidden style="margin-top:10px;"></div>
       <div style="text-align:center;margin-top:16px;">
         <a href="/reparo/index.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
           ← Volver al inicio de sesión
