@@ -188,17 +188,49 @@ $iniciales = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) 
     </div>
 
     <!-- Historial de pagos -->
-    <div class="ec-card">
+    <div class="ec-card" id="card-pagos">
       <div class="ec-card-hdr">
         <span class="material-icons-round">receipt_long</span>
         Historial de pagos
-        <?php if (!empty($pagos)): ?>
-        <span class="adm-badge adm-badge-info" style="margin-left:auto;"><?= count($pagos) ?></span>
-        <?php endif; ?>
+        <span class="adm-badge adm-badge-info" id="badge-pagos-count" style="margin-left:6px;"><?= count($pagos) ?></span>
+        <button class="adm-btn adm-btn-ghost" id="btn-abrir-pago" style="margin-left:auto;padding:5px 12px;font-size:12px;">
+          <span class="material-icons-round">add</span>Registrar pago
+        </button>
       </div>
-      <div class="ec-card-body" style="padding:0 20px;">
+      <!-- Formulario inline de nuevo pago (oculto por defecto) -->
+      <div id="form-pago" hidden style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--bg3);">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="fg" style="margin:0;">
+            <label>Descripción</label>
+            <input id="pago-desc" type="text" placeholder="Ej: Pago mensual Plan Pro">
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Monto ($)</label>
+            <input id="pago-monto" type="number" min="1" placeholder="0">
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Estado</label>
+            <select id="pago-estado">
+              <option value="Pagado">Pagado</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Anulado">Anulado</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0;">
+            <label>Fecha</label>
+            <input id="pago-fecha" type="date" value="<?= date('Y-m-d') ?>">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="adm-btn adm-btn-ghost" id="btn-cancelar-pago" style="padding:6px 12px;font-size:12px;">Cancelar</button>
+          <button class="adm-btn adm-btn-primary" id="btn-guardar-pago" data-id="<?= $id ?>" style="padding:6px 14px;font-size:12px;">
+            <span class="material-icons-round">save</span>Guardar pago
+          </button>
+        </div>
+      </div>
+      <div id="lista-pagos" style="padding:0 20px;">
         <?php if (empty($pagos)): ?>
-          <div style="padding:32px 0;text-align:center;color:var(--txt3);">
+          <div id="pagos-vacio" style="padding:32px 0;text-align:center;color:var(--txt3);">
             <span class="material-icons-round" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4;">receipt_long</span>
             Sin pagos registrados
           </div>
@@ -220,6 +252,27 @@ $iniciales = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) 
     </div>
 
   </div><!-- /ec-grid -->
+
+  <!-- Notas internas -->
+  <div class="ec-card" style="margin-bottom:16px;">
+    <div class="ec-card-hdr">
+      <span class="material-icons-round" style="color:#fbbf24;">sticky_note_2</span>
+      Notas internas
+      <span style="font-size:11px;color:var(--txt3);margin-left:6px;">Solo visibles para el super admin</span>
+      <span id="nota-saving" style="margin-left:auto;font-size:12px;color:var(--txt3);display:none;">Guardando…</span>
+      <span id="nota-saved"  style="margin-left:auto;font-size:12px;color:#4ade80;display:none;">✓ Guardado</span>
+    </div>
+    <div class="ec-card-body">
+      <textarea id="notas-internas" data-id="<?= $id ?>"
+        style="width:100%;min-height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+               padding:12px 14px;color:var(--txt);font-family:'Inter',sans-serif;font-size:13px;
+               resize:vertical;outline:none;transition:var(--tr);"
+        placeholder="Escribe aquí notas privadas sobre esta empresa: acuerdos, situaciones especiales, recordatorios..."
+        onfocus="this.style.borderColor='#fbbf24'"
+        onblur="this.style.borderColor=''"
+      ><?= htmlspecialchars($emp['notas_internas'] ?? '') ?></textarea>
+    </div>
+  </div>
 
   <!-- Usuarios -->
   <div class="ec-card">

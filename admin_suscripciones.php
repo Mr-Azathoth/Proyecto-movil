@@ -65,7 +65,18 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 <main class="adm-main">
-  <div class="adm-topbar"><h1 class="adm-title">Suscripciones</h1></div>
+  <div class="adm-topbar">
+    <h1 class="adm-title">Suscripciones</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="adm-btn adm-btn-ghost" id="btn-cron-dry" style="font-size:12px;padding:7px 12px;">
+        <span class="material-icons-round">preview</span>Vista previa
+      </button>
+      <button class="adm-btn adm-btn-primary" id="btn-cron-run" style="font-size:12px;padding:7px 14px;">
+        <span class="material-icons-round">send</span>Enviar notificaciones
+      </button>
+    </div>
+  </div>
+  <div id="cron-result" hidden style="margin-bottom:16px;"></div>
 
   <div class="adm-kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;">
     <div class="adm-kpi-card"><span class="material-icons-round" style="color:#4ade80;">check_circle</span><div><div class="adm-kpi-val"><?= $kpi['activos'] ?></div><div class="adm-kpi-lbl">Planes activos</div></div></div>
@@ -188,5 +199,6 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
   </div>
 </main>
 <script src="/reparo/assets/js/admin_common.js"></script>
+<script src="/reparo/assets/js/admin_suscripciones.js"></script>
 </body>
 </html>

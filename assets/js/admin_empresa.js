@@ -92,7 +92,99 @@ document.querySelectorAll('.btn-toggle-user').forEach(btn => {
   });
 });
 
-// Guardar plan
+// ── Notas internas (debounce 1.5s) ───────────────────────────
+const notaTA = document.getElementById('notas-internas');
+if (notaTA) {
+  let notaTimer;
+  notaTA.addEventListener('input', function () {
+    clearTimeout(notaTimer);
+    document.getElementById('nota-saved').style.display  = 'none';
+    document.getElementById('nota-saving').style.display = 'inline';
+    notaTimer = setTimeout(async () => {
+      const fd = new FormData();
+      fd.append('id_empresa', this.dataset.id);
+      fd.append('nota', this.value);
+      const r = await fetch('/reparo/api/admin/save_nota.php', { method: 'POST', body: fd });
+      const j = await r.json();
+      document.getElementById('nota-saving').style.display = 'none';
+      document.getElementById('nota-saved').style.display  = 'inline';
+      if (!j.ok) showToast('Error al guardar nota.', false);
+    }, 1500);
+  });
+}
+
+// ── Registro de pagos ─────────────────────────────────────────
+document.getElementById('btn-abrir-pago')?.addEventListener('click', () => {
+  document.getElementById('form-pago').removeAttribute('hidden');
+  document.getElementById('pago-desc').focus();
+});
+document.getElementById('btn-cancelar-pago')?.addEventListener('click', () => {
+  document.getElementById('form-pago').setAttribute('hidden', '');
+});
+document.getElementById('btn-guardar-pago')?.addEventListener('click', async function () {
+  const desc   = document.getElementById('pago-desc').value.trim();
+  const monto  = document.getElementById('pago-monto').value;
+  const estado = document.getElementById('pago-estado').value;
+  const fecha  = document.getElementById('pago-fecha').value;
+
+  if (!desc || !monto || parseFloat(monto) <= 0) {
+    showToast('Completa descripción y monto.', false); return;
+  }
+
+  const fd = new FormData();
+  fd.append('id_empresa',  this.dataset.id);
+  fd.append('descripcion', desc);
+  fd.append('monto',       monto);
+  fd.append('estado',      estado);
+  fd.append('fecha',       fecha);
+
+  const orig = this.innerHTML;
+  this.disabled = true;
+  this.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Guardando...';
+
+  const r = await fetch('/reparo/api/admin/add_pago.php', { method: 'POST', body: fd });
+  const j = await r.json();
+  this.innerHTML = orig;
+  this.disabled  = false;
+
+  if (j.ok) {
+    const p = j.data;
+    const badgeClass = p.estado === 'Pagado' ? 'adm-badge-ok' : 'adm-badge-warn';
+    const fmtFecha   = new Date(p.fecha + 'T12:00:00').toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const fmtMonto   = '$' + Number(p.monto).toLocaleString('es-CL');
+
+    const row = document.createElement('div');
+    row.className = 'pago-row';
+    row.innerHTML = `
+      <div>
+        <div class="pago-desc">${p.descripcion}</div>
+        <div class="pago-fecha">${fmtFecha}</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="pago-monto">${fmtMonto}</div>
+        <span class="adm-badge ${badgeClass}" style="margin-top:4px;display:inline-block;">${p.estado}</span>
+      </div>`;
+
+    const lista = document.getElementById('lista-pagos');
+    const vacio = document.getElementById('pagos-vacio');
+    if (vacio) vacio.remove();
+    lista.prepend(row);
+
+    // Actualizar contador
+    const badge = document.getElementById('badge-pagos-count');
+    badge.textContent = parseInt(badge.textContent || '0') + 1;
+
+    // Limpiar y cerrar form
+    document.getElementById('pago-desc').value  = '';
+    document.getElementById('pago-monto').value = '';
+    document.getElementById('form-pago').setAttribute('hidden', '');
+    showToast(`Pago de ${fmtMonto} registrado.`);
+  } else {
+    showToast(j.msg || 'Error al guardar.', false);
+  }
+});
+
+// ── Guardar plan ──────────────────────────────────────────────
 document.getElementById('btn-save-plan')?.addEventListener('click', async function () {
   const fd = new FormData();
   fd.append('id_empresa',       this.dataset.id);
