@@ -22,7 +22,7 @@ if (recForm) {
       const j = await r.json();
       if (j.ok) {
         document.getElementById('rec-form-wrap').style.display = 'none';
-        document.getElementById('rec-ok').style.display = 'block';
+        document.getElementById('rec-ok').removeAttribute('hidden');
       } else {
         err.textContent = j.msg || 'Error al procesar la solicitud.';
         err.removeAttribute('hidden');

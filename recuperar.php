@@ -39,7 +39,7 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
       <div id="rec-err" class="alert-err" hidden style="margin-top:12px;"></div>
     </div>
 
-    <div id="rec-ok" style="display:none;text-align:center;padding:12px 0;">
+    <div id="rec-ok" hidden style="text-align:center;padding:12px 0;">
       <span class="material-icons-round" style="font-size:48px;color:#4ade80;">mark_email_read</span>
       <p style="margin:12px 0 4px;font-size:16px;font-weight:600;color:var(--txt);">Revisa tu correo</p>
       <p style="font-size:13px;color:var(--txt2);line-height:1.5;">
