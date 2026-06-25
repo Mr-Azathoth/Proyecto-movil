@@ -4,6 +4,7 @@ require_once __DIR__ . '/../../includes/admin_config.php';
 header('Content-Type: application/json; charset=utf-8');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }
 sadmin_guard();
+sadmin_csrf_check();
 
 $id   = (int)($_POST['id_empresa'] ?? 0);
 $nota = trim($_POST['nota'] ?? '');

@@ -32,20 +32,12 @@ $pagos = $pagos->fetchAll();
 
 $planOk = $emp['plan_estado'] === 'Activo' && ($emp['plan_vencimiento'] === null || $emp['plan_vencimiento'] >= date('Y-m-d'));
 
-// Iniciales para avatar de empresa
-$palabras = preg_split('/\s+/', trim($emp['nombre']));
-$iniciales = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) ? mb_substr($palabras[1], 0, 1) : ''));
+$iniciales = sadmin_iniciales($emp['nombre']);
 ?>
+<?php $pageTitle = 'Reparo Admin — ' . htmlspecialchars($emp['nombre']); ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reparo Admin — <?= htmlspecialchars($emp['nombre']) ?></title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
-<link rel="stylesheet" href="/reparo/assets/css/admin.css">
-</head>
+<?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 

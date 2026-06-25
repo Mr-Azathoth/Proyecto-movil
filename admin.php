@@ -4,18 +4,22 @@ require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
 $db = getDB();
 
-$kpi = $db->query("
+// 3 queries en lugar de 7 subconsultas correlacionadas
+$kpi_emp = $db->query("
     SELECT
-        (SELECT COUNT(*) FROM empresas WHERE activa = 1)                                     AS empresas_activas,
-        (SELECT COUNT(*) FROM empresas WHERE activa = 0)                                     AS empresas_inactivas,
-        (SELECT COUNT(*) FROM usuarios WHERE activo = 1)                                     AS usuarios_totales,
-        (SELECT COUNT(*) FROM reparaciones)                                                   AS servicios_totales,
-        (SELECT COUNT(*) FROM reparaciones WHERE DATE(fecha_ingreso) = CURDATE())             AS servicios_hoy,
-        (SELECT COUNT(*) FROM empresas WHERE activa = 1
-            AND plan_estado = 'Activo' AND (plan_vencimiento IS NULL OR plan_vencimiento >= CURDATE())) AS con_plan_activo,
-        (SELECT COUNT(*) FROM empresas WHERE activa = 1
-            AND (plan_estado != 'Activo' OR (plan_vencimiento IS NOT NULL AND plan_vencimiento < CURDATE()))) AS sin_plan_activo
-")->fetch();
+        SUM(activa = 1) AS empresas_activas,
+        SUM(activa = 0) AS empresas_inactivas,
+        SUM(activa = 1 AND plan_estado = 'Activo' AND (plan_vencimiento IS NULL OR plan_vencimiento >= CURDATE())) AS con_plan_activo,
+        SUM(activa = 1 AND (plan_estado != 'Activo' OR (plan_vencimiento IS NOT NULL AND plan_vencimiento < CURDATE()))) AS sin_plan_activo
+    FROM empresas
+")->fetch(PDO::FETCH_ASSOC);
+$kpi_usr = (int)$db->query("SELECT COUNT(*) FROM usuarios WHERE activo = 1")->fetchColumn();
+$kpi_rep = $db->query("SELECT COUNT(*) AS total, COALESCE(SUM(DATE(fecha_ingreso) = CURDATE()), 0) AS hoy FROM reparaciones")->fetch(PDO::FETCH_ASSOC);
+$kpi = array_merge($kpi_emp, [
+    'usuarios_totales'  => $kpi_usr,
+    'servicios_totales' => (int)($kpi_rep['total'] ?? 0),
+    'servicios_hoy'     => (int)($kpi_rep['hoy'] ?? 0),
+]);
 
 $nuevas = $db->query("SELECT id_empresa, nombre, correo, activa, creada_en FROM empresas ORDER BY creada_en DESC LIMIT 6")->fetchAll();
 
@@ -28,14 +32,8 @@ $actividad = $db->query("
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo Admin</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
-<link rel="stylesheet" href="/reparo/assets/css/admin.css">
-</head>
+<?php $pageTitle = 'Reparo Admin'; ?>
+<?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 
@@ -88,8 +86,7 @@ $actividad = $db->query("
         <thead><tr><th>Empresa</th><th>Estado</th><th>Registro</th></tr></thead>
         <tbody>
           <?php foreach ($nuevas as $e):
-            $palabras = preg_split('/\s+/', trim($e['nombre']));
-            $ini = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) ? mb_substr($palabras[1], 0, 1) : ''));
+            $ini = sadmin_iniciales($e['nombre']);
           ?>
           <tr data-href="/reparo/admin_empresa.php?id=<?= $e['id_empresa'] ?>">
             <td>

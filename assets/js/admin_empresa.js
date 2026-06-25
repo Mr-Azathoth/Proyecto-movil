@@ -1,4 +1,5 @@
 // Detalle de empresa — acciones
+// Requiere sadminFetch() y sadminCsrf definidos en admin_common.js (cargado primero)
 
 function showToast(msg, ok = true) {
   const t = document.getElementById('toast');
@@ -18,7 +19,7 @@ document.getElementById('btn-toggle-empresa')?.addEventListener('click', async f
 
   const fd = new FormData();
   fd.append('id_empresa', this.dataset.id);
-  const r = await fetch('/reparo/api/admin/toggle_empresa.php', { method: 'POST', body: fd });
+  const r = await sadminFetch('/reparo/api/admin/toggle_empresa.php', fd);
   const j = await r.json();
 
   if (j.ok) {
@@ -39,14 +40,15 @@ document.getElementById('btn-toggle-empresa')?.addEventListener('click', async f
 // Reset contraseña de usuario
 document.querySelectorAll('.btn-reset-pass').forEach(btn => {
   btn.addEventListener('click', async function () {
-    if (!confirm(`¿Enviar enlace de restablecimiento a ${this.dataset.nombre}?`)) return;
+    const correo = this.dataset.correo || '(correo de la empresa)';
+    if (!confirm(`¿Enviar enlace de restablecimiento a ${this.dataset.nombre}?\nSe enviará a: ${correo}`)) return;
     const orig = this.innerHTML;
     this.disabled = true;
     this.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Enviando...';
 
     const fd = new FormData();
     fd.append('id_usuario', this.dataset.id);
-    const r = await fetch('/reparo/api/admin/send_reset.php', { method: 'POST', body: fd });
+    const r = await sadminFetch('/reparo/api/admin/send_reset.php', fd);
     const j = await r.json();
 
     this.innerHTML = orig;
@@ -63,13 +65,12 @@ document.querySelectorAll('.btn-toggle-user').forEach(btn => {
 
     const fd = new FormData();
     fd.append('id_usuario', this.dataset.id);
-    const r = await fetch('/reparo/api/admin/toggle_usuario.php', { method: 'POST', body: fd });
+    const r = await sadminFetch('/reparo/api/admin/toggle_usuario.php', fd);
     const j = await r.json();
 
     if (j.ok) {
       const nuevo = j.data.activo;
       const id = this.dataset.id;
-      this.dataset.activo = nuevo ? '1' : '0';
 
       if (nuevo) {
         this.className = 'adm-btn-xs adm-btn-xs-danger btn-toggle-user';
@@ -104,7 +105,7 @@ if (notaTA) {
       const fd = new FormData();
       fd.append('id_empresa', this.dataset.id);
       fd.append('nota', this.value);
-      const r = await fetch('/reparo/api/admin/save_nota.php', { method: 'POST', body: fd });
+      const r = await sadminFetch('/reparo/api/admin/save_nota.php', fd);
       const j = await r.json();
       document.getElementById('nota-saving').style.display = 'none';
       document.getElementById('nota-saved').style.display  = 'inline';
@@ -142,7 +143,7 @@ document.getElementById('btn-guardar-pago')?.addEventListener('click', async fun
   this.disabled = true;
   this.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Guardando...';
 
-  const r = await fetch('/reparo/api/admin/add_pago.php', { method: 'POST', body: fd });
+  const r = await sadminFetch('/reparo/api/admin/add_pago.php', fd);
   const j = await r.json();
   this.innerHTML = orig;
   this.disabled  = false;
@@ -170,11 +171,9 @@ document.getElementById('btn-guardar-pago')?.addEventListener('click', async fun
     if (vacio) vacio.remove();
     lista.prepend(row);
 
-    // Actualizar contador
     const badge = document.getElementById('badge-pagos-count');
     badge.textContent = parseInt(badge.textContent || '0') + 1;
 
-    // Limpiar y cerrar form
     document.getElementById('pago-desc').value  = '';
     document.getElementById('pago-monto').value = '';
     document.getElementById('form-pago').setAttribute('hidden', '');
@@ -196,7 +195,7 @@ document.getElementById('btn-save-plan')?.addEventListener('click', async functi
   this.disabled = true;
   this.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Guardando...';
 
-  const r = await fetch('/reparo/api/admin/update_plan.php', { method: 'POST', body: fd });
+  const r = await sadminFetch('/reparo/api/admin/update_plan.php', fd);
   const j = await r.json();
 
   this.disabled = false;

@@ -7,12 +7,11 @@ $db = getDB();
 $empresas = $db->query("
     SELECT e.id_empresa, e.nombre, e.correo, e.activa, e.creada_en,
            e.plan_tipo, e.plan_estado, e.plan_vencimiento,
-           COUNT(DISTINCT u.id_usuario) AS num_usuarios,
-           COUNT(DISTINCT r.id_ingreso) AS num_servicios
+           COALESCE(u.num_usuarios, 0) AS num_usuarios,
+           COALESCE(r.num_servicios, 0) AS num_servicios
     FROM empresas e
-    LEFT JOIN usuarios u ON u.id_empresa = e.id_empresa AND u.activo = 1
-    LEFT JOIN reparaciones r ON r.id_empresa = e.id_empresa
-    GROUP BY e.id_empresa
+    LEFT JOIN (SELECT id_empresa, COUNT(*) AS num_usuarios FROM usuarios WHERE activo = 1 GROUP BY id_empresa) u ON u.id_empresa = e.id_empresa
+    LEFT JOIN (SELECT id_empresa, COUNT(*) AS num_servicios FROM reparaciones GROUP BY id_empresa) r ON r.id_empresa = e.id_empresa
     ORDER BY e.creada_en DESC
 ")->fetchAll();
 
@@ -20,14 +19,8 @@ $hoy = date('Y-m-d');
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo Admin — Clientes</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
-<link rel="stylesheet" href="/reparo/assets/css/admin.css">
-</head>
+<?php $pageTitle = 'Reparo Admin — Clientes'; ?>
+<?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 <main class="adm-main">
@@ -60,8 +53,7 @@ $hoy = date('Y-m-d');
       </thead>
       <tbody>
         <?php foreach ($empresas as $e):
-          $palabras = preg_split('/\s+/', trim($e['nombre']));
-          $ini = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) ? mb_substr($palabras[1], 0, 1) : ''));
+          $ini = sadmin_iniciales($e['nombre']);
           $planOk = $e['plan_estado'] === 'Activo' && ($e['plan_vencimiento'] === null || $e['plan_vencimiento'] >= $hoy);
         ?>
         <tr data-href="/reparo/admin_empresa.php?id=<?= $e['id_empresa'] ?>"

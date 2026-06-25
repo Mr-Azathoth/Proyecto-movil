@@ -1,4 +1,5 @@
 // Botones de notificaciones de vencimiento
+// Requiere sadminFetch() definido en admin_common.js (cargado primero)
 
 async function runCron(dry) {
   const btnDry = document.getElementById('btn-cron-dry');
@@ -12,7 +13,7 @@ async function runCron(dry) {
 
   const fd = new FormData();
   if (dry) fd.append('dry_run', '1');
-  const r = await fetch('/reparo/api/admin/run_cron.php', { method: 'POST', body: fd });
+  const r = await sadminFetch('/reparo/api/admin/run_cron.php', fd);
   const j = await r.json();
 
   btnDry.disabled = btnRun.disabled = false;

@@ -3,36 +3,34 @@ require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
 $db = getDB();
-$hoy = date('Y-m-d');
 
-// KPIs de planes
+// KPIs de planes — query separado para evitar duplicar filas por LEFT JOIN con historial_pagos
 $kpi = $db->query("
     SELECT
-        SUM(plan_estado = 'Activo' AND (plan_vencimiento IS NULL OR plan_vencimiento >= '$hoy')) AS activos,
-        SUM(plan_vencimiento IS NOT NULL AND plan_vencimiento < '$hoy')                          AS vencidos,
-        SUM(plan_estado = 'Gratis')                                                              AS gratis,
-        SUM(plan_vencimiento BETWEEN '$hoy' AND DATE_ADD('$hoy', INTERVAL 7 DAY))               AS vencen_7d,
-        SUM(hp.monto) AS ingresos_total
-    FROM empresas e
-    LEFT JOIN historial_pagos hp ON hp.id_empresa = e.id_empresa
-")->fetch();
+        SUM(plan_estado = 'Activo' AND (plan_vencimiento IS NULL OR plan_vencimiento >= CURDATE())) AS activos,
+        SUM(plan_vencimiento IS NOT NULL AND plan_vencimiento < CURDATE())                           AS vencidos,
+        SUM(plan_estado = 'Gratis')                                                                  AS gratis,
+        SUM(plan_vencimiento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY))              AS vencen_7d
+    FROM empresas
+")->fetch(PDO::FETCH_ASSOC);
+$kpi['ingresos_total'] = (float)$db->query("SELECT COALESCE(SUM(monto), 0) FROM historial_pagos")->fetchColumn();
 
 // Por vencer próximos 30 días
 $proximos = $db->query("
     SELECT e.id_empresa, e.nombre, e.plan_tipo, e.plan_vencimiento,
-           DATEDIFF(e.plan_vencimiento, '$hoy') AS dias_restantes
+           DATEDIFF(e.plan_vencimiento, CURDATE()) AS dias_restantes
     FROM empresas e
     WHERE e.activa = 1 AND e.plan_vencimiento IS NOT NULL
-      AND e.plan_vencimiento BETWEEN '$hoy' AND DATE_ADD('$hoy', INTERVAL 30 DAY)
+      AND e.plan_vencimiento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
     ORDER BY e.plan_vencimiento ASC
 ")->fetchAll();
 
 // Vencidos / morosos
 $morosos = $db->query("
     SELECT e.id_empresa, e.nombre, e.plan_tipo, e.plan_estado, e.plan_vencimiento,
-           DATEDIFF('$hoy', e.plan_vencimiento) AS dias_vencido
+           DATEDIFF(CURDATE(), e.plan_vencimiento) AS dias_vencido
     FROM empresas e
-    WHERE e.activa = 1 AND e.plan_vencimiento IS NOT NULL AND e.plan_vencimiento < '$hoy'
+    WHERE e.activa = 1 AND e.plan_vencimiento IS NOT NULL AND e.plan_vencimiento < CURDATE()
     ORDER BY dias_vencido DESC
 ")->fetchAll();
 
@@ -51,17 +49,10 @@ $dist = $db->query("
     GROUP BY plan_tipo ORDER BY total DESC
 ")->fetchAll();
 $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
-?>
+<?php $pageTitle = 'Reparo Admin — Suscripciones'; ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo Admin — Suscripciones</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
-<link rel="stylesheet" href="/reparo/assets/css/admin.css">
-</head>
+<?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 <main class="adm-main">
@@ -83,7 +74,7 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
     <div class="adm-kpi-card <?= $kpi['vencidos'] > 0 ? 'adm-kpi-warn' : '' ?>"><span class="material-icons-round" style="color:#f87171;">warning</span><div><div class="adm-kpi-val"><?= $kpi['vencidos'] ?></div><div class="adm-kpi-lbl">Vencidos</div></div></div>
     <div class="adm-kpi-card <?= $kpi['vencen_7d'] > 0 ? 'adm-kpi-warn' : '' ?>"><span class="material-icons-round" style="color:#fbbf24;">schedule</span><div><div class="adm-kpi-val"><?= $kpi['vencen_7d'] ?></div><div class="adm-kpi-lbl">Vencen en 7 días</div></div></div>
     <div class="adm-kpi-card"><span class="material-icons-round" style="color:#a78bfa;">volunteer_activism</span><div><div class="adm-kpi-val"><?= $kpi['gratis'] ?></div><div class="adm-kpi-lbl">Plan gratuito</div></div></div>
-    <div class="adm-kpi-card"><span class="material-icons-round" style="color:#34d399;">payments</span><div><div class="adm-kpi-val">$<?= number_format($kpi['ingresos_total'] ?? 0, 0, ',', '.') ?></div><div class="adm-kpi-lbl">Ingresos totales</div></div></div>
+    <div class="adm-kpi-card"><span class="material-icons-round" style="color:#34d399;">payments</span><div><div class="adm-kpi-val">$<?= number_format($kpi['ingresos_total'], 0, ',', '.') ?></div><div class="adm-kpi-lbl">Ingresos totales</div></div></div>
   </div>
 
   <div class="adm-two-col" style="margin-bottom:16px;">
@@ -121,14 +112,11 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
       <table class="adm-table">
         <thead><tr><th>Empresa</th><th>Plan</th><th>Vence</th><th>Días</th></tr></thead>
         <tbody>
-          <?php foreach ($proximos as $p):
-            $palabras2 = preg_split('/\s+/', trim($p['nombre']));
-            $ini2 = mb_strtoupper(mb_substr($palabras2[0], 0, 1) . (isset($palabras2[1]) ? mb_substr($palabras2[1], 0, 1) : ''));
-          ?>
+          <?php foreach ($proximos as $p): ?>
           <tr data-href="/reparo/admin_empresa.php?id=<?= $p['id_empresa'] ?>">
             <td>
               <div class="tbl-name-cell">
-                <div class="tbl-avatar"><?= $ini2 ?></div>
+                <div class="tbl-avatar"><?= sadmin_iniciales($p['nombre']) ?></div>
                 <span class="tbl-name-main"><?= htmlspecialchars($p['nombre']) ?></span>
               </div>
             </td>
@@ -154,14 +142,11 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
     <table class="adm-table">
       <thead><tr><th>Empresa</th><th>Plan</th><th>Venció</th><th>Días vencido</th></tr></thead>
       <tbody>
-        <?php foreach ($morosos as $m):
-          $palabras = preg_split('/\s+/', trim($m['nombre']));
-          $ini = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) ? mb_substr($palabras[1], 0, 1) : ''));
-        ?>
+        <?php foreach ($morosos as $m): ?>
         <tr data-href="/reparo/admin_empresa.php?id=<?= $m['id_empresa'] ?>">
           <td>
             <div class="tbl-name-cell">
-              <div class="tbl-avatar" style="background:linear-gradient(135deg,#dc2626,#f87171);"><?= $ini ?></div>
+              <div class="tbl-avatar" style="background:linear-gradient(135deg,#dc2626,#f87171);"><?= sadmin_iniciales($m['nombre']) ?></div>
               <div class="tbl-name-main"><?= htmlspecialchars($m['nombre']) ?></div>
             </div>
           </td>

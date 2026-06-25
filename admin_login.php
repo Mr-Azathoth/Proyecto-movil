@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['sadmin_user']   = $row['user'];
             $_SESSION['sadmin_nombre'] = $row['nombre'];
             $_SESSION['sadmin_last']   = time();
+            $_SESSION['sadmin_csrf']   = bin2hex(random_bytes(32));
 
             $db->prepare("UPDATE super_admins SET ultimo_acceso = NOW() WHERE id = ?")->execute([$row['id']]);
             header('Location: /reparo/admin.php');
@@ -54,7 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
     </div>
 
-    <?php if ($err): ?>
+    <?php if (isset($_GET['timeout'])): ?>
+      <div class="alert-err">Tu sesión expiró por inactividad. Vuelve a iniciar sesión.</div>
+    <?php elseif ($err): ?>
       <div class="alert-err"><?= htmlspecialchars($err) ?></div>
     <?php endif; ?>
 

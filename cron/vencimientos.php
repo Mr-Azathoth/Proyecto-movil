@@ -6,34 +6,41 @@
  *   C:\xampp\php\php.exe C:\xampp\htdocs\reparo\cron\vencimientos.php
  *
  * También puede lanzarse desde el admin: admin_suscripciones.php → "Ejecutar ahora"
- * En ese caso se envía con ?dry_run=1 para previsualización.
+ * En ese caso se requiere desde api/admin/run_cron.php (CRON_CALL_INTERNAL).
  */
 
 define('CRON_CALL', true);
+// Bloquear acceso HTTP directo — solo CLI o invocación interna desde run_cron.php
+if (php_sapi_name() !== 'cli' && !defined('CRON_CALL_INTERNAL')) {
+    http_response_code(403);
+    exit;
+}
+
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/mailer.php';
 
-$dry_run = isset($_GET['dry_run']) || in_array('--dry-run', $argv ?? []);
-$db      = getDB();
-$hoy     = date('Y-m-d');
-$log     = [];
+$dry_run      = isset($_GET['dry_run']) || in_array('--dry-run', $argv ?? []);
+$db           = getDB();
+$hoy          = date('Y-m-d');
+$log          = [];
+$notif_ok_ids = [];
 
 // ── Buscar super admin email ──────────────────────────────────────
-$sadmin_email = $db->query("SELECT email, nombre FROM super_admins WHERE activo = 1 LIMIT 1")->fetch();
-$sadmin_to    = $sadmin_email['email'] ?? null;
+$sadmin_email  = $db->query("SELECT email, nombre FROM super_admins WHERE activo = 1 LIMIT 1")->fetch();
+$sadmin_to     = $sadmin_email['email'] ?? null;
 $sadmin_nombre = $sadmin_email['nombre'] ?? 'Administrador';
 
 // ── Empresas que vencen en 7 o 1 día (sin notificación enviada hoy) ──
 $pronto = $db->query("
     SELECT id_empresa, nombre, correo, plan_tipo, plan_vencimiento,
-           DATEDIFF(plan_vencimiento, '$hoy') AS dias_restantes,
+           DATEDIFF(plan_vencimiento, CURDATE()) AS dias_restantes,
            notif_vencimiento
     FROM empresas
     WHERE activa = 1
       AND plan_vencimiento IS NOT NULL
-      AND plan_vencimiento > '$hoy'
-      AND DATEDIFF(plan_vencimiento, '$hoy') IN (7, 1)
-      AND (notif_vencimiento IS NULL OR notif_vencimiento < '$hoy')
+      AND plan_vencimiento > CURDATE()
+      AND DATEDIFF(plan_vencimiento, CURDATE()) IN (7, 1)
+      AND (notif_vencimiento IS NULL OR notif_vencimiento < CURDATE())
 ")->fetchAll();
 
 // ── Empresas ya vencidas (plan_vencimiento = ayer, notif no enviada) ──
@@ -43,7 +50,7 @@ $vencidas = $db->query("
     FROM empresas
     WHERE activa = 1
       AND plan_vencimiento IS NOT NULL
-      AND plan_vencimiento < '$hoy'
+      AND plan_vencimiento < CURDATE()
       AND (notif_vencimiento IS NULL OR notif_vencimiento < plan_vencimiento)
 ")->fetchAll();
 
@@ -75,10 +82,7 @@ foreach ($pronto as $e) {
     if (!$dry_run && $e['correo']) {
         $ok = send_email($e['correo'], $e['nombre'], "Tu plan vence {$label} — Reparo", $html);
         $log[array_key_last($log)]['enviado'] = $ok;
-        if ($ok) {
-            $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id_empresa = ?")
-               ->execute([$hoy, $e['id_empresa']]);
-        }
+        if ($ok) $notif_ok_ids[] = $e['id_empresa'];
     }
 }
 
@@ -105,15 +109,19 @@ foreach ($vencidas as $e) {
     if (!$dry_run && $e['correo']) {
         $ok = send_email($e['correo'], $e['nombre'], 'Tu plan ha vencido — Reparo', $html);
         $log[array_key_last($log)]['enviado'] = $ok;
-        if ($ok) {
-            $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id_empresa = ?")
-               ->execute([$hoy, $e['id_empresa']]);
-        }
+        if ($ok) $notif_ok_ids[] = $e['id_empresa'];
     }
 }
 
+// ── Batch UPDATE notif_vencimiento (un solo query en lugar de N) ──
+if ($notif_ok_ids) {
+    $ph = implode(',', array_fill(0, count($notif_ok_ids), '?'));
+    $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id_empresa IN ($ph)")
+       ->execute(array_merge([$hoy], $notif_ok_ids));
+}
+
 // ── Email resumen al super admin ─────────────────────────────────
-$total_pronto  = count($pronto);
+$total_pronto   = count($pronto);
 $total_vencidas = count($vencidas);
 
 if ($sadmin_to && ($total_pronto > 0 || $total_vencidas > 0)) {
@@ -172,13 +180,10 @@ if ($sadmin_to && ($total_pronto > 0 || $total_vencidas > 0)) {
 
 // ── Respuesta ────────────────────────────────────────────────────
 if (php_sapi_name() === 'cli') {
-    echo ($dry_run ? '[DRY RUN] ' : '') . "Procesadas: " . count($pronto) . " por vencer, " . count($vencidas) . " vencidas.\n";
+    echo ($dry_run ? '[DRY RUN] ' : '') . "Procesadas: {$total_pronto} por vencer, {$total_vencidas} vencidas.\n";
     foreach ($log as $l) {
         $icon = $l['enviado'] ? '✓' : ($dry_run ? '~' : '✗');
         echo "  $icon [{$l['tipo']}] {$l['empresa']} → {$l['correo']}\n";
     }
-} else {
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['ok' => true, 'dry_run' => $dry_run, 'log' => $log,
-        'pronto' => $total_pronto, 'vencidas' => $total_vencidas]);
 }
+// Si CRON_CALL_INTERNAL: $log, $total_pronto, $total_vencidas quedan disponibles en el scope de run_cron.php

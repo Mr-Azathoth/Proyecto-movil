@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../includes/mailer.php';
 header('Content-Type: application/json; charset=utf-8');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }
 sadmin_guard();
+sadmin_csrf_check();
 
 $id_usuario = (int)($_POST['id_usuario'] ?? 0);
 if (!$id_usuario) sadmin_json_err('Datos incompletos.');

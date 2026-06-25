@@ -38,14 +38,8 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo Admin — Actividad</title>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
-<link rel="stylesheet" href="/reparo/assets/css/admin.css">
-</head>
+<?php $pageTitle = 'Reparo Admin — Actividad'; ?>
+<?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 <main class="adm-main">
@@ -107,14 +101,23 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
     </table>
   </div>
 
-  <!-- Paginación -->
-  <?php if ($paginas > 1): ?>
+  <!-- Paginación con ventana (evita renderizar cientos de links) -->
+  <?php if ($paginas > 1):
+    $base_pg = '?empresa=' . $filtro_empresa . '&accion=' . urlencode($filtro_accion);
+    $shown = [];
+    for ($i = 1; $i <= $paginas; $i++) {
+        if ($i === 1 || $i === $paginas || abs($i - $pagina) <= 2) $shown[] = $i;
+    }
+  ?>
   <div style="display:flex;gap:6px;margin-top:14px;align-items:center;flex-wrap:wrap;">
-    <?php for ($i = 1; $i <= $paginas; $i++): ?>
-    <a href="?empresa=<?= $filtro_empresa ?>&accion=<?= urlencode($filtro_accion) ?>&p=<?= $i ?>"
-       class="adm-btn <?= $i === $pagina ? 'adm-btn-primary' : 'adm-btn-ghost' ?>"
-       style="padding:5px 10px;min-width:36px;justify-content:center;"><?= $i ?></a>
-    <?php endfor; ?>
+    <?php $prev_pg = null; foreach ($shown as $pg): ?>
+      <?php if ($prev_pg !== null && $pg - $prev_pg > 1): ?>
+        <span style="color:var(--txt3);padding:0 6px;">…</span>
+      <?php endif; ?>
+      <a href="<?= $base_pg ?>&p=<?= $pg ?>"
+         class="adm-btn <?= $pg === $pagina ? 'adm-btn-primary' : 'adm-btn-ghost' ?>"
+         style="padding:5px 10px;min-width:36px;justify-content:center;"><?= $pg ?></a>
+    <?php $prev_pg = $pg; endforeach; ?>
   </div>
   <?php endif; ?>
 
