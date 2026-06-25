@@ -36,6 +36,7 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
           Enviar enlace <span class="material-icons-round">send</span>
         </button>
       </form>
+      <div id="rec-err" class="alert-err" style="display:none;margin-top:12px;"></div>
     </div>
 
     <div id="rec-ok" style="display:none;text-align:center;padding:12px 0;">
@@ -47,8 +48,6 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
       </p>
     </div>
 
-    <div id="rec-err" class="alert-err" style="display:none;margin-top:12px;"></div>
-
     <div style="text-align:center;margin-top:20px;">
       <a href="/reparo/index.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
         ← Volver al inicio de sesión
@@ -56,39 +55,6 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
     </div>
   </div>
 </div>
-<script>
-document.getElementById('rec-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn  = document.getElementById('rec-btn');
-  const err  = document.getElementById('rec-err');
-  const user = document.getElementById('rec-user').value.trim();
-  if (!user) return;
-
-  btn.disabled = true;
-  btn.textContent = 'Enviando...';
-  err.style.display = 'none';
-
-  try {
-    const fd = new FormData();
-    fd.append('user', user);
-    const r = await fetch('/reparo/api/recuperar_password.php', { method: 'POST', body: fd });
-    const j = await r.json();
-    if (j.ok) {
-      document.getElementById('rec-form-wrap').style.display = 'none';
-      document.getElementById('rec-ok').style.display = 'block';
-    } else {
-      err.textContent = j.msg || 'Error al procesar la solicitud.';
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.innerHTML = 'Enviar enlace <span class="material-icons-round">send</span>';
-    }
-  } catch {
-    err.textContent = 'Error de red. Verifica tu conexión.';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = 'Enviar enlace <span class="material-icons-round">send</span>';
-  }
-});
-</script>
+<script src="/reparo/assets/js/recuperar.js"></script>
 </body>
 </html>

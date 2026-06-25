@@ -5,11 +5,10 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
 $token = trim($_GET['token'] ?? '');
 if (!$token) { header('Location: /reparo/index.php'); exit; }
 
-// Verificar que el token existe y no expiró
 $db  = getDB();
 $st  = $db->prepare(
-    "SELECT pr.id FROM password_resets pr
-     WHERE pr.token = ? AND pr.used = 0 AND pr.expires_at > NOW() LIMIT 1"
+    "SELECT id FROM password_resets
+     WHERE token = ? AND used = 0 AND expires_at > NOW() LIMIT 1"
 );
 $st->execute([$token]);
 $valid = (bool) $st->fetch();
@@ -47,7 +46,7 @@ $valid = (bool) $st->fetch();
         <p style="font-size:14px;color:var(--txt2);margin:0 0 20px;">
           Elige una nueva contraseña para tu cuenta.
         </p>
-        <form id="rst-form">
+        <form id="rst-form" novalidate>
           <input type="hidden" id="rst-token" value="<?= htmlspecialchars($token, ENT_QUOTES) ?>">
           <div class="fg">
             <label>Nueva contraseña</label>
@@ -57,11 +56,11 @@ $valid = (bool) $st->fetch();
             <label>Confirmar contraseña</label>
             <input type="password" id="rst-confirm" placeholder="Repite la contraseña" required autocomplete="new-password">
           </div>
-          <button type="submit" class="btn-login" id="rst-btn">
+          <div id="rst-err" class="alert-err" style="display:none;margin-top:4px;"></div>
+          <button type="submit" class="btn-login" id="rst-btn" style="margin-top:12px;">
             Guardar contraseña <span class="material-icons-round">lock_reset</span>
           </button>
         </form>
-        <div id="rst-err" class="alert-err" style="display:none;margin-top:12px;"></div>
       </div>
 
       <div id="rst-ok" style="display:none;text-align:center;padding:12px 0;">
@@ -75,55 +74,6 @@ $valid = (bool) $st->fetch();
     <?php endif; ?>
   </div>
 </div>
-<?php if ($valid): ?>
-<script>
-document.getElementById('rst-form').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const btn     = document.getElementById('rst-btn');
-  const err     = document.getElementById('rst-err');
-  const token   = document.getElementById('rst-token').value;
-  const pass    = document.getElementById('rst-pass').value;
-  const confirm = document.getElementById('rst-confirm').value;
-
-  err.style.display = 'none';
-  if (pass !== confirm) {
-    err.textContent = 'Las contraseñas no coinciden.';
-    err.style.display = 'block';
-    return;
-  }
-  if (pass.length < 6) {
-    err.textContent = 'La contraseña debe tener al menos 6 caracteres.';
-    err.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = 'Guardando...';
-
-  try {
-    const fd = new FormData();
-    fd.append('token', token);
-    fd.append('password', pass);
-    fd.append('confirm', confirm);
-    const r = await fetch('/reparo/api/reset_password.php', { method: 'POST', body: fd });
-    const j = await r.json();
-    if (j.ok) {
-      document.getElementById('rst-form-wrap').style.display = 'none';
-      document.getElementById('rst-ok').style.display = 'block';
-    } else {
-      err.textContent = j.msg || 'Error al actualizar la contraseña.';
-      err.style.display = 'block';
-      btn.disabled = false;
-      btn.innerHTML = 'Guardar contraseña <span class="material-icons-round">lock_reset</span>';
-    }
-  } catch {
-    err.textContent = 'Error de red.';
-    err.style.display = 'block';
-    btn.disabled = false;
-    btn.innerHTML = 'Guardar contraseña <span class="material-icons-round">lock_reset</span>';
-  }
-});
-</script>
-<?php endif; ?>
+<script src="/reparo/assets/js/recuperar.js"></script>
 </body>
 </html>
