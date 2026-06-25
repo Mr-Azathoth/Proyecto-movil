@@ -164,6 +164,10 @@ try {
           <span class="material-icons-round stat-ic" style="color:#94a3b8">assignment_turned_in</span>
           <div><div class="stat-val" id="st-entr">0</div><div class="stat-lbl">Entregados</div></div>
         </div>
+        <div class="stat-card" data-filter="Garantia">
+          <span class="material-icons-round stat-ic" style="color:#c084fc">verified_user</span>
+          <div><div class="stat-val" id="st-gar">0</div><div class="stat-lbl">Garantía</div></div>
+        </div>
       </div>
 
       <!-- Controles -->

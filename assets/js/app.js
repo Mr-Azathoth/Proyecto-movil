@@ -374,13 +374,14 @@ async function loadServicios() {
 }
 
 function updateStats(rows) {
-  const counts = { total:rows.length, Ingresado:0, 'En Reparacion':0, Reparado:0, Entregado:0 };
+  const counts = { total:rows.length, Ingresado:0, 'En Reparacion':0, Reparado:0, Entregado:0, Garantia:0 };
   rows.forEach(r => { if (counts[r.status]!==undefined) counts[r.status]++; });
   document.getElementById('st-total').textContent = counts.total;
   document.getElementById('st-ing').textContent   = counts['Ingresado'];
   document.getElementById('st-rep').textContent   = counts['En Reparacion'];
   document.getElementById('st-done').textContent  = counts['Reparado'];
   document.getElementById('st-entr').textContent  = counts['Entregado'];
+  document.getElementById('st-gar').textContent   = counts['Garantia'];
 }
 
 // Retorna link directo al chat de WhatsApp sin mensaje predefinido
