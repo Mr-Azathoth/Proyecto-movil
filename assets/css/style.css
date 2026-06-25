@@ -50,6 +50,8 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
   border-radius:var(--r); padding:10px 14px; font-size:13px; margin-bottom:16px; }
 .alert-warn  { background:rgba(251,146,60,0.12); border:1px solid rgba(251,146,60,0.3); color:#fb923c;
   border-radius:var(--r); padding:10px 14px; font-size:13px; margin-bottom:16px; }
+.alert-ok    { background:rgba(74,222,128,0.12); border:1px solid rgba(74,222,128,0.3); color:#4ade80;
+  border-radius:var(--r); padding:10px 14px; font-size:13px; margin-bottom:16px; }
 .fg          { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
 .fg label    { font-size:12px; font-weight:600; color:var(--txt2); text-transform:uppercase; letter-spacing:.04em; }
 .fg input, .fg select, .fg textarea {

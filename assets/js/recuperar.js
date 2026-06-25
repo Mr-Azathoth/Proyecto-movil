@@ -73,8 +73,7 @@ if (rstForm) {
       const r = await fetch('/reparo/api/reset_password.php', { method: 'POST', body: fd });
       const j = await r.json();
       if (j.ok) {
-        document.getElementById('rst-form-wrap').style.display = 'none';
-        document.getElementById('rst-ok').style.display = 'block';
+        window.location.href = '/reparo/index.php?reset=1';
       } else {
         err.textContent = j.msg || 'Error al actualizar la contraseña.';
         err.style.display = 'block';

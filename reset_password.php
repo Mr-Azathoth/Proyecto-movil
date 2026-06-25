@@ -42,33 +42,27 @@ $valid = (bool) $st->fetch();
         </a>
       </div>
     <?php else: ?>
-      <div id="rst-form-wrap">
-        <p style="font-size:14px;color:var(--txt2);margin:0 0 20px;">
-          Elige una nueva contraseña para tu cuenta.
-        </p>
-        <form id="rst-form" novalidate>
-          <input type="hidden" id="rst-token" value="<?= htmlspecialchars($token, ENT_QUOTES) ?>">
-          <div class="fg">
-            <label>Nueva contraseña</label>
-            <input type="password" id="rst-pass" placeholder="Mínimo 6 caracteres" required autofocus autocomplete="new-password">
-          </div>
-          <div class="fg">
-            <label>Confirmar contraseña</label>
-            <input type="password" id="rst-confirm" placeholder="Repite la contraseña" required autocomplete="new-password">
-          </div>
-          <div id="rst-err" class="alert-err" style="display:none;margin-top:4px;"></div>
-          <button type="submit" class="btn-login" id="rst-btn" style="margin-top:12px;">
-            Guardar contraseña <span class="material-icons-round">lock_reset</span>
-          </button>
-        </form>
-      </div>
-
-      <div id="rst-ok" style="display:none;text-align:center;padding:12px 0;">
-        <span class="material-icons-round" style="font-size:48px;color:#4ade80;">check_circle</span>
-        <p style="margin:12px 0 4px;font-size:16px;font-weight:600;color:var(--txt);">¡Contraseña actualizada!</p>
-        <p style="font-size:13px;color:var(--txt2);">Ya puedes iniciar sesión con tu nueva contraseña.</p>
-        <a href="/reparo/index.php" class="btn-login" style="display:inline-flex;margin-top:16px;text-decoration:none;">
-          Ir al inicio de sesión <span class="material-icons-round">arrow_forward</span>
+      <p style="font-size:14px;color:var(--txt2);margin:0 0 20px;">
+        Elige una nueva contraseña para tu cuenta.
+      </p>
+      <form id="rst-form" novalidate>
+        <input type="hidden" id="rst-token" value="<?= htmlspecialchars($token, ENT_QUOTES) ?>">
+        <div class="fg">
+          <label>Nueva contraseña</label>
+          <input type="password" id="rst-pass" placeholder="Mínimo 6 caracteres" required autofocus autocomplete="new-password">
+        </div>
+        <div class="fg">
+          <label>Confirmar contraseña</label>
+          <input type="password" id="rst-confirm" placeholder="Repite la contraseña" required autocomplete="new-password">
+        </div>
+        <div id="rst-err" class="alert-err" style="display:none;"></div>
+        <button type="submit" class="btn-login" id="rst-btn">
+          Guardar contraseña <span class="material-icons-round">lock_reset</span>
+        </button>
+      </form>
+      <div style="text-align:center;margin-top:16px;">
+        <a href="/reparo/index.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
+          ← Volver al inicio de sesión
         </a>
       </div>
     <?php endif; ?>
