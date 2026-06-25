@@ -168,6 +168,14 @@
 }
 .adm-activity-row:hover { background: var(--bg3); }
 
+/* Empresa detail grid */
+.adm-empresa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 1000px) { .adm-empresa-grid { grid-template-columns: 1fr; } }
+
 /* Page header for sub-pages */
 .adm-page-hdr {
   display: flex;

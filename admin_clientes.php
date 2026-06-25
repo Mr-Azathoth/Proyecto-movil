@@ -5,17 +5,15 @@ requireSuperAdmin();
 $db = getDB();
 
 $empresas = $db->query("
-    SELECT e.id_empresa, e.nombre, e.correo, e.activo, e.created_at,
+    SELECT e.id_empresa, e.nombre, e.correo, e.activa, e.creada_en,
+           e.plan_tipo, e.plan_estado, e.plan_vencimiento,
            COUNT(DISTINCT u.id_usuario) AS num_usuarios,
-           COUNT(DISTINCT r.id_reparacion) AS num_servicios,
-           (SELECT s.plan_tipo FROM suscripciones s
-            WHERE s.id_empresa = e.id_empresa AND s.estado = 'activa' AND s.fecha_fin >= CURDATE()
-            ORDER BY s.fecha_fin DESC LIMIT 1) AS plan_activo
+           COUNT(DISTINCT r.id_ingreso) AS num_servicios
     FROM empresas e
     LEFT JOIN usuarios u ON u.id_empresa = e.id_empresa AND u.activo = 1
     LEFT JOIN reparaciones r ON r.id_empresa = e.id_empresa
     GROUP BY e.id_empresa
-    ORDER BY e.created_at DESC
+    ORDER BY e.creada_en DESC
 ")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -49,9 +47,12 @@ $empresas = $db->query("
           <td style="color:var(--txt2);font-size:12px;"><?= htmlspecialchars($e['correo'] ?? '—') ?></td>
           <td style="text-align:center;"><?= $e['num_usuarios'] ?></td>
           <td style="text-align:center;"><?= number_format($e['num_servicios']) ?></td>
-          <td><?php if ($e['plan_activo']): ?><span class="adm-badge adm-badge-purple"><?= htmlspecialchars($e['plan_activo']) ?></span><?php else: ?><span class="adm-badge adm-badge-off">Sin plan</span><?php endif; ?></td>
-          <td><span class="adm-badge <?= $e['activo'] ? 'adm-badge-ok' : 'adm-badge-off' ?>"><?= $e['activo'] ? 'Activa' : 'Inactiva' ?></span></td>
-          <td style="color:var(--txt2);font-size:12px;"><?= date('d/m/Y', strtotime($e['created_at'])) ?></td>
+          <td><?php
+            $planOk = $e['plan_estado'] === 'Activo' && ($e['plan_vencimiento'] === null || $e['plan_vencimiento'] >= date('Y-m-d'));
+            if ($planOk): ?><span class="adm-badge adm-badge-purple"><?= htmlspecialchars($e['plan_tipo'] ?: 'Activo') ?></span><?php
+            else: ?><span class="adm-badge adm-badge-off">Sin plan</span><?php endif; ?></td>
+          <td><span class="adm-badge <?= $e['activa'] ? 'adm-badge-ok' : 'adm-badge-off' ?>"><?= $e['activa'] ? 'Activa' : 'Inactiva' ?></span></td>
+          <td style="color:var(--txt2);font-size:12px;"><?= date('d/m/Y', strtotime($e['creada_en'])) ?></td>
           <td><a href="/reparo/admin_empresa.php?id=<?= $e['id_empresa'] ?>" class="adm-btn adm-btn-ghost" style="padding:5px 10px;font-size:12px;"><span class="material-icons-round">open_in_new</span>Ver</a></td>
         </tr>
         <?php endforeach; ?>

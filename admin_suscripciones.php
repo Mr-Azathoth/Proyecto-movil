@@ -2,14 +2,169 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
+$db = getDB();
+$hoy = date('Y-m-d');
 
-?><!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Reparo Admin — Suscripciones</title>
+// KPIs de planes
+$kpi = $db->query("
+    SELECT
+        SUM(plan_estado = 'Activo' AND (plan_vencimiento IS NULL OR plan_vencimiento >= '$hoy')) AS activos,
+        SUM(plan_vencimiento IS NOT NULL AND plan_vencimiento < '$hoy')                          AS vencidos,
+        SUM(plan_estado = 'Gratis')                                                              AS gratis,
+        SUM(plan_vencimiento BETWEEN '$hoy' AND DATE_ADD('$hoy', INTERVAL 7 DAY))               AS vencen_7d,
+        SUM(hp.monto) AS ingresos_total
+    FROM empresas e
+    LEFT JOIN historial_pagos hp ON hp.id_empresa = e.id_empresa
+")->fetch();
+
+// Por vencer próximos 30 días
+$proximos = $db->query("
+    SELECT e.id_empresa, e.nombre, e.plan_tipo, e.plan_vencimiento,
+           DATEDIFF(e.plan_vencimiento, '$hoy') AS dias_restantes
+    FROM empresas e
+    WHERE e.activa = 1 AND e.plan_vencimiento IS NOT NULL
+      AND e.plan_vencimiento BETWEEN '$hoy' AND DATE_ADD('$hoy', INTERVAL 30 DAY)
+    ORDER BY e.plan_vencimiento ASC
+")->fetchAll();
+
+// Vencidos / morosos
+$morosos = $db->query("
+    SELECT e.id_empresa, e.nombre, e.plan_tipo, e.plan_estado, e.plan_vencimiento,
+           DATEDIFF('$hoy', e.plan_vencimiento) AS dias_vencido
+    FROM empresas e
+    WHERE e.activa = 1 AND e.plan_vencimiento IS NOT NULL AND e.plan_vencimiento < '$hoy'
+    ORDER BY dias_vencido DESC
+")->fetchAll();
+
+// Historial de pagos recientes (todos los tenants)
+$pagos = $db->query("
+    SELECT hp.fecha, hp.monto, hp.descripcion, hp.estado, e.nombre AS empresa
+    FROM historial_pagos hp
+    JOIN empresas e ON e.id_empresa = hp.id_empresa
+    ORDER BY hp.fecha DESC LIMIT 20
+")->fetchAll();
+
+// Distribución por tipo de plan
+$dist = $db->query("
+    SELECT plan_tipo, COUNT(*) AS total
+    FROM empresas WHERE activa = 1 AND plan_tipo IS NOT NULL AND plan_tipo != ''
+    GROUP BY plan_tipo ORDER BY total DESC
+")->fetchAll();
+$dist_total = array_sum(array_column($dist, 'total')) ?: 1;
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reparo Admin — Suscripciones</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css"><link rel="stylesheet" href="/reparo/assets/css/admin.css">
-</head><body class="admin-body"><?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
-<main class="adm-main"><div class="adm-topbar"><h1 class="adm-title">Suscripciones</h1></div>
-<div class="adm-panel" style="padding:48px;text-align:center;color:var(--txt2);">
-<span class="material-icons-round" style="font-size:44px;color:#7c3aed;">workspace_premium</span>
-<p style="margin-top:12px;font-size:14px;">Módulo en construcción — próximamente.</p>
-</div></main></body></html>
+<link rel="stylesheet" href="/reparo/assets/css/style.css">
+<link rel="stylesheet" href="/reparo/assets/css/admin.css">
+</head>
+<body class="admin-body">
+<?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
+<main class="adm-main">
+  <div class="adm-topbar"><h1 class="adm-title">Suscripciones</h1></div>
+
+  <div class="adm-kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;">
+    <div class="adm-kpi-card"><span class="material-icons-round" style="color:#4ade80;">check_circle</span><div><div class="adm-kpi-val"><?= $kpi['activos'] ?></div><div class="adm-kpi-lbl">Planes activos</div></div></div>
+    <div class="adm-kpi-card <?= $kpi['vencidos'] > 0 ? 'adm-kpi-warn' : '' ?>"><span class="material-icons-round" style="color:#f87171;">warning</span><div><div class="adm-kpi-val"><?= $kpi['vencidos'] ?></div><div class="adm-kpi-lbl">Vencidos</div></div></div>
+    <div class="adm-kpi-card <?= $kpi['vencen_7d'] > 0 ? 'adm-kpi-warn' : '' ?>"><span class="material-icons-round" style="color:#fbbf24;">schedule</span><div><div class="adm-kpi-val"><?= $kpi['vencen_7d'] ?></div><div class="adm-kpi-lbl">Vencen en 7 días</div></div></div>
+    <div class="adm-kpi-card"><span class="material-icons-round" style="color:#a78bfa;">volunteer_activism</span><div><div class="adm-kpi-val"><?= $kpi['gratis'] ?></div><div class="adm-kpi-lbl">Plan gratuito</div></div></div>
+    <div class="adm-kpi-card"><span class="material-icons-round" style="color:#34d399;">payments</span><div><div class="adm-kpi-val">$<?= number_format($kpi['ingresos_total'] ?? 0, 0, ',', '.') ?></div><div class="adm-kpi-lbl">Ingresos totales</div></div></div>
+  </div>
+
+  <div class="adm-two-col" style="margin-bottom:16px;">
+    <!-- Distribución por plan -->
+    <div class="adm-panel">
+      <div class="adm-panel-hdr">Distribución por plan</div>
+      <div style="padding:16px 18px;">
+        <?php if (empty($dist)): ?>
+          <div style="color:var(--txt2);font-size:13px;">Sin datos.</div>
+        <?php else: foreach ($dist as $d):
+          $pct = round($d['total'] / $dist_total * 100); ?>
+          <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+              <span><?= htmlspecialchars($d['plan_tipo']) ?></span>
+              <span style="color:var(--txt2);"><?= $d['total'] ?> (<?= $pct ?>%)</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:4px;height:6px;">
+              <div style="background:#7c3aed;width:<?= $pct ?>%;height:100%;border-radius:4px;"></div>
+            </div>
+          </div>
+        <?php endforeach; endif; ?>
+      </div>
+    </div>
+
+    <!-- Por vencer -->
+    <div class="adm-panel">
+      <div class="adm-panel-hdr">Vencen en 30 días <?php if ($proximos): ?><span class="adm-badge adm-badge-warn"><?= count($proximos) ?></span><?php endif; ?></div>
+      <?php if (empty($proximos)): ?>
+        <div style="padding:20px 18px;color:var(--txt2);font-size:13px;">Ninguno próximamente.</div>
+      <?php else: ?>
+      <table class="adm-table">
+        <thead><tr><th>Empresa</th><th>Plan</th><th>Vence</th><th>Días</th></tr></thead>
+        <tbody>
+          <?php foreach ($proximos as $p): ?>
+          <tr>
+            <td><a href="/reparo/admin_empresa.php?id=<?= $p['id_empresa'] ?>" style="color:var(--accent);text-decoration:none;"><?= htmlspecialchars($p['nombre']) ?></a></td>
+            <td><span class="adm-badge adm-badge-purple"><?= htmlspecialchars($p['plan_tipo']) ?></span></td>
+            <td style="font-size:12px;color:var(--txt2);"><?= date('d/m/Y', strtotime($p['plan_vencimiento'])) ?></td>
+            <td><span class="adm-badge <?= $p['dias_restantes'] <= 7 ? 'adm-badge-warn' : 'adm-badge-info' ?>"><?= $p['dias_restantes'] ?>d</span></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <!-- Morosos -->
+  <?php if ($morosos): ?>
+  <div class="adm-panel" style="margin-bottom:16px;border-color:rgba(248,113,113,0.3);">
+    <div class="adm-panel-hdr" style="color:#f87171;">
+      <span><span class="material-icons-round" style="font-size:16px;vertical-align:middle;">warning</span> Planes vencidos (<?= count($morosos) ?>)</span>
+    </div>
+    <table class="adm-table">
+      <thead><tr><th>Empresa</th><th>Plan</th><th>Venció</th><th>Días vencido</th><th></th></tr></thead>
+      <tbody>
+        <?php foreach ($morosos as $m): ?>
+        <tr>
+          <td style="font-weight:600;"><?= htmlspecialchars($m['nombre']) ?></td>
+          <td><?= htmlspecialchars($m['plan_tipo'] ?: '—') ?></td>
+          <td style="color:#f87171;font-size:12px;"><?= date('d/m/Y', strtotime($m['plan_vencimiento'])) ?></td>
+          <td><span class="adm-badge adm-badge-off"><?= $m['dias_vencido'] ?>d</span></td>
+          <td><a href="/reparo/admin_empresa.php?id=<?= $m['id_empresa'] ?>" class="adm-btn adm-btn-ghost" style="padding:4px 10px;font-size:12px;"><span class="material-icons-round">edit</span>Gestionar</a></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <?php endif; ?>
+
+  <!-- Historial de pagos -->
+  <div class="adm-panel">
+    <div class="adm-panel-hdr">Historial de pagos recientes</div>
+    <?php if (empty($pagos)): ?>
+      <div style="padding:24px 18px;color:var(--txt2);font-size:13px;">Sin pagos registrados.</div>
+    <?php else: ?>
+    <table class="adm-table">
+      <thead><tr><th>Empresa</th><th>Descripción</th><th>Monto</th><th>Estado</th><th>Fecha</th></tr></thead>
+      <tbody>
+        <?php foreach ($pagos as $p): ?>
+        <tr>
+          <td style="font-weight:600;"><?= htmlspecialchars($p['empresa']) ?></td>
+          <td style="font-size:13px;color:var(--txt2);"><?= htmlspecialchars($p['descripcion']) ?></td>
+          <td style="font-weight:700;">$<?= number_format($p['monto'], 0, ',', '.') ?></td>
+          <td><span class="adm-badge <?= $p['estado'] === 'Pagado' ? 'adm-badge-ok' : 'adm-badge-warn' ?>"><?= htmlspecialchars($p['estado']) ?></span></td>
+          <td style="font-size:12px;color:var(--txt2);"><?= date('d/m/Y', strtotime($p['fecha'])) ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+  </div>
+</main>
+</body>
+</html>

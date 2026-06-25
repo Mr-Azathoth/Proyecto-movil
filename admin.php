@@ -8,34 +8,26 @@ $db = getDB();
 // KPIs globales
 $kpi = $db->query("
     SELECT
-        (SELECT COUNT(*) FROM empresas WHERE activo = 1)                          AS empresas_activas,
-        (SELECT COUNT(*) FROM empresas WHERE activo = 0)                          AS empresas_inactivas,
-        (SELECT COUNT(*) FROM usuarios WHERE activo = 1)                          AS usuarios_totales,
-        (SELECT COUNT(*) FROM reparaciones)                                        AS servicios_totales,
-        (SELECT COUNT(*) FROM reparaciones WHERE DATE(fecha_ingreso) = CURDATE())  AS servicios_hoy,
-        (SELECT COUNT(*) FROM empresas
-            WHERE activo = 1
-            AND id_empresa IN (
-                SELECT id_empresa FROM suscripciones
-                WHERE estado = 'activa' AND fecha_fin >= CURDATE()
-            ))                                                                     AS con_plan_activo,
-        (SELECT COUNT(*) FROM empresas
-            WHERE activo = 1
-            AND id_empresa NOT IN (
-                SELECT id_empresa FROM suscripciones
-                WHERE estado = 'activa' AND fecha_fin >= CURDATE()
-            ))                                                                     AS sin_plan_activo
+        (SELECT COUNT(*) FROM empresas WHERE activa = 1)                                     AS empresas_activas,
+        (SELECT COUNT(*) FROM empresas WHERE activa = 0)                                     AS empresas_inactivas,
+        (SELECT COUNT(*) FROM usuarios WHERE activo = 1)                                     AS usuarios_totales,
+        (SELECT COUNT(*) FROM reparaciones)                                                   AS servicios_totales,
+        (SELECT COUNT(*) FROM reparaciones WHERE DATE(fecha_ingreso) = CURDATE())             AS servicios_hoy,
+        (SELECT COUNT(*) FROM empresas WHERE activa = 1
+            AND plan_estado = 'Activo' AND (plan_vencimiento IS NULL OR plan_vencimiento >= CURDATE())) AS con_plan_activo,
+        (SELECT COUNT(*) FROM empresas WHERE activa = 1
+            AND (plan_estado != 'Activo' OR (plan_vencimiento IS NOT NULL AND plan_vencimiento < CURDATE()))) AS sin_plan_activo
 ")->fetch();
 
 // Últimas 6 empresas registradas
-$nuevas = $db->query("SELECT id_empresa, nombre, correo, activo, created_at FROM empresas ORDER BY created_at DESC LIMIT 6")->fetchAll();
+$nuevas = $db->query("SELECT id_empresa, nombre, correo, activa, creada_en FROM empresas ORDER BY creada_en DESC LIMIT 6")->fetchAll();
 
-// Actividad reciente (últimas acciones de todos los tenants)
+// Actividad reciente
 $actividad = $db->query("
-    SELECT la.accion, la.usuario, la.ip, la.created_at, e.nombre AS empresa
+    SELECT la.accion, la.usuario, la.ip, la.fecha, e.nombre AS empresa
     FROM log_acciones la
     JOIN empresas e ON e.id_empresa = la.id_empresa
-    ORDER BY la.created_at DESC LIMIT 10
+    ORDER BY la.fecha DESC LIMIT 10
 ")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -121,11 +113,11 @@ $actividad = $db->query("
             <td><?= htmlspecialchars($e['nombre']) ?></td>
             <td style="color:var(--txt2);font-size:12px;"><?= htmlspecialchars($e['correo'] ?? '—') ?></td>
             <td>
-              <span class="adm-badge <?= $e['activo'] ? 'adm-badge-ok' : 'adm-badge-off' ?>">
-                <?= $e['activo'] ? 'Activa' : 'Inactiva' ?>
+              <span class="adm-badge <?= $e['activa'] ? 'adm-badge-ok' : 'adm-badge-off' ?>">
+                <?= $e['activa'] ? 'Activa' : 'Inactiva' ?>
               </span>
             </td>
-            <td style="color:var(--txt2);font-size:12px;"><?= date('d/m/Y', strtotime($e['created_at'])) ?></td>
+            <td style="color:var(--txt2);font-size:12px;"><?= date('d/m/Y', strtotime($e['creada_en'])) ?></td>
           </tr>
           <?php endforeach; ?>
         </tbody>
@@ -147,7 +139,7 @@ $actividad = $db->query("
               <strong><?= htmlspecialchars($a['usuario'] ?? '—') ?></strong>
               — <?= htmlspecialchars($a['accion']) ?>
             </div>
-            <div style="font-size:11px;color:var(--txt2);"><?= htmlspecialchars($a['empresa']) ?> · <?= date('d/m H:i', strtotime($a['created_at'])) ?></div>
+            <div style="font-size:11px;color:var(--txt2);"><?= htmlspecialchars($a['empresa']) ?> · <?= date('d/m H:i', strtotime($a['fecha'])) ?></div>
           </div>
         </div>
         <?php endforeach; ?>
