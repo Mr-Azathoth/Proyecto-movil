@@ -172,14 +172,7 @@ try {
           <span class="material-icons-round search-ic">search</span>
           <input id="search-bar" type="text" class="search-input" placeholder="Buscar por cliente, modelo, # orden...">
         </div>
-        <select id="filter-status" class="filter-sel">
-          <option value="">Todos los estados</option>
-          <option value="Ingresado">Ingresado</option>
-          <option value="En Reparacion">En Reparación</option>
-          <option value="Reparado">Reparado</option>
-          <option value="Entregado">Entregado</option>
-          <option value="Garantia">Garantía</option>
-        </select>
+        <input type="hidden" id="filter-status" value="">
       </div>
 
       <!-- Tabla -->

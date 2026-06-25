@@ -1409,7 +1409,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('search-bar').addEventListener('input', debounce(loadServicios, 300));
-  document.getElementById('filter-status').addEventListener('change', loadServicios);
   document.getElementById('search-inv').addEventListener('input', debounce(loadInventario, 300));
 
   // Click en headers ordenables (# y Cliente)
