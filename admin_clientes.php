@@ -34,7 +34,6 @@ $hoy = date('Y-m-d');
 
   <div class="adm-topbar">
     <h1 class="adm-title">Clientes</h1>
-    <div style="font-size:13px;color:var(--txt2);"><?= count($empresas) ?> empresas registradas</div>
   </div>
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
@@ -42,9 +41,8 @@ $hoy = date('Y-m-d');
       <span class="material-icons-round" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--txt3);pointer-events:none;">search</span>
       <input type="text" id="srch" class="adm-search" style="padding-left:36px;max-width:100%;width:100%;" placeholder="Buscar empresa...">
     </div>
-    <div class="dblclick-hint">
-      <span class="material-icons-round">touch_app</span>
-      Doble clic para ver detalle
+    <div style="font-size:13px;color:var(--txt2);margin-left:auto;">
+      <?= count($empresas) ?> <?= count($empresas) === 1 ? 'empresa' : 'empresas' ?>
     </div>
   </div>
 

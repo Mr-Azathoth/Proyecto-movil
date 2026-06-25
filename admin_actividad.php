@@ -107,10 +107,6 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
     </table>
   </div>
 
-  <div style="padding:10px 18px;border-top:1px solid var(--border);" class="dblclick-hint">
-    <span class="material-icons-round">touch_app</span>Doble clic en una fila para ver el detalle de la empresa
-  </div>
-
   <!-- Paginación -->
   <?php if ($paginas > 1): ?>
   <div style="display:flex;gap:6px;margin-top:14px;align-items:center;flex-wrap:wrap;">

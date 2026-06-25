@@ -111,9 +111,6 @@ $actividad = $db->query("
           <?php endforeach; ?>
         </tbody>
       </table>
-      <div style="padding:10px 18px;border-top:1px solid var(--border);" class="dblclick-hint">
-        <span class="material-icons-round">touch_app</span>Doble clic para ver detalle
-      </div>
     </div>
 
     <!-- Actividad reciente -->
