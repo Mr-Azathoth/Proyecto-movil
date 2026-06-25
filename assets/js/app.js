@@ -283,6 +283,66 @@ async function apiFetch(url, options = {}) {
 // ═══════════════════════════════════════════════════════════
 // SERVICIOS
 // ═══════════════════════════════════════════════════════════
+function _buildServicioRow(rep) {
+  const pill = STATUS_COLORS[rep.status] || 'pill-gray';
+  const lbl  = STATUS_LABELS[rep.status] || rep.status;
+  const v    = rep.valor_ingreso > 0 ? `$${fmt(rep.valor_ingreso)}` : '—';
+  return `
+    <tr class="tbl-row" data-id="${rep.id_ingreso}">
+      <td class="id-col">#${rep.id_ingreso}</td>
+      <td>
+        <div class="cell-main">${esc(rep.nombre_cliente)}</div>
+        <div class="cell-sub">${esc(rep.telefono_cliente)}</div>
+      </td>
+      <td>
+        <div class="cell-main">${esc(rep.marca_ingreso)} ${esc(rep.modelo_ingreso)}</div>
+        <div class="cell-sub">${esc(rep.tipo_ingreso)}</div>
+      </td>
+      <td class="cell-sub">${esc(rep.daño_ingreso)}</td>
+      <td class="cell-val">${v}</td>
+      <td class="cell-sub">${esc(rep.ingresado_por)}</td>
+      <td class="cell-sub">${fmtDate(rep.fecha_ingreso)}</td>
+      <td><span class="pill ${pill}">${lbl}</span></td>
+      <td class="action-col">
+        <div class="row-actions">
+          <button type="button" class="btn-row-action btn-row-edit" title="Editar servicio">
+            <span class="material-icons-round">edit</span>
+          </button>
+          <button type="button" class="btn-row-action btn-row-print" data-orden="${rep.id_ingreso}" title="Imprimir orden de servicio técnico">
+            <span class="material-icons-round">print</span>
+          </button>
+          <a href="${waLink(rep)}" target="_blank" class="btn-row-action btn-row-wa" title="Abrir chat WhatsApp">
+            ${WA_SVG}
+          </a>
+          ${CURRENT_USER.role === 'Admin' ? `<button type="button" class="btn-row-action btn-row-delete" title="Eliminar servicio">
+            <span class="material-icons-round">delete</span>
+          </button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+}
+
+function _applySortServicios() {
+  const tbody = document.getElementById('tbl-servicios');
+  if (!_repMap.size) return;
+  let reps = Array.from(_repMap.values());
+  if (_sortCol) {
+    reps.sort((a, b) => {
+      const va = _sortCol === 'id' ? a.id_ingreso : (a.nombre_cliente || '').toLowerCase();
+      const vb = _sortCol === 'id' ? b.id_ingreso : (b.nombre_cliente || '').toLowerCase();
+      if (va < vb) return _sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return _sortDir === 'asc' ?  1 : -1;
+      return 0;
+    });
+  }
+  tbody.innerHTML = reps.map(_buildServicioRow).join('');
+  document.querySelectorAll('.th-sortable').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sort === _sortCol)
+      th.classList.add(_sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  });
+}
+
 async function loadServicios() {
   const q     = document.getElementById('search-bar').value;
   const st    = document.getElementById('filter-status').value;
@@ -305,42 +365,8 @@ async function loadServicios() {
     }
 
     _repMap.clear();
-    tbody.innerHTML = rows.map(rep => {
-      _repMap.set(rep.id_ingreso, rep);
-      const pill = STATUS_COLORS[rep.status] || 'pill-gray';
-      const lbl  = STATUS_LABELS[rep.status] || rep.status;
-      const v    = rep.valor_ingreso > 0 ? `$${fmt(rep.valor_ingreso)}` : '—';
-      return `
-        <tr class="tbl-row" data-id="${rep.id_ingreso}">
-          <td class="id-col">#${rep.id_ingreso}</td>
-          <td>
-            <div class="cell-main">${esc(rep.nombre_cliente)}</div>
-            <div class="cell-sub">${esc(rep.telefono_cliente)}</div>
-          </td>
-          <td>
-            <div class="cell-main">${esc(rep.marca_ingreso)} ${esc(rep.modelo_ingreso)}</div>
-            <div class="cell-sub">${esc(rep.tipo_ingreso)}</div>
-          </td>
-          <td class="cell-sub">${esc(rep.daño_ingreso)}</td>
-          <td class="cell-val">${v}</td>
-          <td class="cell-sub">${esc(rep.ingresado_por)}</td>
-          <td class="cell-sub">${fmtDate(rep.fecha_ingreso)}</td>
-          <td><span class="pill ${pill}">${lbl}</span></td>
-          <td class="action-col">
-            <div class="row-actions">
-              <button type="button" class="btn-row-action btn-row-edit" title="Editar servicio">
-                <span class="material-icons-round">edit</span>
-              </button>
-              <a href="${waLink(rep)}" target="_blank" class="btn-row-action btn-row-wa" title="Abrir chat WhatsApp">
-                ${WA_SVG}
-              </a>
-              ${CURRENT_USER.role === 'Admin' ? `<button type="button" class="btn-row-action btn-row-delete" title="Eliminar servicio">
-                <span class="material-icons-round">delete</span>
-              </button>` : ''}
-            </div>
-          </td>
-        </tr>`;
-    }).join('');
+    rows.forEach(rep => _repMap.set(rep.id_ingreso, rep));
+    _applySortServicios();
   } catch(e) {
     if (e.message !== 'session_expired')
       tbody.innerHTML = `<tr><td colspan="9" class="tbl-empty">Error de red. ¿Está XAMPP activo?</td></tr>`;
@@ -544,6 +570,7 @@ async function submitNuevo(e) {
       document.getElementById('nuevo-post-save').style.display = '';
       document.getElementById('form-nuevo').style.display       = 'none';
       document.getElementById('ps-num').textContent             = _lastNuevoId ? `#${_lastNuevoId}` : '';
+      // ps-boleta href ya no es necesario; el listener usa _lastNuevoId directamente
     } else { toast(j.msg, 'err'); }
   } catch(err) {
     if (err.message !== 'session_expired') toast('Error de red.', 'err');
@@ -582,6 +609,56 @@ async function submitActualizar(e) {
 // ═══════════════════════════════════════════════════════════
 // INVENTARIO
 // ═══════════════════════════════════════════════════════════
+function _buildInventarioRow(rep) {
+  const isAdmin    = CURRENT_USER.role === 'Admin';
+  const stockColor = rep.cantidad > 5 ? 'color:#4ade80' : rep.cantidad > 0 ? 'color:#fb923c' : 'color:#f87171';
+  const actions = `<td class="action-col">
+    <div class="row-actions">
+      ${isAdmin ? `<button type="button" class="btn-row-action btn-inv-edit" title="Editar repuesto">
+        <span class="material-icons-round">edit</span>
+      </button>` : ''}
+      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${parseInt(rep.cantidad)+1}" title="Aumentar">+</button>
+      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${Math.max(0,parseInt(rep.cantidad)-1)}" title="Disminuir">−</button>
+    </div>
+  </td>`;
+  return `<tr data-inv-id="${rep.id_repuesto}">
+    <td><strong>${esc(rep.nombre)}</strong></td>
+    <td>${esc(rep.marca_compatible||'—')}</td>
+    <td>${esc(rep.modelo_compatible||'—')}</td>
+    <td>$${fmt(rep.precio_venta)}</td>
+    <td><strong style="${stockColor}">${rep.cantidad} un.</strong></td>
+    ${actions}
+  </tr>`;
+}
+
+function _applySortInventario() {
+  const tbody = document.getElementById('tbl-inventario');
+  if (!_invMap.size) return;
+  let reps = Array.from(_invMap.values());
+  if (_invSortCol) {
+    reps.sort((a, b) => {
+      let va, vb;
+      switch (_invSortCol) {
+        case 'nombre': va = (a.nombre||'').toLowerCase(); vb = (b.nombre||'').toLowerCase(); break;
+        case 'marca':  va = (a.marca_compatible||'').toLowerCase(); vb = (b.marca_compatible||'').toLowerCase(); break;
+        case 'modelo': va = (a.modelo_compatible||'').toLowerCase(); vb = (b.modelo_compatible||'').toLowerCase(); break;
+        case 'precio': va = parseFloat(a.precio_venta)||0; vb = parseFloat(b.precio_venta)||0; break;
+        case 'stock':  va = parseInt(a.cantidad)||0; vb = parseInt(b.cantidad)||0; break;
+        default: va = vb = 0;
+      }
+      if (va < vb) return _invSortDir === 'asc' ? -1 : 1;
+      if (va > vb) return _invSortDir === 'asc' ?  1 : -1;
+      return 0;
+    });
+  }
+  tbody.innerHTML = reps.map(_buildInventarioRow).join('');
+  document.querySelectorAll('.th-sortable[data-sort-inv]').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.sortInv === _invSortCol)
+      th.classList.add(_invSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+  });
+}
+
 async function loadInventario() {
   const q     = document.getElementById('search-inv').value;
   const tbody = document.getElementById('tbl-inventario');
@@ -596,30 +673,9 @@ async function loadInventario() {
       tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Sin repuestos registrados.${addBtn}</td></tr>`;
       return;
     }
-    const isAdmin = CURRENT_USER.role === 'Admin';
     _invMap.clear();
-    tbody.innerHTML = j.data.map(rep => {
-      _invMap.set(rep.id_repuesto, rep);
-      const stockColor = rep.cantidad > 5 ? 'color:#4ade80' : rep.cantidad > 0 ? 'color:#fb923c' : 'color:#f87171';
-      const actions = `<td class="action-col">
-        <div class="row-actions">
-          <button type="button" class="btn-row-action btn-inv-edit" title="Editar repuesto">
-            <span class="material-icons-round">edit</span>
-          </button>
-          ${isAdmin ? `
-          <button class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${parseInt(rep.cantidad)+1}" title="Aumentar">+</button>
-          <button class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${Math.max(0,parseInt(rep.cantidad)-1)}" title="Disminuir">−</button>` : ''}
-        </div>
-      </td>`;
-      return `<tr data-inv-id="${rep.id_repuesto}">
-        <td><strong>${esc(rep.nombre)}</strong></td>
-        <td>${esc(rep.marca_compatible||'—')}</td>
-        <td>${esc(rep.modelo_compatible||'—')}</td>
-        <td>$${fmt(rep.precio_venta)}</td>
-        <td><strong style="${stockColor}">${rep.cantidad} un.</strong></td>
-        ${actions}
-      </tr>`;
-    }).join('');
+    j.data.forEach(rep => _invMap.set(rep.id_repuesto, rep));
+    _applySortInventario();
   } catch(e) {
     if (e.message !== 'session_expired')
       tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">Error de red.</td></tr>`;
@@ -803,6 +859,10 @@ let _marcasCache        = null;
 let _repuestosCache     = null; // cache de items inventario para selects de repuesto
 const _repMap           = new Map(); // id_ingreso → objeto rep completo
 const _invMap           = new Map(); // id_repuesto → objeto repuesto completo
+let   _sortCol          = null;      // columna activa servicios: 'id' | 'cliente' | null
+let   _sortDir          = 'asc';    // 'asc' | 'desc'
+let   _invSortCol       = null;      // columna activa inventario
+let   _invSortDir       = 'asc';
 let _selMarcaNuevo      = null;
 let _selModeloNuevo     = null;
 let _selRepNuevo        = null; // select repuesto en modal-nuevo
@@ -930,6 +990,31 @@ function _resetModalNuevo() {
   if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">save</span> Registrar ingreso'; }
 }
 
+// ── Split button ─────────────────────────────────────────────
+function _initSplitBtn(wrapId, mainId, arrowId, menuId) {
+  const wrap  = document.getElementById(wrapId);
+  const main  = document.getElementById(mainId);
+  const arrow = document.getElementById(arrowId);
+  const menu  = document.getElementById(menuId);
+  if (!wrap || !main || !arrow || !menu) return;
+
+  const toggleMenu = open => {
+    menu.classList.toggle('open', open);
+    const ic = arrow.querySelector('.material-icons-round');
+    if (ic) ic.textContent = open ? 'expand_less' : 'expand_more';
+  };
+
+  main.addEventListener('click', () => toggleMenu(!menu.classList.contains('open')));
+  arrow.addEventListener('click', e => { e.stopPropagation(); toggleMenu(!menu.classList.contains('open')); });
+
+  document.addEventListener('click', e => {
+    if (!wrap.contains(e.target)) toggleMenu(false);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') toggleMenu(false);
+  });
+}
+
 // ── Exportar ─────────────────────────────────────────────────
 async function openExportModal() {
   // Poblar select de repuestos si aún no tiene opciones
@@ -952,12 +1037,69 @@ async function openExportModal() {
     const hasta = document.getElementById('exp-f-hasta');
     if (hasta && !hasta.value) hasta.value = today;
   }
+  // Banda de vista actual
+  const q  = document.getElementById('search-bar').value;
+  const st = document.getElementById('filter-status').value;
+  const wrap = document.getElementById('exp-vista-wrap');
+  const info = document.getElementById('exp-vista-info');
+  if (wrap && info) {
+    const parts = [];
+    if (q)        parts.push(`"${q}"`);
+    if (st)       parts.push(st);
+    if (_sortCol) parts.push(`orden ${_sortCol === 'id' ? '#' : 'cliente'} ${_sortDir === 'asc' ? '↑' : '↓'}`);
+    if (parts.length) { info.textContent = parts.join(' · '); wrap.style.display = ''; }
+    else wrap.style.display = 'none';
+  }
   openModal('modal-exportar');
 }
 
+function openExportInvModal() {
+  const q    = document.getElementById('search-inv').value;
+  const info = document.getElementById('exp-inv-vista-info');
+  if (info) {
+    const parts = [];
+    if (q)           parts.push(`"${q}"`);
+    if (_invSortCol) parts.push(`orden ${_invSortCol} ${_invSortDir === 'asc' ? '↑' : '↓'}`);
+    info.textContent = parts.length ? parts.join(' · ') : 'Sin filtros';
+  }
+  openModal('modal-exportar-inv');
+}
+
+function doExportInv(formato) {
+  const params = new URLSearchParams();
+  params.set('formato', formato);
+  const q = document.getElementById('search-inv').value;
+  if (q) params.set('q', q);
+  if (_invSortCol) { params.set('sort_col', _invSortCol); params.set('sort_dir', _invSortDir); }
+  const url = `/reparo/api/exportar_inventario.php?${params.toString()}`;
+  closeModal('modal-exportar-inv');
+  if (formato === 'csv') {
+    window.open(url, '_blank');
+  } else {
+    const w = window.open(url, 'inv_export', 'width=900,height=700,scrollbars=yes,resizable=yes');
+    if (w) { w.focus(); setTimeout(() => w.print(), 800); }
+  }
+}
+
+// Construye params desde la VISTA ACTUAL (search-bar + filter-status + sort)
+function _buildViewParams(formato) {
+  const params = new URLSearchParams();
+  params.set('formato', formato);
+  const q  = document.getElementById('search-bar').value;
+  const st = document.getElementById('filter-status').value;
+  if (q)  params.set('q', q);
+  if (st) params.append('status[]', st);
+  if (_sortCol) { params.set('sort_col', _sortCol); params.set('sort_dir', _sortDir); }
+  return params;
+}
+
+// Construye params desde el MODAL de personalización
 function _buildExportParams(formato) {
   const params = new URLSearchParams();
   params.set('formato', formato);
+  const q = document.getElementById('search-bar').value;
+  if (q) params.set('q', q);
+  if (_sortCol) { params.set('sort_col', _sortCol); params.set('sort_dir', _sortDir); }
   const desde = document.getElementById('exp-f-desde').value;
   const hasta  = document.getElementById('exp-f-hasta').value;
   if (desde) params.set('f_desde', desde);
@@ -970,6 +1112,14 @@ function _buildExportParams(formato) {
   const idRep = document.getElementById('exp-repuesto').value;
   if (idRep) params.set('id_rep', idRep);
   return params;
+}
+
+function doExportView(formato) {
+  const params = _buildViewParams(formato);
+  const url    = `/reparo/api/exportar.php?${params.toString()}`;
+  if (formato === 'csv') { window.open(url, '_blank'); return; }
+  const w = window.open(url, 'serv_export', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+  if (w) { w.focus(); setTimeout(() => w.print(), 800); }
 }
 
 function doExport(formato) {
@@ -999,6 +1149,15 @@ function doExport(formato) {
     // Limpiar después de que el usuario cierre el diálogo
     iframe.contentWindow.addEventListener('afterprint', () => iframe.remove(), { once: true });
   };
+}
+
+// ─── Orden de servicio técnico (popup ventana) ────────────────
+function doOrden(id) {
+  if (!id) return;
+  const url = `/reparo/orden.php?id=${id}`;
+  const w = window.open(url, `orden_${id}`,
+    'width=600,height=720,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no');
+  if (w) w.focus();
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1148,10 +1307,46 @@ document.addEventListener('DOMContentLoaded', async () => {
     closeModal('modal-nuevo');
     _resetModalNuevo();
   });
-  document.getElementById('btn-exportar')?.addEventListener('click', openExportModal);
+  document.getElementById('ps-boleta')?.addEventListener('click', () => doOrden(_lastNuevoId));
+  document.getElementById('det-boleta-btn')?.addEventListener('click', () => {
+    const id = parseInt(document.getElementById('det-hidden-id').value);
+    doOrden(id);
+  });
+  // Split buttons — servicios
+  _initSplitBtn('split-exportar', 'btn-exportar-main', 'btn-exportar-arrow', 'split-exportar-menu');
+  // Split buttons — inventario
+  _initSplitBtn('split-exportar-inv', 'btn-exportar-inv-main', 'btn-exportar-inv-arrow', 'split-exportar-inv-menu');
+
+  // Acciones del dropdown de exportar (servicios e inventario)
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-split-action]');
+    if (!btn) return;
+    const action = btn.dataset.splitAction;
+    // cerrar todos los dropdowns abiertos
+    document.querySelectorAll('.split-dropdown.open').forEach(d => d.classList.remove('open'));
+    document.querySelectorAll('.split-arrow .material-icons-round').forEach(i => i.textContent = 'expand_more');
+    if      (action === 'exp-serv-csv')          doExportView('csv');
+    else if (action === 'exp-serv-pdf')          doExportView('pdf');
+    else if (action === 'exp-serv-personalizar') openExportModal();
+    else if (action === 'exp-inv-csv')           doExportInv('csv');
+    else if (action === 'exp-inv-pdf')           doExportInv('pdf');
+    else if (action === 'exp-inv-personalizar')  openExportInvModal();
+  });
+
   document.getElementById('btn-exp-csv')?.addEventListener('click', () => doExport('csv'));
   document.getElementById('btn-exp-pdf')?.addEventListener('click', () => doExport('pdf'));
   document.getElementById('btn-abrir-repuesto')?.addEventListener('click', () => openModal('modal-repuesto'));
+
+  // Click en headers ordenables del inventario
+  document.querySelector('#tbl-inventario').closest('table').querySelector('thead')
+    .addEventListener('click', e => {
+      const th = e.target.closest('.th-sortable[data-sort-inv]');
+      if (!th || !_invMap.size) return;
+      const col = th.dataset.sortInv;
+      if (_invSortCol === col) _invSortDir = _invSortDir === 'asc' ? 'desc' : 'asc';
+      else { _invSortCol = col; _invSortDir = 'asc'; }
+      _applySortInventario();
+    });
 
   document.querySelectorAll('.modal-close[data-modal], .btn-sec[data-modal]').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.modal));
@@ -1217,6 +1412,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('filter-status').addEventListener('change', loadServicios);
   document.getElementById('search-inv').addEventListener('input', debounce(loadInventario, 300));
 
+  // Click en headers ordenables (# y Cliente)
+  document.querySelector('#tbl-servicios').closest('table').querySelector('thead')
+    .addEventListener('click', e => {
+      const th = e.target.closest('.th-sortable[data-sort]');
+      if (!th || !_repMap.size) return;
+      const col = th.dataset.sort;
+      if (_sortCol === col) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
+      else { _sortCol = col; _sortDir = 'asc'; }
+      _applySortServicios();
+    });
+
   // Click simple: botón editar, eliminar y limpiar filtros (servicios)
   document.getElementById('tbl-servicios').addEventListener('click', e => {
     if (e.target.dataset.action === 'clear-filters') {
@@ -1231,6 +1437,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (row) { const rep = _repMap.get(parseInt(row.dataset.id)); if (rep) openDetalle(rep); }
       return;
     }
+    const printBtn = e.target.closest('.btn-row-print[data-orden]');
+    if (printBtn) { doOrden(parseInt(printBtn.dataset.orden)); return; }
     const delBtn = e.target.closest('.btn-row-delete');
     if (delBtn) {
       const row = delBtn.closest('.tbl-row[data-id]');

@@ -13,6 +13,17 @@ Options -Indexes
     RewriteRule ^includes/ - [F,L]
 </IfModule>
 
+# ── Bloquear archivos de semilla (solo uso local, nunca en prod) ─
+<FilesMatch "^seed_">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── Bloquear ejecución PHP en uploads (logos) ────────────────
+<IfModule mod_rewrite.c>
+    RewriteRule ^assets/uploads/.*\.php$ - [F,L]
+</IfModule>
+
 # ── Ocultar versión del servidor ─────────────────────────────
 ServerSignature Off
 

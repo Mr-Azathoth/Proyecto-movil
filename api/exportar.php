@@ -12,6 +12,7 @@ try {
 } catch (PDOException $e) {}
 
 $formato     = $_GET['formato']     ?? 'csv';
+$q           = trim($_GET['q']       ?? '');
 $fecha_desde = trim($_GET['f_desde'] ?? '');
 $fecha_hasta = trim($_GET['f_hasta'] ?? '');
 $valid_estados = ['Ingresado', 'En Reparacion', 'Reparado', 'Entregado', 'No tiene reparacion'];
@@ -22,6 +23,9 @@ $estados       = array_values(array_intersect(
 $precio_min  = isset($_GET['p_min']) && $_GET['p_min'] !== '' ? max(0, (int) $_GET['p_min']) : null;
 $precio_max  = isset($_GET['p_max']) && $_GET['p_max'] !== '' ? max(0, (int) $_GET['p_max']) : null;
 $id_repuesto = isset($_GET['id_rep']) && $_GET['id_rep'] !== '' ? (int) $_GET['id_rep'] : null;
+$valid_sort  = ['id' => 'r.id_ingreso', 'cliente' => 'r.nombre_cliente'];
+$sort_col    = $valid_sort[$_GET['sort_col'] ?? ''] ?? null;
+$sort_dir    = ($_GET['sort_dir'] ?? '') === 'desc' ? 'DESC' : 'ASC';
 
 $sql = "SELECT r.id_ingreso, r.fecha_ingreso, r.nombre_cliente, r.telefono_cliente,
                r.rut_cliente, r.tipo_ingreso, r.marca_ingreso, r.modelo_ingreso,
@@ -42,11 +46,17 @@ if (!empty($estados)) {
     $params = array_merge($params, $estados);
 }
 
+if ($q) {
+    $like     = '%' . $q . '%';
+    $sql     .= " AND (r.nombre_cliente LIKE ? OR r.marca_ingreso LIKE ? OR r.modelo_ingreso LIKE ? OR CAST(r.id_ingreso AS CHAR) LIKE ?)";
+    $params   = array_merge($params, [$like, $like, $like, $like]);
+}
 if ($precio_min !== null) { $sql .= " AND r.valor_ingreso >= ?"; $params[] = $precio_min; }
 if ($precio_max !== null) { $sql .= " AND r.valor_ingreso <= ?"; $params[] = $precio_max; }
 if ($id_repuesto)         { $sql .= " AND r.id_repuesto_usado = ?"; $params[] = $id_repuesto; }
 
-$sql .= " ORDER BY r.fecha_ingreso DESC";
+if ($sort_col) $sql .= " ORDER BY $sort_col $sort_dir";
+else           $sql .= " ORDER BY r.fecha_ingreso DESC";
 
 $s = $db->prepare($sql);
 $s->execute($params);
@@ -102,6 +112,7 @@ function hesc(string $s): string { return htmlspecialchars($s, ENT_QUOTES, 'UTF-
 function fmtNum(int $n): string  { return '$' . number_format($n, 0, ',', '.'); }
 
 $filtrosAplicados = [];
+if ($q)            $filtrosAplicados[] = 'Búsqueda: "' . $q . '"';
 if ($fecha_desde || $fecha_hasta) {
     $filtrosAplicados[] = 'Fechas: ' . ($fecha_desde ?: '…') . ' → ' . ($fecha_hasta ?: 'hoy');
 }
