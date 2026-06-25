@@ -2,10 +2,8 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
-
 $db = getDB();
 
-// KPIs globales
 $kpi = $db->query("
     SELECT
         (SELECT COUNT(*) FROM empresas WHERE activa = 1)                                     AS empresas_activas,
@@ -19,10 +17,8 @@ $kpi = $db->query("
             AND (plan_estado != 'Activo' OR (plan_vencimiento IS NOT NULL AND plan_vencimiento < CURDATE()))) AS sin_plan_activo
 ")->fetch();
 
-// Últimas 6 empresas registradas
 $nuevas = $db->query("SELECT id_empresa, nombre, correo, activa, creada_en FROM empresas ORDER BY creada_en DESC LIMIT 6")->fetchAll();
 
-// Actividad reciente
 $actividad = $db->query("
     SELECT la.accion, la.usuario, la.ip, la.fecha, e.nombre AS empresa
     FROM log_acciones la
@@ -33,8 +29,7 @@ $actividad = $db->query("
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Reparo Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
@@ -42,76 +37,70 @@ $actividad = $db->query("
 <link rel="stylesheet" href="/reparo/assets/css/admin.css">
 </head>
 <body class="admin-body">
-
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 
-<!-- Main -->
 <main class="adm-main">
   <div class="adm-topbar">
-    <h1 class="adm-title">Resumen general</h1>
-    <div style="font-size:13px;color:var(--txt2);"><?= date('d/m/Y') ?></div>
+    <div>
+      <h1 class="adm-title">Resumen general</h1>
+      <div style="font-size:13px;color:var(--txt2);margin-top:2px;"><?= date('l d \d\e F \d\e Y') ?></div>
+    </div>
   </div>
 
   <!-- KPI Cards -->
   <div class="adm-kpi-grid">
     <div class="adm-kpi-card">
       <span class="material-icons-round" style="color:#4ade80;">business</span>
-      <div>
-        <div class="adm-kpi-val"><?= $kpi['empresas_activas'] ?></div>
-        <div class="adm-kpi-lbl">Empresas activas</div>
-      </div>
+      <div><div class="adm-kpi-val"><?= $kpi['empresas_activas'] ?></div><div class="adm-kpi-lbl">Empresas activas</div></div>
     </div>
     <div class="adm-kpi-card">
       <span class="material-icons-round" style="color:#60a5fa;">people</span>
-      <div>
-        <div class="adm-kpi-val"><?= $kpi['usuarios_totales'] ?></div>
-        <div class="adm-kpi-lbl">Usuarios totales</div>
-      </div>
+      <div><div class="adm-kpi-val"><?= $kpi['usuarios_totales'] ?></div><div class="adm-kpi-lbl">Usuarios totales</div></div>
     </div>
     <div class="adm-kpi-card">
       <span class="material-icons-round" style="color:#f59e0b;">build</span>
-      <div>
-        <div class="adm-kpi-val"><?= number_format($kpi['servicios_totales']) ?></div>
-        <div class="adm-kpi-lbl">Servicios registrados</div>
-      </div>
+      <div><div class="adm-kpi-val"><?= number_format($kpi['servicios_totales']) ?></div><div class="adm-kpi-lbl">Servicios registrados</div></div>
     </div>
     <div class="adm-kpi-card">
-      <span class="material-icons-round" style="color:#a78bfa;">build_circle</span>
-      <div>
-        <div class="adm-kpi-val"><?= $kpi['servicios_hoy'] ?></div>
-        <div class="adm-kpi-lbl">Servicios hoy</div>
-      </div>
+      <span class="material-icons-round" style="color:#a78bfa;">today</span>
+      <div><div class="adm-kpi-val"><?= $kpi['servicios_hoy'] ?></div><div class="adm-kpi-lbl">Servicios hoy</div></div>
     </div>
     <div class="adm-kpi-card">
       <span class="material-icons-round" style="color:#34d399;">workspace_premium</span>
-      <div>
-        <div class="adm-kpi-val"><?= $kpi['con_plan_activo'] ?></div>
-        <div class="adm-kpi-lbl">Con plan activo</div>
-      </div>
+      <div><div class="adm-kpi-val"><?= $kpi['con_plan_activo'] ?></div><div class="adm-kpi-lbl">Con plan activo</div></div>
     </div>
     <div class="adm-kpi-card <?= $kpi['sin_plan_activo'] > 0 ? 'adm-kpi-warn' : '' ?>">
       <span class="material-icons-round" style="color:#f87171;">warning</span>
-      <div>
-        <div class="adm-kpi-val"><?= $kpi['sin_plan_activo'] ?></div>
-        <div class="adm-kpi-lbl">Sin plan activo</div>
-      </div>
+      <div><div class="adm-kpi-val"><?= $kpi['sin_plan_activo'] ?></div><div class="adm-kpi-lbl">Sin plan activo</div></div>
     </div>
   </div>
 
   <div class="adm-two-col">
+
     <!-- Últimas empresas -->
-    <div class="adm-panel">
-      <div class="adm-panel-hdr">
-        <span>Últimas empresas registradas</span>
-        <a href="/reparo/admin_clientes.php" style="font-size:12px;color:var(--accent);text-decoration:none;">Ver todas →</a>
+    <div class="ec-card">
+      <div class="ec-card-hdr">
+        <span class="material-icons-round">business</span>
+        Últimas empresas registradas
+        <a href="/reparo/admin_clientes.php" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;font-weight:400;">Ver todas →</a>
       </div>
-      <table class="adm-table">
-        <thead><tr><th>Empresa</th><th>Correo</th><th>Estado</th><th>Registro</th></tr></thead>
+      <table class="adm-table" id="tbl">
+        <thead><tr><th>Empresa</th><th>Estado</th><th>Registro</th></tr></thead>
         <tbody>
-          <?php foreach ($nuevas as $e): ?>
-          <tr>
-            <td><?= htmlspecialchars($e['nombre']) ?></td>
-            <td style="color:var(--txt2);font-size:12px;"><?= htmlspecialchars($e['correo'] ?? '—') ?></td>
+          <?php foreach ($nuevas as $e):
+            $palabras = preg_split('/\s+/', trim($e['nombre']));
+            $ini = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) ? mb_substr($palabras[1], 0, 1) : ''));
+          ?>
+          <tr data-href="/reparo/admin_empresa.php?id=<?= $e['id_empresa'] ?>">
+            <td>
+              <div class="tbl-name-cell">
+                <div class="tbl-avatar"><?= $ini ?></div>
+                <div>
+                  <div class="tbl-name-main"><?= htmlspecialchars($e['nombre']) ?></div>
+                  <div class="tbl-name-sub"><?= htmlspecialchars($e['correo'] ?? '—') ?></div>
+                </div>
+              </div>
+            </td>
             <td>
               <span class="adm-badge <?= $e['activa'] ? 'adm-badge-ok' : 'adm-badge-off' ?>">
                 <?= $e['activa'] ? 'Activa' : 'Inactiva' ?>
@@ -122,34 +111,40 @@ $actividad = $db->query("
           <?php endforeach; ?>
         </tbody>
       </table>
+      <div style="padding:10px 18px;border-top:1px solid var(--border);" class="dblclick-hint">
+        <span class="material-icons-round">touch_app</span>Doble clic para ver detalle
+      </div>
     </div>
 
     <!-- Actividad reciente -->
-    <div class="adm-panel">
-      <div class="adm-panel-hdr">
-        <span>Actividad reciente</span>
-        <a href="/reparo/admin_actividad.php" style="font-size:12px;color:var(--accent);text-decoration:none;">Ver todo →</a>
+    <div class="ec-card">
+      <div class="ec-card-hdr">
+        <span class="material-icons-round">history</span>
+        Actividad reciente
+        <a href="/reparo/admin_actividad.php" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;font-weight:400;">Ver todo →</a>
       </div>
-      <div class="adm-activity-list">
-        <?php foreach ($actividad as $a): ?>
+      <div style="padding:4px 0;">
+        <?php if (empty($actividad)): ?>
+          <div style="padding:32px;text-align:center;color:var(--txt3);">Sin actividad registrada aún.</div>
+        <?php else: foreach ($actividad as $a): ?>
         <div class="adm-activity-row">
-          <span class="material-icons-round" style="font-size:16px;color:var(--txt3);">radio_button_checked</span>
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;margin-top:5px;"></div>
           <div style="flex:1;min-width:0;">
             <div style="font-size:13px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               <strong><?= htmlspecialchars($a['usuario'] ?? '—') ?></strong>
-              — <?= htmlspecialchars($a['accion']) ?>
+              <span style="color:var(--txt2);"> — <?= htmlspecialchars($a['accion']) ?></span>
             </div>
-            <div style="font-size:11px;color:var(--txt2);"><?= htmlspecialchars($a['empresa']) ?> · <?= date('d/m H:i', strtotime($a['fecha'])) ?></div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:2px;">
+              <?= htmlspecialchars($a['empresa']) ?> · <?= date('d/m H:i', strtotime($a['fecha'])) ?>
+            </div>
           </div>
         </div>
-        <?php endforeach; ?>
-        <?php if (empty($actividad)): ?>
-          <div style="color:var(--txt2);font-size:13px;padding:12px 0;">Sin actividad registrada aún.</div>
-        <?php endif; ?>
+        <?php endforeach; endif; ?>
       </div>
     </div>
+
   </div>
 </main>
-
+<script src="/reparo/assets/js/admin_common.js"></script>
 </body>
 </html>

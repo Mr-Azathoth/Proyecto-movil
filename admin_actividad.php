@@ -71,8 +71,8 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
     <?php endif; ?>
   </form>
 
-  <div class="adm-panel">
-    <table class="adm-table">
+  <div class="ec-card">
+    <table class="adm-table" id="tbl">
       <thead>
         <tr>
           <th>Fecha</th>
@@ -85,9 +85,15 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
       </thead>
       <tbody>
         <?php foreach ($logs as $l): ?>
-        <tr>
+        <tr data-href="/reparo/admin_empresa.php?id=<?= $l['id_empresa'] ?>">
           <td style="font-size:12px;color:var(--txt2);white-space:nowrap;"><?= date('d/m/Y H:i', strtotime($l['fecha'])) ?></td>
-          <td><a href="/reparo/admin_empresa.php?id=<?= $l['id_empresa'] ?>" style="color:var(--accent);text-decoration:none;font-size:13px;"><?= htmlspecialchars($l['empresa']) ?></a></td>
+          <td>
+            <div class="tbl-name-cell">
+              <?php $ini2 = mb_strtoupper(mb_substr($l['empresa'], 0, 1)); ?>
+              <div class="tbl-avatar" style="width:28px;height:28px;font-size:10px;border-radius:6px;"><?= $ini2 ?></div>
+              <span style="font-size:13px;"><?= htmlspecialchars($l['empresa']) ?></span>
+            </div>
+          </td>
           <td style="font-size:13px;font-weight:600;"><?= htmlspecialchars($l['usuario'] ?? '—') ?></td>
           <td style="font-size:13px;"><?= htmlspecialchars($l['accion']) ?></td>
           <td style="font-size:12px;color:var(--txt2);"><?= $l['id_reparacion'] ? '#'.$l['id_reparacion'] : '—' ?></td>
@@ -99,6 +105,10 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
         <?php endif; ?>
       </tbody>
     </table>
+  </div>
+
+  <div style="padding:10px 18px;border-top:1px solid var(--border);" class="dblclick-hint">
+    <span class="material-icons-round">touch_app</span>Doble clic en una fila para ver el detalle de la empresa
   </div>
 
   <!-- Paginación -->
@@ -113,5 +123,6 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
   <?php endif; ?>
 
 </main>
+<script src="/reparo/assets/js/admin_common.js"></script>
 </body>
 </html>

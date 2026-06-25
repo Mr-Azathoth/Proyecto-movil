@@ -363,3 +363,30 @@
 .adm-btn-danger { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
 .adm-btn-danger:hover { background: rgba(248,113,113,0.2); }
 .adm-btn .material-icons-round { font-size: 16px; }
+
+/* Filas clicables (doble clic) */
+tr[data-href] { cursor: pointer; }
+tr[data-href]:hover td { background: rgba(124,58,237,0.06); }
+
+/* Empresa avatar en tabla */
+.tbl-avatar {
+  width: 32px; height: 32px;
+  border-radius: var(--r);
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800; color: #fff;
+  flex-shrink: 0;
+}
+.tbl-name-cell { display: flex; align-items: center; gap: 10px; }
+.tbl-name-main { font-weight: 600; font-size: 13px; color: var(--txt); }
+.tbl-name-sub  { font-size: 11px; color: var(--txt2); margin-top: 1px; }
+
+/* Panel header con icono (upgrade de adm-panel-hdr) */
+.adm-panel-hdr .material-icons-round { font-size: 18px; color: var(--txt2); }
+
+/* Hint doble clic */
+.dblclick-hint {
+  font-size: 11px; color: var(--txt3);
+  display: flex; align-items: center; gap: 4px;
+}
+.dblclick-hint .material-icons-round { font-size: 14px; }

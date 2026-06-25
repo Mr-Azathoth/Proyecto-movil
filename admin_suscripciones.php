@@ -77,11 +77,11 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
 
   <div class="adm-two-col" style="margin-bottom:16px;">
     <!-- Distribución por plan -->
-    <div class="adm-panel">
-      <div class="adm-panel-hdr">Distribución por plan</div>
+    <div class="ec-card">
+      <div class="ec-card-hdr"><span class="material-icons-round">pie_chart</span>Distribución por plan</div>
       <div style="padding:16px 18px;">
         <?php if (empty($dist)): ?>
-          <div style="color:var(--txt2);font-size:13px;">Sin datos.</div>
+          <div style="padding:24px 0;color:var(--txt3);font-size:13px;text-align:center;">Sin datos.</div>
         <?php else: foreach ($dist as $d):
           $pct = round($d['total'] / $dist_total * 100); ?>
           <div style="margin-bottom:12px;">
@@ -98,17 +98,29 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
     </div>
 
     <!-- Por vencer -->
-    <div class="adm-panel">
-      <div class="adm-panel-hdr">Vencen en 30 días <?php if ($proximos): ?><span class="adm-badge adm-badge-warn"><?= count($proximos) ?></span><?php endif; ?></div>
+    <div class="ec-card">
+      <div class="ec-card-hdr">
+        <span class="material-icons-round">schedule</span>
+        Vencen en 30 días
+        <?php if ($proximos): ?><span class="adm-badge adm-badge-warn" style="margin-left:4px;"><?= count($proximos) ?></span><?php endif; ?>
+      </div>
       <?php if (empty($proximos)): ?>
-        <div style="padding:20px 18px;color:var(--txt2);font-size:13px;">Ninguno próximamente.</div>
+        <div style="padding:24px;text-align:center;color:var(--txt3);font-size:13px;">Ninguno próximamente.</div>
       <?php else: ?>
       <table class="adm-table">
         <thead><tr><th>Empresa</th><th>Plan</th><th>Vence</th><th>Días</th></tr></thead>
         <tbody>
-          <?php foreach ($proximos as $p): ?>
-          <tr>
-            <td><a href="/reparo/admin_empresa.php?id=<?= $p['id_empresa'] ?>" style="color:var(--accent);text-decoration:none;"><?= htmlspecialchars($p['nombre']) ?></a></td>
+          <?php foreach ($proximos as $p):
+            $palabras2 = preg_split('/\s+/', trim($p['nombre']));
+            $ini2 = mb_strtoupper(mb_substr($palabras2[0], 0, 1) . (isset($palabras2[1]) ? mb_substr($palabras2[1], 0, 1) : ''));
+          ?>
+          <tr data-href="/reparo/admin_empresa.php?id=<?= $p['id_empresa'] ?>">
+            <td>
+              <div class="tbl-name-cell">
+                <div class="tbl-avatar"><?= $ini2 ?></div>
+                <span class="tbl-name-main"><?= htmlspecialchars($p['nombre']) ?></span>
+              </div>
+            </td>
             <td><span class="adm-badge adm-badge-purple"><?= htmlspecialchars($p['plan_tipo']) ?></span></td>
             <td style="font-size:12px;color:var(--txt2);"><?= date('d/m/Y', strtotime($p['plan_vencimiento'])) ?></td>
             <td><span class="adm-badge <?= $p['dias_restantes'] <= 7 ? 'adm-badge-warn' : 'adm-badge-info' ?>"><?= $p['dias_restantes'] ?>d</span></td>
@@ -122,30 +134,42 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
 
   <!-- Morosos -->
   <?php if ($morosos): ?>
-  <div class="adm-panel" style="margin-bottom:16px;border-color:rgba(248,113,113,0.3);">
-    <div class="adm-panel-hdr" style="color:#f87171;">
-      <span><span class="material-icons-round" style="font-size:16px;vertical-align:middle;">warning</span> Planes vencidos (<?= count($morosos) ?>)</span>
+  <div class="ec-card" style="margin-bottom:16px;border-color:rgba(248,113,113,0.3);">
+    <div class="ec-card-hdr" style="color:#f87171;">
+      <span class="material-icons-round" style="color:#f87171;">warning</span>
+      Planes vencidos
+      <span class="adm-badge adm-badge-off" style="margin-left:4px;"><?= count($morosos) ?></span>
     </div>
     <table class="adm-table">
-      <thead><tr><th>Empresa</th><th>Plan</th><th>Venció</th><th>Días vencido</th><th></th></tr></thead>
+      <thead><tr><th>Empresa</th><th>Plan</th><th>Venció</th><th>Días vencido</th></tr></thead>
       <tbody>
-        <?php foreach ($morosos as $m): ?>
-        <tr>
-          <td style="font-weight:600;"><?= htmlspecialchars($m['nombre']) ?></td>
+        <?php foreach ($morosos as $m):
+          $palabras = preg_split('/\s+/', trim($m['nombre']));
+          $ini = mb_strtoupper(mb_substr($palabras[0], 0, 1) . (isset($palabras[1]) ? mb_substr($palabras[1], 0, 1) : ''));
+        ?>
+        <tr data-href="/reparo/admin_empresa.php?id=<?= $m['id_empresa'] ?>">
+          <td>
+            <div class="tbl-name-cell">
+              <div class="tbl-avatar" style="background:linear-gradient(135deg,#dc2626,#f87171);"><?= $ini ?></div>
+              <div class="tbl-name-main"><?= htmlspecialchars($m['nombre']) ?></div>
+            </div>
+          </td>
           <td><?= htmlspecialchars($m['plan_tipo'] ?: '—') ?></td>
           <td style="color:#f87171;font-size:12px;"><?= date('d/m/Y', strtotime($m['plan_vencimiento'])) ?></td>
           <td><span class="adm-badge adm-badge-off"><?= $m['dias_vencido'] ?>d</span></td>
-          <td><a href="/reparo/admin_empresa.php?id=<?= $m['id_empresa'] ?>" class="adm-btn adm-btn-ghost" style="padding:4px 10px;font-size:12px;"><span class="material-icons-round">edit</span>Gestionar</a></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
+    <div style="padding:10px 18px;border-top:1px solid var(--border);" class="dblclick-hint">
+      <span class="material-icons-round">touch_app</span>Doble clic para gestionar
+    </div>
   </div>
   <?php endif; ?>
 
   <!-- Historial de pagos -->
-  <div class="adm-panel">
-    <div class="adm-panel-hdr">Historial de pagos recientes</div>
+  <div class="ec-card">
+    <div class="ec-card-hdr"><span class="material-icons-round">receipt_long</span>Historial de pagos recientes</div>
     <?php if (empty($pagos)): ?>
       <div style="padding:24px 18px;color:var(--txt2);font-size:13px;">Sin pagos registrados.</div>
     <?php else: ?>
@@ -166,5 +190,6 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
     <?php endif; ?>
   </div>
 </main>
+<script src="/reparo/assets/js/admin_common.js"></script>
 </body>
 </html>
