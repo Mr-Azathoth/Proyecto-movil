@@ -96,6 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($expired && !$err): ?>
       <div class="alert-warn">Tu sesión expiró por inactividad. Vuelve a ingresar.</div>
     <?php endif; ?>
+    <?php if (isset($_GET['reset']) && !$err): ?>
+      <div class="alert-ok">Contraseña actualizada correctamente. Ya puedes ingresar.</div>
+    <?php endif; ?>
     <?php if ($err): ?>
       <div class="alert-err"><?= htmlspecialchars($err) ?></div>
     <?php endif; ?>
@@ -113,6 +116,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <button type="submit" class="btn-login">
         Ingresar <span class="material-icons-round">arrow_forward</span>
       </button>
+      <div style="text-align:center;margin-top:16px;">
+        <a href="/reparo/recuperar.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
+          ¿Olvidaste tu contraseña?
+        </a>
+      </div>
     </form>
   </div>
 </div>
