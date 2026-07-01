@@ -10,6 +10,21 @@ $method = $_SERVER['REQUEST_METHOD'];
 // Migración silenciosa: añadir columnas si no existen
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN id_repuesto_usado INT NULL"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN stock_descontado TINYINT(1) NOT NULL DEFAULT 0"); } catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE reparaciones ADD COLUMN codigo_seguimiento VARCHAR(6) NULL"); } catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (codigo_seguimiento)"); } catch(PDOException $e) {}
+
+function generar_codigo_seguimiento(PDO $db): string {
+    $chars = 'ABCDEFGHJKMNPQRSTUVWXY3456789';
+    $len   = strlen($chars);
+    for ($try = 0; $try < 30; $try++) {
+        $code = '';
+        for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, $len - 1)];
+        $st = $db->prepare("SELECT 1 FROM reparaciones WHERE codigo_seguimiento = ?");
+        $st->execute([$code]);
+        if (!$st->fetch()) return $code;
+    }
+    return strtoupper(substr(md5(uniqid('', true)), 0, 6));
+}
 
 if ($method === 'GET') {
     $q  = mb_substr(trim($_GET['q'] ?? ''), 0, 100);
@@ -80,16 +95,18 @@ if ($method === 'POST') {
         if ($chkRp->fetch()) $id_repuesto_inicial = $id_rp;
     }
 
+    $codigo = generar_codigo_seguimiento($db);
+
     $db->prepare("INSERT INTO reparaciones
         (id_empresa, nombre_cliente, telefono_cliente, rut_cliente, tipo_ingreso,
          marca_ingreso, modelo_ingreso, imei, pass_ingreso, daño_ingreso,
-         valor_ingreso, status, obs, ingresado_por, id_repuesto_usado)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+         valor_ingreso, status, obs, ingresado_por, id_repuesto_usado, codigo_seguimiento)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
        ->execute([
             $eid, $f['nombre_cliente'], $f['telefono_cliente'], $f['rut_cliente'],
             $f['tipo_ingreso'], $f['marca_ingreso'], $f['modelo_ingreso'], $f['imei'],
             $f['pass_ingreso'], $f['daño_ingreso'], $f['valor_ingreso'],
-            $f['status'], $f['obs'], uname(), $id_repuesto_inicial,
+            $f['status'], $f['obs'], uname(), $id_repuesto_inicial, $codigo,
         ]);
     $newId = (int) $db->lastInsertId();
     log_accion($db, 'nueva_reparacion', $newId);
@@ -104,7 +121,12 @@ if ($method === 'POST') {
            ->execute([$eid, $newId, $f['obs'], uname()]);
     }
 
-    json_ok(['id' => $newId, 'msg' => "Servicio #{$newId} registrado."]);
+    // Recuperar el código generado para mostrarlo al frontend
+    $sc = $db->prepare("SELECT codigo_seguimiento FROM reparaciones WHERE id_ingreso = ?");
+    $sc->execute([$newId]);
+    $codigo = $sc->fetchColumn() ?? '';
+
+    json_ok(['id' => $newId, 'codigo_seguimiento' => $codigo, 'msg' => "Servicio #{$newId} registrado."]);
 }
 
 if ($method === 'PUT') {

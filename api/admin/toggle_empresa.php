@@ -14,5 +14,6 @@ $db->prepare("UPDATE empresas SET activa = NOT activa WHERE id_empresa = ?")->ex
 $st = $db->prepare("SELECT activa FROM empresas WHERE id_empresa = ?");
 $st->execute([$id]);
 $nuevo = $st->fetchColumn();
+if ($nuevo === false) sadmin_json_err('Empresa no encontrada.', 404);
 
 sadmin_json_ok(['activa' => (bool)$nuevo]);

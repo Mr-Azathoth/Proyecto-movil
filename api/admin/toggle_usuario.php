@@ -14,5 +14,6 @@ $db->prepare("UPDATE usuarios SET activo = NOT activo WHERE id_usuario = ?")->ex
 $st = $db->prepare("SELECT activo FROM usuarios WHERE id_usuario = ?");
 $st->execute([$id]);
 $nuevo = $st->fetchColumn();
+if ($nuevo === false) sadmin_json_err('Usuario no encontrado.', 404);
 
 sadmin_json_ok(['activo' => (bool)$nuevo]);

@@ -26,7 +26,7 @@ try {
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $row = $db->prepare("SELECT plan_tipo, plan_estado, plan_vencimiento, notif_vencimiento FROM empresas WHERE id = ?");
+    $row = $db->prepare("SELECT plan_tipo, plan_estado, plan_vencimiento, notif_vencimiento FROM empresas WHERE id_empresa = ?");
     $row->execute([$eid]);
     $data = $row->fetch();
 
@@ -58,7 +58,7 @@ if ($method === 'PUT') {
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
     if (array_key_exists('notif_vencimiento', $input)) {
-        $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id = ?")
+        $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id_empresa = ?")
            ->execute([$input['notif_vencimiento'] ? 1 : 0, $eid]);
         json_ok([]);
     }

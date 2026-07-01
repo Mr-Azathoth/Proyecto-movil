@@ -231,9 +231,10 @@ function switchView(name, el) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   if (el) el.classList.add('active');
-  if (name === 'servicios')  loadServicios();
-  if (name === 'inventario') loadInventario();
-  if (name === 'config')     loadConfigData();
+  if (name === 'servicios')    loadServicios();
+  if (name === 'inventario')   loadInventario();
+  if (name === 'config')       loadConfigData();
+  if (name === 'estadisticas') initEstadisticas();
 }
 
 function openModal(id) {
@@ -528,6 +529,16 @@ async function submitNuevo(e) {
   const marcaNombre  = inpNM.classList.contains('visible') ? inpNM.value.trim() : hidMarca.value.trim();
   const modeloNombre = inpMM.classList.contains('visible') ? inpMM.value.trim() : hidModelo.value.trim();
 
+  const telInput  = document.querySelector('[name="telefono_cliente"]');
+  const telDigits = (telInput?.value || '').replace(/\D/g, '').replace(/^56/, '');
+  if (telDigits.length !== 9) {
+    telInput?.classList.add('inp-err');
+    telInput?.focus();
+    toast('El teléfono debe tener 9 dígitos después del +56.', 'err');
+    return;
+  }
+  telInput?.classList.remove('inp-err');
+
   if (!marcaNombre)  { toast('Selecciona o escribe la marca del equipo.', 'err'); return; }
   if (!modeloNombre) { toast('Selecciona o escribe el modelo del equipo.', 'err'); return; }
 
@@ -563,15 +574,33 @@ async function submitNuevo(e) {
     const j = await r.json();
 
     if (j.ok) {
-      // Guardar id para panel post-save
       _lastNuevoId = j.data.id ?? null;
-      // Recargar lista en background
       loadServicios();
-      // Mostrar panel de confirmación
-      document.getElementById('nuevo-post-save').style.display = '';
-      document.getElementById('form-nuevo').style.display       = 'none';
-      document.getElementById('ps-num').textContent             = _lastNuevoId ? `#${_lastNuevoId}` : '';
-      // ps-boleta href ya no es necesario; el listener usa _lastNuevoId directamente
+      document.getElementById('nuevo-post-save').classList.remove('hidden');
+      document.getElementById('form-nuevo').classList.add('hidden');
+      document.getElementById('ps-num').textContent = _lastNuevoId ? `#${_lastNuevoId}` : '';
+      // Mostrar código de seguimiento
+      const codigo = j.data.codigo_seguimiento ?? '';
+      const psCode = document.getElementById('ps-codigo');
+      if (psCode) psCode.textContent = codigo || '–';
+      // Construir enlace WhatsApp
+      const waBtn = document.getElementById('ps-wa-btn');
+      if (waBtn && codigo) {
+        const tel   = (document.querySelector('[name="telefono_cliente"]')?.value || '').replace(/\D/g, '');
+        const nombre = document.querySelector('[name="nombre_cliente"]')?.value?.trim() || 'cliente';
+        const local = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+        const url   = `https://reparo.cl/seguimiento?codigo=${encodeURIComponent(codigo)}`;
+        const msg   = `Hola ${nombre}! Tu equipo ingresó a *${local}*.\n` +
+                      `Código de seguimiento: *${codigo}*\n` +
+                      `Consulta el estado en: ${url}`;
+        const wa    = tel.length >= 11
+          ? `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`
+          : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        waBtn.href = wa;
+        waBtn.classList.remove('hidden');
+      } else if (waBtn) {
+        waBtn.classList.add('hidden');
+      }
     } else { toast(j.msg, 'err'); }
   } catch(err) {
     if (err.message !== 'session_expired') toast('Error de red.', 'err');
@@ -969,8 +998,8 @@ function setupMarcaModeloPair() {
 // ── Reset modal nuevo ─────────────────────────────────────────
 function _resetModalNuevo() {
   // Mostrar form, ocultar panel post-save
-  document.getElementById('form-nuevo').style.display       = '';
-  document.getElementById('nuevo-post-save').style.display  = 'none';
+  document.getElementById('form-nuevo').classList.remove('hidden');
+  document.getElementById('nuevo-post-save').classList.add('hidden');
 
   // Reset form fields
   document.getElementById('form-nuevo').reset();
@@ -1253,6 +1282,18 @@ async function loadUsuarios() {
     const r = await apiFetch('/reparo/api/usuarios.php');
     const j = await r.json();
     if (!j.ok) { tbody.innerHTML = `<tr><td colspan="4" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
+    // Actualizar contador de técnicos y estado del botón
+    const tecnicos = j.data.filter(u => u.cargo === 'Tecnico').length;
+    const countEl  = document.getElementById('cfg-tecnicos-count');
+    const btnNuevo = document.getElementById('btn-nuevo-tecnico');
+    if (countEl) {
+      countEl.textContent = `${tecnicos} / 5 técnicos`;
+      countEl.classList.remove('hidden');
+    }
+    if (btnNuevo) {
+      btnNuevo.disabled = tecnicos >= 5;
+      btnNuevo.title    = tecnicos >= 5 ? 'Límite alcanzado: máximo 5 técnicos' : '';
+    }
     const me = CURRENT_USER.user;
     tbody.innerHTML = j.data.map(u => {
       const esSelf  = u.user === me;
@@ -1363,6 +1404,61 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('form-nuevo')?.addEventListener('submit', submitNuevo);
   document.getElementById('form-actualizar')?.addEventListener('submit', submitActualizar);
   document.getElementById('form-repuesto')?.addEventListener('submit', submitRepuesto);
+
+  // ── Solo dígitos en IMEI y Teléfono ────────────────────────────────────────
+  const PREFIX = '+56 ';
+  document.querySelectorAll('[name="imei"],[name="telefono_cliente"]').forEach(inp => {
+    if (inp.name === 'telefono_cliente' && !inp.value.startsWith(PREFIX)) inp.value = PREFIX;
+    inp.addEventListener('input', () => {
+      if (inp.name === 'telefono_cliente') {
+        // Asegurar que el prefijo siempre esté presente
+        if (!inp.value.startsWith(PREFIX)) inp.value = PREFIX + inp.value.replace(/^\+56\s?/,'').replace(/[^0-9 ]/g,'');
+        // Quitar letras del resto
+        const rest = inp.value.slice(PREFIX.length).replace(/[^0-9 ]/g, '');
+        inp.value = PREFIX + rest;
+        // Limpiar error visual cuando tiene 9 dígitos
+        const digits = rest.replace(/\D/g, '');
+        if (digits.length === 9) inp.classList.remove('inp-err');
+      } else {
+        inp.value = inp.value.replace(/\D/g, '');
+      }
+    });
+    inp.addEventListener('keydown', e => {
+      if (inp.name !== 'telefono_cliente') return;
+      // Bloquear borrado dentro del prefijo
+      const pos = inp.selectionStart;
+      if ((e.key === 'Backspace' && pos <= PREFIX.length && inp.selectionStart === inp.selectionEnd) ||
+          (e.key === 'Delete'    && pos <  PREFIX.length)) {
+        e.preventDefault();
+      }
+    });
+    inp.addEventListener('click', () => {
+      if (inp.name === 'telefono_cliente' && inp.selectionStart < PREFIX.length) {
+        inp.setSelectionRange(PREFIX.length, PREFIX.length);
+      }
+    });
+  });
+
+  // ── Formateo automático de RUT chileno ─────────────────────────────────────
+  const rutInput = document.querySelector('[name="rut_cliente"]');
+  if (rutInput) {
+    rutInput.addEventListener('input', () => {
+      let v = rutInput.value.toUpperCase().replace(/[^0-9K]/g, '');
+      if (v.length < 2) { rutInput.value = v; return; }
+      const dv   = v.slice(-1);          // dígito verificador
+      const body = v.slice(0, -1);       // cuerpo sin DV
+      // Insertar puntos cada 3 dígitos desde la derecha
+      const fmt  = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      rutInput.value = fmt + '-' + dv;
+    });
+    rutInput.addEventListener('keydown', e => {
+      // Permitir borrar el guión-DV sin quedarse pegado
+      if (e.key === 'Backspace' && rutInput.value.endsWith('-')) {
+        e.preventDefault();
+        rutInput.value = rutInput.value.slice(0, -2);
+      }
+    });
+  }
 
   // TagInput de modelos compatibles en inventario
   _tagModeloNuevo = new TagInput('tag-nuevo-modelo');
@@ -1556,9 +1652,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('sidebar-nombre').textContent = j.data.nombre;
       const iconWrap = document.getElementById('logo-icon-wrap');
       if (j.data.logo_path) {
-        iconWrap.innerHTML = `<img class="logo-img" id="logo-img" src="/reparo/${j.data.logo_path}?t=${Date.now()}" alt="Logo">`;
+        const img = document.createElement('img');
+        img.className = 'logo-img'; img.id = 'logo-img'; img.alt = 'Logo';
+        img.src = '/reparo/' + j.data.logo_path + '?t=' + Date.now();
+        iconWrap.innerHTML = ''; iconWrap.appendChild(img);
       } else {
-        iconWrap.innerHTML = `<span id="logo-letra">${j.data.nombre.charAt(0).toUpperCase()}</span>`;
+        iconWrap.innerHTML = `<span id="logo-letra">${esc(j.data.nombre.charAt(0).toUpperCase())}</span>`;
       }
       document.getElementById('inp-emp-nombre').value = j.data.nombre;
       document.getElementById('inp-emp-logo').value   = '';
@@ -1715,3 +1814,241 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
   });
 });
+
+// ── ESTADÍSTICAS ────────────────────────────────────────────────────────────
+(function () {
+  var chartIngresos = null;
+  var chartFlujo    = null;
+  var chartMarcas   = null;
+  var estIniciado   = false;
+
+  var COLORS = {
+    blue:   '#2f81f7',
+    green:  '#3fb950',
+    purple: '#bc8cff',
+    orange: '#f78166',
+    yellow: '#fbbf24',
+    gray:   '#8b949e',
+  };
+
+  function pesos(n) {
+    return '$' + Math.round(n).toLocaleString('es-CL');
+  }
+
+  function getRango() {
+    var desde = document.getElementById('est-desde').value;
+    var hasta = document.getElementById('est-hasta').value;
+    return { desde: desde, hasta: hasta };
+  }
+
+  function setRangoAtajo(rango) {
+    var hoy   = new Date();
+    var hasta = hoy.toISOString().slice(0, 10);
+    var desde;
+    if (rango === 'mes') {
+      desde = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-01';
+    } else if (rango === 'trim') {
+      var d = new Date(hoy); d.setMonth(d.getMonth() - 2); d.setDate(1);
+      desde = d.toISOString().slice(0, 10);
+    } else if (rango === 'anio') {
+      desde = hoy.getFullYear() + '-01-01';
+    } else {
+      desde = '2020-01-01';
+    }
+    document.getElementById('est-desde').value = desde;
+    document.getElementById('est-hasta').value = hasta;
+  }
+
+  function destroyChart(c) { if (c) { try { c.destroy(); } catch(e) {} } return null; }
+
+  function renderIngresos(data) {
+    chartIngresos = destroyChart(chartIngresos);
+    var labels = data.map(function(r) {
+      var p = r.mes.split('-'); return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(p[1])-1] + ' ' + p[0].slice(2);
+    });
+    var vals = data.map(function(r) { return parseInt(r.ingresos); });
+    var ctx = document.getElementById('chart-ingresos').getContext('2d');
+    chartIngresos = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'Ingresos', data: vals, backgroundColor: COLORS.blue + 'cc', borderColor: COLORS.blue, borderWidth: 1, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(c) { return ' ' + pesos(c.raw); } } } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 }, callback: function(v) { return pesos(v); } } }
+        }
+      }
+    });
+  }
+
+  function renderFlujo(data) {
+    chartFlujo = destroyChart(chartFlujo);
+    var labels = data.map(function(r) {
+      var p = r.mes.split('-'); return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(p[1])-1] + ' ' + p[0].slice(2);
+    });
+    var ctx = document.getElementById('chart-flujo').getContext('2d');
+    chartFlujo = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Ingresadas', data: data.map(function(r){ return parseInt(r.ingresadas); }), backgroundColor: COLORS.blue + '99', borderColor: COLORS.blue, borderWidth: 1, borderRadius: 3 },
+          { label: 'Cerradas',   data: data.map(function(r){ return parseInt(r.cerradas); }),   backgroundColor: COLORS.green + '99', borderColor: COLORS.green, borderWidth: 1, borderRadius: 3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 } }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  function renderMarcas(data) {
+    chartMarcas = destroyChart(chartMarcas);
+    var ctx = document.getElementById('chart-marcas').getContext('2d');
+    var palette = [COLORS.blue, COLORS.green, COLORS.purple, COLORS.orange, COLORS.yellow, COLORS.gray, '#60a5fa', '#34d399'];
+    chartMarcas = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(function(r){ return r.marca; }),
+        datasets: [{ data: data.map(function(r){ return parseInt(r.total); }), backgroundColor: data.map(function(_, i){ return palette[i % palette.length] + 'cc'; }), borderRadius: 4 }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 } }, beginAtZero: true },
+          y: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 12 } } }
+        }
+      }
+    });
+  }
+
+  function renderFallas(data) {
+    var el = document.getElementById('est-fallas-list');
+    if (!el) return;
+    if (!data.length) { el.innerHTML = '<p style="color:var(--txt3);font-size:13px;padding:12px 0;">Sin datos en el período.</p>'; return; }
+    var max = parseInt(data[0].total) || 1;
+    el.innerHTML = data.map(function(r) {
+      var pct = Math.round(parseInt(r.total) / max * 100);
+      return '<div class="est-falla-item">' +
+        '<div class="est-falla-txt"><span class="est-falla-lbl">' + escHtml(r.falla) + '</span><span class="est-falla-cnt">' + r.total + '</span></div>' +
+        '<div class="est-falla-bar"><div class="est-falla-fill" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  async function cargarEstadisticas() {
+    var r = getRango();
+    try {
+      var j = await (await apiFetch('/reparo/api/estadisticas.php?desde=' + r.desde + '&hasta=' + r.hasta)).json();
+      if (!j.ok) return;
+      var d = j.data;
+
+      // KPIs
+      document.getElementById('est-k-ordenes').textContent  = d.kpis.total_ordenes;
+      document.getElementById('est-k-ingresos').textContent = pesos(d.kpis.ingresos_totales);
+      document.getElementById('est-k-ticket').textContent   = pesos(d.kpis.ticket_promedio);
+      document.getElementById('est-k-cerradas').textContent = d.kpis.ordenes_cerradas;
+      document.getElementById('est-k-dias').textContent     = parseFloat(d.kpis.dias_promedio).toFixed(1) + ' días';
+
+      renderIngresos(d.por_mes);
+      renderFlujo(d.flujo_mes);
+      renderMarcas(d.marcas);
+      renderFallas(d.fallas);
+    } catch(e) {
+      if (e.message !== 'session_expired') toast('Error al cargar estadísticas.', 'err');
+    }
+  }
+
+  window.initEstadisticas = function() {
+    if (!estIniciado) {
+      estIniciado = true;
+
+      // Atajos de fecha
+      document.querySelectorAll('.est-atajo').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.est-atajo').forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          setRangoAtajo(btn.dataset.rango);
+          cargarEstadisticas();
+        });
+      });
+
+      // Aplicar rango custom
+      document.getElementById('est-btn-aplicar').addEventListener('click', function() {
+        document.querySelectorAll('.est-atajo').forEach(function(b) { b.classList.remove('active'); });
+        cargarEstadisticas();
+      });
+    }
+    // Siempre cargar al entrar a la vista
+    setRangoAtajo('mes');
+    document.querySelector('.est-atajo[data-rango="mes"]').classList.add('active');
+    cargarEstadisticas();
+  };
+
+  // ── Modal nuevo técnico ────────────────────────────────────────────────────
+  function openModalTecnico() {
+    document.getElementById('tecnico-nombre').value = '';
+    document.getElementById('tecnico-user').value   = '';
+    document.getElementById('tecnico-pass').value   = '';
+    document.getElementById('tecnico-pass2').value  = '';
+    document.getElementById('modal-nuevo-tecnico').classList.remove('hidden');
+    document.getElementById('tecnico-nombre').focus();
+  }
+  function closeModalTecnico() {
+    document.getElementById('modal-nuevo-tecnico').classList.add('hidden');
+  }
+
+  document.getElementById('btn-nuevo-tecnico')?.addEventListener('click', openModalTecnico);
+  document.getElementById('modal-tecnico-close')?.addEventListener('click', closeModalTecnico);
+  document.getElementById('modal-tecnico-cancel')?.addEventListener('click', closeModalTecnico);
+  document.getElementById('modal-nuevo-tecnico')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModalTecnico();
+  });
+
+  document.getElementById('btn-tecnico-guardar')?.addEventListener('click', async () => {
+    const nombre = document.getElementById('tecnico-nombre').value.trim();
+    const user   = document.getElementById('tecnico-user').value.trim();
+    const pass   = document.getElementById('tecnico-pass').value;
+    const pass2  = document.getElementById('tecnico-pass2').value;
+
+    if (!nombre || !user || !pass) { toast('Completa todos los campos.', 'err'); return; }
+    if (pass !== pass2)            { toast('Las contraseñas no coinciden.', 'err'); return; }
+
+    const btn = document.getElementById('btn-tecnico-guardar');
+    btn.disabled = true;
+    try {
+      const r = await apiFetch('/reparo/api/usuarios.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, user, password: pass })
+      });
+      const j = await r.json();
+      if (j.ok) {
+        toast(j.data.msg, 'ok');
+        closeModalTecnico();
+        loadUsuarios();
+      } else {
+        toast(j.msg, 'err');
+      }
+    } catch(e) {
+      if (e.message !== 'session_expired') toast('Error de red.', 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}());
