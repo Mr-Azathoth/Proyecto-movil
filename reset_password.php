@@ -36,15 +36,11 @@ $valid = (bool) $st->fetch();
 
     <?php if (!$valid): ?>
       <div class="alert-err">Este enlace no es válido o ya expiró.</div>
-      <div style="text-align:center;margin-top:20px;">
-        <a href="/reparo/recuperar.php" style="font-size:13px;color:var(--accent);text-decoration:none;">
-          Solicitar un nuevo enlace
-        </a>
+      <div class="auth-back">
+        <a href="/reparo/recuperar.php" class="auth-back-accent">Solicitar un nuevo enlace</a>
       </div>
     <?php else: ?>
-      <p style="font-size:14px;color:var(--txt2);margin:0 0 20px;">
-        Elige una nueva contraseña para tu cuenta.
-      </p>
+      <p class="auth-intro">Elige una nueva contraseña para tu cuenta.</p>
       <form id="rst-form" novalidate>
         <input type="hidden" id="rst-token" value="<?= htmlspecialchars($token, ENT_QUOTES) ?>">
         <div class="fg">
@@ -59,11 +55,9 @@ $valid = (bool) $st->fetch();
           Guardar contraseña <span class="material-icons-round">lock_reset</span>
         </button>
       </form>
-      <div id="rst-err" class="alert-err" hidden style="margin-top:10px;"></div>
-      <div style="text-align:center;margin-top:16px;">
-        <a href="/reparo/index.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
-          ← Volver al inicio de sesión
-        </a>
+      <div id="rst-err" class="alert-err mt-10" hidden></div>
+      <div class="auth-back">
+        <a href="/reparo/index.php">← Volver al inicio de sesión</a>
       </div>
     <?php endif; ?>
   </div>

@@ -146,7 +146,8 @@ if ($method === 'DELETE') {
 
     $qv = $db->prepare("SELECT valor_ingreso FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
     $qv->execute([(int) $row['id_reparacion'], $eid]);
-    $nuevo_valor = (int) $qv->fetchColumn();
+    $nuevo_valor = $qv->fetchColumn();
+    if ($nuevo_valor === false) json_err('Reparación no encontrada.', 404);
 
     log_accion($db, 'repuesto_eliminado', (int) $row['id_reparacion']);
 

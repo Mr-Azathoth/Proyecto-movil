@@ -22,12 +22,16 @@ $db->exec("CREATE TABLE IF NOT EXISTS password_resets (
 $username = trim($_POST['user'] ?? '');
 if (!$username) { json_ok(['msg' => 'ok']); } // respuesta genérica siempre
 
-// Buscar usuario
+// Buscar por nombre de usuario O por correo de la empresa (Admin primero)
 $su = $db->prepare(
     "SELECT u.id_usuario, u.nombre, u.id_empresa
-     FROM usuarios u WHERE u.user = ? AND u.activo = 1 LIMIT 1"
+       FROM usuarios u
+  LEFT JOIN empresas e ON e.id_empresa = u.id_empresa
+      WHERE (u.user = ? OR e.correo = ?) AND u.activo = 1
+   ORDER BY FIELD(u.cargo, 'Admin', 'Tecnico')
+      LIMIT 1"
 );
-$su->execute([$username]);
+$su->execute([$username, $username]);
 $user = $su->fetch();
 
 if ($user) {

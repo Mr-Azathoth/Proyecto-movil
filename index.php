@@ -25,11 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$u || !$p) {
             $err = 'Completa todos los campos.';
         } else {
-            // Traer usuario solo por nombre (no incluir la contraseña en la query)
+            // Buscar por nombre de usuario O correo de la empresa (Admin primero)
             $st = getDB()->prepare(
-                "SELECT * FROM usuarios WHERE user = ? AND id_empresa = ? AND activo = 1 LIMIT 1"
+                "SELECT u.* FROM usuarios u
+                 LEFT JOIN empresas e ON e.id_empresa = u.id_empresa
+                 WHERE (u.user = ? OR e.correo = ?) AND u.id_empresa = ? AND u.activo = 1
+                 ORDER BY FIELD(u.cargo, 'Admin', 'Tecnico') LIMIT 1"
             );
-            $st->execute([$u, EMPRESA_ID]);
+            $st->execute([$u, $u, EMPRESA_ID]);
             $row = $st->fetch();
 
             // Soportar tanto bcrypt (nuevo) como MD5 (legacy) para migración gradual
@@ -105,9 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <form method="POST">
       <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
       <div class="fg">
-        <label>Usuario</label>
-        <input type="text" name="user" placeholder="Tu usuario"
-               value="<?= htmlspecialchars($_POST['user'] ?? '') ?>" required autofocus autocomplete="username">
+        <label>Usuario o correo</label>
+        <input type="text" name="user" placeholder="Tu usuario o correo"
+               value="<?= htmlspecialchars($_POST['user'] ?? '') ?>" required autofocus autocomplete="username email">
       </div>
       <div class="fg">
         <label>Contraseña</label>
@@ -116,10 +119,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <button type="submit" class="btn-login">
         Ingresar <span class="material-icons-round">arrow_forward</span>
       </button>
-      <div style="text-align:center;margin-top:16px;">
-        <a href="/reparo/recuperar.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
-          ¿Olvidaste tu contraseña?
-        </a>
+      <div class="auth-back">
+        <a href="/reparo/recuperar.php">¿Olvidaste tu contraseña?</a>
       </div>
     </form>
   </div>

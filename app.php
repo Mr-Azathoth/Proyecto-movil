@@ -82,6 +82,9 @@ try {
         <span class="material-icons-round">inventory_2</span><span>Inventario</span>
       </a>
       <?php if(isAdmin()): ?>
+      <a class="nav-link" data-view="estadisticas">
+        <span class="material-icons-round">bar_chart</span><span>Estadísticas</span>
+      </a>
       <a class="nav-link" data-view="config">
         <span class="material-icons-round">settings</span><span>Configuración</span>
       </a>
@@ -149,23 +152,23 @@ try {
           <div><div class="stat-val" id="st-total">0</div><div class="stat-lbl">Total</div></div>
         </div>
         <div class="stat-card" data-filter="Ingresado">
-          <span class="material-icons-round stat-ic" style="color:#60a5fa">login</span>
+          <span class="material-icons-round stat-ic ic-ingresado">login</span>
           <div><div class="stat-val" id="st-ing">0</div><div class="stat-lbl">Ingresados</div></div>
         </div>
         <div class="stat-card" data-filter="En Reparacion">
-          <span class="material-icons-round stat-ic" style="color:#fb923c">handyman</span>
+          <span class="material-icons-round stat-ic ic-reparacion">handyman</span>
           <div><div class="stat-val" id="st-rep">0</div><div class="stat-lbl">En reparación</div></div>
         </div>
         <div class="stat-card" data-filter="Reparado">
-          <span class="material-icons-round stat-ic" style="color:#4ade80">check_circle</span>
+          <span class="material-icons-round stat-ic ic-reparado">check_circle</span>
           <div><div class="stat-val" id="st-done">0</div><div class="stat-lbl">Reparados</div></div>
         </div>
         <div class="stat-card" data-filter="Entregado">
-          <span class="material-icons-round stat-ic" style="color:#94a3b8">assignment_turned_in</span>
+          <span class="material-icons-round stat-ic ic-entregado">assignment_turned_in</span>
           <div><div class="stat-val" id="st-entr">0</div><div class="stat-lbl">Entregados</div></div>
         </div>
         <div class="stat-card" data-filter="Garantia">
-          <span class="material-icons-round stat-ic" style="color:#c084fc">verified_user</span>
+          <span class="material-icons-round stat-ic ic-garantia">verified_user</span>
           <div><div class="stat-val" id="st-gar">0</div><div class="stat-lbl">Garantía</div></div>
         </div>
       </div>
@@ -298,7 +301,7 @@ try {
 
         <div class="cfg-section">
           <h3 class="cfg-section-title">Cambiar contraseña</h3>
-          <div class="form-grid2" style="max-width:520px">
+          <div class="form-grid2 modal-w520">
             <div class="fg fg-wide"><label>Contraseña actual</label><input type="password" id="cfg-pass-actual" placeholder="••••••••" autocomplete="current-password"></div>
             <div class="fg"><label>Nueva contraseña</label><input type="password" id="cfg-pass-nueva" placeholder="••••••••" autocomplete="new-password"></div>
             <div class="fg"><label>Confirmar nueva</label><input type="password" id="cfg-pass-confirm" placeholder="••••••••" autocomplete="new-password"></div>
@@ -312,8 +315,16 @@ try {
       <!-- Panel: Usuarios -->
       <div class="cfg-panel hidden" id="cfg-usuarios">
         <div class="cfg-section">
-          <h3 class="cfg-section-title">Usuarios de la cuenta</h3>
-          <table class="tbl" style="margin-top:8px">
+          <div class="cfg-usuarios-header">
+            <h3 class="cfg-section-title">Usuarios de la cuenta</h3>
+            <div class="cfg-usuarios-actions">
+              <span class="cfg-tecnicos-count hidden" id="cfg-tecnicos-count"></span>
+              <button type="button" class="btn-primary btn-sm" id="btn-nuevo-tecnico">
+                <span class="material-icons-round">person_add</span> Agregar técnico
+              </button>
+            </div>
+          </div>
+          <table class="tbl mt-8">
             <thead>
               <tr><th>Nombre</th><th>Usuario</th><th>Cargo</th><th>Acciones</th></tr>
             </thead>
@@ -321,6 +332,34 @@ try {
               <tr><td colspan="4" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Modal: Nuevo técnico -->
+      <div class="modal-overlay hidden" id="modal-nuevo-tecnico">
+        <div class="modal-box modal-sm">
+          <div class="modal-header">
+            <span class="modal-title">Agregar técnico</span>
+            <button type="button" class="modal-close" id="modal-tecnico-close" aria-label="Cerrar">
+              <span class="material-icons-round">close</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <label class="form-label">Nombre completo</label>
+            <input type="text" id="tecnico-nombre" class="form-inp" placeholder="Ej: Juan Pérez" maxlength="80" autocomplete="off">
+            <label class="form-label mt-8">Nombre de usuario</label>
+            <input type="text" id="tecnico-user" class="form-inp" placeholder="Ej: juan.perez" maxlength="40" autocomplete="off">
+            <label class="form-label mt-8">Contraseña</label>
+            <input type="password" id="tecnico-pass" class="form-inp" placeholder="Mínimo 6 caracteres" maxlength="60">
+            <label class="form-label mt-8">Confirmar contraseña</label>
+            <input type="password" id="tecnico-pass2" class="form-inp" placeholder="Repetir contraseña" maxlength="60">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-sec" id="modal-tecnico-cancel">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn-tecnico-guardar">
+              <span class="material-icons-round">save</span> Guardar
+            </button>
+          </div>
         </div>
       </div>
 
@@ -389,7 +428,7 @@ try {
             <?php endforeach; ?>
           </div>
           <p class="subs-pay-note">
-            <span class="material-icons-round" style="font-size:14px;vertical-align:middle;margin-right:4px">lock</span>
+            <span class="material-icons-round ic-inline">lock</span>
             Pago seguro vía Mercado Pago. Tus datos de tarjeta son gestionados por MP, nunca por nosotros.
           </p>
         </div>
@@ -406,6 +445,86 @@ try {
 
     </div><!-- /view-config -->
 
+    <!-- ══════════════════════ VIEW: ESTADÍSTICAS ══════════════════════ -->
+    <div id="view-estadisticas" class="view">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Estadísticas</h1>
+          <p class="page-sub">Métricas financieras y operacionales</p>
+        </div>
+      </header>
+
+      <!-- Filtros de fecha -->
+      <div class="est-filtros">
+        <div class="est-atajos">
+          <button class="est-atajo active" data-rango="mes">Este mes</button>
+          <button class="est-atajo" data-rango="trim">3 meses</button>
+          <button class="est-atajo" data-rango="anio">Este año</button>
+          <button class="est-atajo" data-rango="todo">Todo</button>
+        </div>
+        <div class="est-rango-custom">
+          <input type="date" id="est-desde" class="est-date-input">
+          <span class="est-rango-sep">→</span>
+          <input type="date" id="est-hasta" class="est-date-input">
+          <button class="btn-primary btn-sm" id="est-btn-aplicar">Aplicar</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="est-kpis" id="est-kpis">
+        <div class="est-kpi">
+          <div class="est-kpi-icon est-kpi-blue"><span class="material-icons-round">receipt_long</span></div>
+          <div class="est-kpi-val" id="est-k-ordenes">—</div>
+          <div class="est-kpi-lbl">Órdenes en período</div>
+        </div>
+        <div class="est-kpi">
+          <div class="est-kpi-icon est-kpi-green"><span class="material-icons-round">attach_money</span></div>
+          <div class="est-kpi-val" id="est-k-ingresos">—</div>
+          <div class="est-kpi-lbl">Ingresos totales</div>
+        </div>
+        <div class="est-kpi">
+          <div class="est-kpi-icon est-kpi-purple"><span class="material-icons-round">show_chart</span></div>
+          <div class="est-kpi-val" id="est-k-ticket">—</div>
+          <div class="est-kpi-lbl">Ticket promedio</div>
+        </div>
+        <div class="est-kpi">
+          <div class="est-kpi-icon est-kpi-orange"><span class="material-icons-round">check_circle</span></div>
+          <div class="est-kpi-val" id="est-k-cerradas">—</div>
+          <div class="est-kpi-lbl">Órdenes cerradas</div>
+        </div>
+        <div class="est-kpi">
+          <div class="est-kpi-icon est-kpi-gray"><span class="material-icons-round">schedule</span></div>
+          <div class="est-kpi-val" id="est-k-dias">—</div>
+          <div class="est-kpi-lbl">Días prom. reparación</div>
+        </div>
+      </div>
+
+      <!-- Gráficos fila 1 -->
+      <div class="est-charts-row">
+        <div class="est-chart-card est-chart-wide">
+          <div class="est-chart-title">Ingresos por mes</div>
+          <canvas id="chart-ingresos" height="90"></canvas>
+        </div>
+        <div class="est-chart-card">
+          <div class="est-chart-title">Órdenes: ingresadas vs cerradas</div>
+          <canvas id="chart-flujo" height="90"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráficos fila 2 -->
+      <div class="est-charts-row">
+        <div class="est-chart-card">
+          <div class="est-chart-title">Marcas más reparadas</div>
+          <canvas id="chart-marcas" height="160"></canvas>
+        </div>
+        <div class="est-chart-card">
+          <div class="est-chart-title">Fallas más frecuentes</div>
+          <div class="est-fallas-list" id="est-fallas-list"></div>
+        </div>
+      </div>
+
+    </div><!-- /view-estadisticas -->
+
     <!-- Modal: resetear contraseña de usuario -->
     <div class="modal-bg" id="modal-reset-pass">
       <div class="modal-box modal-box-sm">
@@ -415,7 +534,7 @@ try {
         </div>
         <div class="modal-body">
           <input type="hidden" id="reset-pass-uid">
-          <div class="form-grid2" style="max-width:100%">
+          <div class="form-grid2 w-full">
             <div class="fg"><label>Nueva contraseña</label><input type="password" id="reset-pass-nueva" placeholder="••••••••" autocomplete="new-password"></div>
             <div class="fg"><label>Confirmar</label><input type="password" id="reset-pass-confirm" placeholder="••••••••" autocomplete="new-password"></div>
           </div>
@@ -443,10 +562,21 @@ try {
       <button class="modal-close" data-modal="modal-nuevo"><span class="material-icons-round">close</span></button>
     </div>
     <!-- Panel post-guardado (oculto hasta guardar exitosamente) -->
-    <div id="nuevo-post-save" style="display:none">
+    <div id="nuevo-post-save" class="hidden">
       <div class="post-save-body">
         <span class="material-icons-round post-save-icon">check_circle</span>
         <h3 class="post-save-title">Servicio <span id="ps-num"></span> registrado</h3>
+
+        <!-- Código de seguimiento -->
+        <div class="ps-codigo-wrap">
+          <p class="ps-codigo-label">Código de seguimiento del cliente</p>
+          <div class="ps-codigo-chip"><span id="ps-codigo">–</span></div>
+          <a id="ps-wa-btn" href="#" target="_blank" rel="noopener" class="btn-wa ps-wa-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Enviar código por WhatsApp
+          </a>
+        </div>
+
         <p class="post-save-sub">¿Qué deseas hacer?</p>
         <div class="post-save-actions">
           <button type="button" class="btn-sec" id="ps-nuevo">
@@ -470,7 +600,7 @@ try {
         <p class="section-label">Datos del cliente</p>
         <div class="form-grid4">
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" name="nombre_cliente" placeholder="Juan Pérez" required></div>
-          <div class="fg"><label>Teléfono <span class="req">*</span></label><input type="text" name="telefono_cliente" placeholder="+56 9 XXXX XXXX" required></div>
+          <div class="fg"><label>Teléfono <span class="req">*</span></label><input type="text" name="telefono_cliente" placeholder="+56 9 XXXX XXXX" value="+56 " required></div>
           <div class="fg"><label>RUT</label><input type="text" name="rut_cliente" placeholder="12.345.678-9"></div>
           <div class="fg"><label>Tipo</label>
             <select name="tipo_ingreso">
@@ -508,9 +638,9 @@ try {
               <option value="En Reparacion">En Reparación</option>
             </select>
           </div>
-          <div class="fg fg-full"><label>Observación inicial</label><textarea name="obs" placeholder="Sin Observaciones" style="resize:none;height:40px;min-height:40px;overflow:hidden"></textarea></div>
+          <div class="fg fg-full"><label>Observación inicial</label><textarea name="obs" placeholder="Sin Observaciones" class="textarea-compact"></textarea></div>
           <div class="fg fg-full">
-            <label>Repuesto a utilizar <span style="font-size:10.5px;color:var(--txt3);font-weight:400">(opcional)</span></label>
+            <label>Repuesto a utilizar <span class="lbl-opt">(opcional)</span></label>
             <div id="sel-rep-nuevo"></div>
             <input type="hidden" id="hid-rep-nuevo">
           </div>
@@ -553,10 +683,10 @@ try {
 
           <!-- Sección repuestos -->
           <div class="rep-section" id="det-rep-section">
-            <p class="section-label" style="margin-top:8px">Repuestos</p>
+            <p class="section-label">Repuestos</p>
             <div id="det-rep-list"></div>
             <div class="rep-add-row" id="rep-add-row">
-              <div id="sel-rep-adicional" style="flex:1;min-width:0"></div>
+              <div id="sel-rep-adicional" class="flex-grow"></div>
               <input type="hidden" id="hid-rep-adicional">
               <input type="number" id="inp-rep-cant" min="1" value="1" title="Cantidad">
               <button type="button" class="btn-sec btn-sm" id="btn-agregar-rep">+ Agregar</button>
@@ -564,7 +694,7 @@ try {
           </div>
 
           <div class="timeline-wrap">
-            <p class="section-label" style="margin-top:8px">Línea de tiempo</p>
+            <p class="section-label">Línea de tiempo</p>
             <div id="timeline" class="timeline-list">Cargando...</div>
           </div>
         </div>
@@ -584,19 +714,19 @@ try {
             <label>Valor ($)</label>
             <input type="number" id="det-valor" min="0" placeholder="0">
           </div>
-          <p class="hint-txt" id="hint-entregado" style="display:none;margin-top:-4px">
-            <span class="material-icons-round" style="font-size:12px;vertical-align:middle">info</span>
+          <p class="hint-txt" id="hint-entregado">
+            <span class="material-icons-round ic-xs">info</span>
             Al guardar como Entregado se descontarán los repuestos del stock
           </p>
           <div class="fg">
             <label>Nota técnica</label>
-            <textarea id="det-obs" rows="3" placeholder="Avance, resultado, observación..." style="resize:none"></textarea>
+            <textarea id="det-obs" rows="3" placeholder="Avance, resultado, observación..." class="textarea-fixed"></textarea>
           </div>
         </div>
 
       </div>
       <div class="modal-ft">
-        <a id="det-wa-link" href="#" target="_blank" class="btn-wa" title="Abrir chat WhatsApp" style="margin-right:auto">
+        <a id="det-wa-link" href="#" target="_blank" class="btn-wa mr-auto" title="Abrir chat WhatsApp">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           WhatsApp
         </a>
@@ -646,12 +776,12 @@ try {
      MODAL: Confirmación genérica (eliminar)
 ══════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-confirm">
-  <div class="modal-box" style="max-width:420px">
+  <div class="modal-box modal-sm">
     <div class="modal-hd">
       <h3 id="confirm-title">Confirmar acción</h3>
     </div>
     <div class="modal-body">
-      <p id="confirm-msg" style="font-size:14px;line-height:1.6;margin:0"></p>
+      <p id="confirm-msg" class="modal-msg"></p>
     </div>
     <div class="modal-ft">
       <button type="button" class="btn-sec" data-modal="modal-confirm">Cancelar</button>
@@ -680,7 +810,7 @@ try {
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="edit-rep-precio" placeholder="0" min="0"></div>
         </div>
-        <div class="fg" style="max-width:50%;margin-top:4px"><label>Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
+        <div class="fg w-half-mt"><label>Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
       </div>
       <div class="modal-ft">
         <button type="button" class="btn-sec" data-modal="modal-edit-repuesto">Cancelar</button>
@@ -693,18 +823,18 @@ try {
 <?php if(isAdmin()): ?>
 <!-- ══════════════════ MODAL: EXPORTAR ══════════════════════════════════════ -->
 <div class="modal-bg" id="modal-exportar">
-  <div class="modal-box" style="max-width:500px">
+  <div class="modal-box modal-md">
     <div class="modal-hd">
       <h3>Exportar servicios</h3>
       <button class="modal-close" data-modal="modal-exportar"><span class="material-icons-round">close</span></button>
     </div>
     <div class="modal-body exp-body">
 
-      <div class="exp-vista-wrap" id="exp-vista-wrap" style="display:none">
-        <div class="exp-fs" style="margin-bottom:0">
-          <div style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:6px;">
-            <span class="material-icons-round" style="font-size:14px;color:var(--accent)">filter_list</span>
-            <span>Vista actual: </span><span id="exp-vista-info" style="color:var(--txt);font-weight:500"></span>
+      <div class="exp-vista-wrap hidden" id="exp-vista-wrap">
+        <div class="exp-fs mb-0">
+          <div class="exp-vista-meta">
+            <span class="material-icons-round">filter_list</span>
+            <span>Vista actual: </span><span id="exp-vista-info" class="exp-vista-val"></span>
           </div>
         </div>
       </div>
@@ -756,7 +886,7 @@ try {
       </fieldset>
 
     </div>
-    <div class="modal-ft" style="gap:10px">
+    <div class="modal-ft gap-10">
       <button type="button" class="btn-sec" data-modal="modal-exportar">Cancelar</button>
       <button type="button" class="btn-sec" id="btn-exp-csv">
         <span class="material-icons-round">table_view</span> Excel / CSV
@@ -770,21 +900,21 @@ try {
 
 <!-- ══════════════════ MODAL: EXPORTAR INVENTARIO ═══════════════════════════ -->
 <div class="modal-bg" id="modal-exportar-inv">
-  <div class="modal-box" style="max-width:420px">
+  <div class="modal-box modal-sm">
     <div class="modal-hd">
       <h3>Exportar inventario</h3>
       <button class="modal-close" data-modal="modal-exportar-inv"><span class="material-icons-round">close</span></button>
     </div>
     <div class="modal-body exp-body">
       <div class="exp-fs">
-        <div style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:6px;">
-          <span class="material-icons-round" style="font-size:14px;color:var(--accent)">filter_list</span>
-          <span>Vista actual: </span><span id="exp-inv-vista-info" style="color:var(--txt);font-weight:500">Sin filtros</span>
+        <div class="exp-vista-meta">
+          <span class="material-icons-round">filter_list</span>
+          <span>Vista actual: </span><span id="exp-inv-vista-info" class="exp-vista-val">Sin filtros</span>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--txt2)">Se exportará el inventario con los filtros y el orden de la vista actual.</p>
+      <p class="exp-note">Se exportará el inventario con los filtros y el orden de la vista actual.</p>
     </div>
-    <div class="modal-ft" style="gap:10px">
+    <div class="modal-ft gap-10">
       <button type="button" class="btn-sec" data-modal="modal-exportar-inv">Cancelar</button>
       <button type="button" class="btn-sec" id="btn-exp-inv-csv">
         <span class="material-icons-round">table_view</span> Excel / CSV
@@ -800,6 +930,7 @@ try {
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
+<script src="/reparo/assets/js/chart.umd.min.js"></script>
 <script src="/reparo/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 </body>
 </html>

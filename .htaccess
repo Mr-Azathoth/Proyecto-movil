@@ -7,6 +7,12 @@ Options -Indexes
     Deny from all
 </FilesMatch>
 
+# ── URL amigable: /reparo/seguimiento → seguimiento.php ──────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^seguimiento/?$ seguimiento.php [L,QSA]
+</IfModule>
+
 # ── Bloquear acceso a la carpeta includes/ ───────────────────
 <IfModule mod_rewrite.c>
     RewriteEngine On

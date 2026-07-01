@@ -75,3 +75,37 @@ if ($method === 'PUT') {
 
     json_err('Operación no especificada.');
 }
+
+// ── POST: crear técnico ───────────────────────────────────
+if ($method === 'POST') {
+    if (!isAdmin()) json_err('Sin permisos.', 403);
+    csrf_check();
+
+    $in     = json_decode(file_get_contents('php://input'), true) ?? [];
+    $nombre = trim($in['nombre'] ?? '');
+    $user   = trim($in['user']   ?? '');
+    $pass   = $in['password']    ?? '';
+
+    if (!$nombre || !$user || !$pass) json_err('Completa todos los campos.');
+    if (strlen($user) < 3)            json_err('El usuario debe tener al menos 3 caracteres.');
+    if (strlen($pass) < 6)            json_err('La contraseña debe tener al menos 6 caracteres.');
+
+    // Límite de 5 técnicos activos por empresa
+    $cnt = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE id_empresa = ? AND cargo = 'Tecnico'");
+    $cnt->execute([$eid]);
+    if ((int)$cnt->fetchColumn() >= 5) json_err('Límite alcanzado: máximo 5 técnicos por cuenta.');
+
+    // Usuario único en toda la plataforma
+    $dup = $db->prepare("SELECT 1 FROM usuarios WHERE user = ?");
+    $dup->execute([$user]);
+    if ($dup->fetch()) json_err('Ese nombre de usuario ya está en uso.');
+
+    $hash = password_hash($pass, PASSWORD_BCRYPT);
+    $ins  = $db->prepare(
+        "INSERT INTO usuarios (id_empresa, nombre, user, pass, cargo, activo)
+         VALUES (?, ?, ?, ?, 'Tecnico', 1)"
+    );
+    $ins->execute([$eid, $nombre, $user, $hash]);
+    log_accion($db, 'tecnico_creado', null);
+    json_ok(['msg' => "Técnico {$nombre} creado correctamente.", 'id' => (int)$db->lastInsertId()]);
+}
