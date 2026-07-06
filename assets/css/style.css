@@ -811,3 +811,55 @@ input.hidden           { display:none !important; }
 .cfg-usuarios-actions { display:flex; align-items:center; gap:10px; }
 .cfg-tecnicos-count   { font-size:12px; color:var(--txt2); background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:3px 10px; }
 
+/* ── Modal QR ─────────────────────────────────────────────────────────────── */
+.qr-modal-body       { display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 0 4px; }
+#qr-canvas-wrap      { background:#fff; border-radius:16px; padding:18px; display:inline-block; box-shadow:0 4px 24px rgba(0,0,0,.35); }
+#qr-canvas-wrap canvas, #qr-canvas-wrap img { display:block; }
+.qr-item-nombre      { font-size:14px; font-weight:600; color:var(--txt2); text-align:center; margin:0; letter-spacing:.01em; }
+.qr-item-meta        { display:none; }
+.btn-qr-row          { background:none; border:1px solid var(--border2); border-radius:6px; color:var(--txt2); cursor:pointer; padding:3px 7px; display:inline-flex; align-items:center; gap:3px; font-size:12px; }
+.btn-qr-row:hover    { color:var(--accent); border-color:var(--accent); }
+.btn-qr-row .material-icons-round { font-size:14px; }
+.modal-qr-box        { max-width:300px; width:100%; }
+.qr-modal-topbar     { display:flex; justify-content:flex-end; padding:10px 10px 0; }
+
+/* ── Scanner QR ───────────────────────────────────────────────────────────── */
+.scanner-wrap        { position:relative; width:100%; aspect-ratio:1/1; max-height:300px; background:#000; border-radius:10px; overflow:hidden; }
+.scanner-video       { width:100%; height:100%; object-fit:cover; display:block; }
+.scanner-overlay     { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+.scanner-frame       { width:180px; height:180px; border:2px solid var(--accent); border-radius:12px; box-shadow:0 0 0 9999px rgba(0,0,0,0.45); }
+.scanner-hint        { color:#fff; font-size:12px; background:rgba(0,0,0,0.5); padding:4px 10px; border-radius:20px; margin:0; }
+.scanner-mobile-icon  { font-size:40px; color:var(--txt3); display:block; text-align:center; margin-bottom:12px; }
+.scanner-fallback-msg { font-size:13px; color:var(--txt2); text-align:center; line-height:1.6; margin:0; }
+.scanner-ok-icon     { font-size:48px !important; color:#4ade80; display:block; text-align:center; }
+.scanner-result      { text-align:center; padding:16px 0 8px; }
+.scanner-ok-text     { font-size:14px; color:var(--txt); font-weight:600; margin:8px 0 0; }
+
+/* ── Highlight de fila encontrada por QR ─────────────────────────────────── */
+.row-highlight { animation: rowPulse 2.5s ease-out; }
+@keyframes rowPulse {
+  0%   { background:rgba(47,129,247,0.35); }
+  100% { background:transparent; }
+}
+
+/* ── Print: etiqueta QR ───────────────────────────────────────────────────── */
+@media print {
+  body > *                    { display:none !important; }
+  #print-qr-label             { display:flex !important; }
+}
+#print-qr-label {
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:16px;
+  font-family:'Outfit',sans-serif;
+  width:200px;
+  border:1px solid #ccc;
+  border-radius:8px;
+}
+#print-qr-label .pql-nombre   { font-size:13px; font-weight:700; color:#000; text-align:center; margin:0; }
+#print-qr-label .pql-meta     { font-size:10px; color:#555; text-align:center; margin:0; }
+#print-qr-label .pql-codigo   { font-size:11px; font-weight:600; color:#000; font-family:monospace; margin:0; }
+
