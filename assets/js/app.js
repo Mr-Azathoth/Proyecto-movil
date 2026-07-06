@@ -644,6 +644,9 @@ function _buildInventarioRow(rep) {
   const stockColor = rep.cantidad > 5 ? 'color:#4ade80' : rep.cantidad > 0 ? 'color:#fb923c' : 'color:#f87171';
   const actions = `<td class="action-col">
     <div class="row-actions">
+      <button type="button" class="btn-qr-row btn-inv-qr" data-id="${rep.id_repuesto}" title="Ver QR">
+        <span class="material-icons-round">qr_code</span> QR
+      </button>
       ${isAdmin ? `<button type="button" class="btn-row-action btn-inv-edit" title="Editar repuesto">
         <span class="material-icons-round">edit</span>
       </button>` : ''}
@@ -1571,9 +1574,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof _confirmCallback === 'function') { _confirmCallback(); _confirmCallback = null; }
   });
 
-  // Click inventario: editar, stock +/-, abrir modal agregar
+  // Click inventario: editar, stock +/-, QR
   document.getElementById('tbl-inventario').addEventListener('click', e => {
     if (e.target.dataset.action === 'open-modal-repuesto') { openModal('modal-repuesto'); return; }
+    const qrBtn = e.target.closest('.btn-inv-qr');
+    if (qrBtn) {
+      const item = _invMap.get(parseInt(qrBtn.dataset.id));
+      if (item) openQRModal(item);
+      return;
+    }
     const editBtn = e.target.closest('.btn-inv-edit');
     if (editBtn) {
       const row = editBtn.closest('tr[data-inv-id]');
@@ -2006,11 +2015,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('tecnico-user').value   = '';
     document.getElementById('tecnico-pass').value   = '';
     document.getElementById('tecnico-pass2').value  = '';
-    document.getElementById('modal-nuevo-tecnico').classList.remove('hidden');
+    document.getElementById('modal-nuevo-tecnico').classList.add('active');
     document.getElementById('tecnico-nombre').focus();
   }
   function closeModalTecnico() {
-    document.getElementById('modal-nuevo-tecnico').classList.add('hidden');
+    document.getElementById('modal-nuevo-tecnico').classList.remove('active');
   }
 
   document.getElementById('btn-nuevo-tecnico')?.addEventListener('click', openModalTecnico);
@@ -2051,4 +2060,176 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.disabled = false;
     }
   });
+
+  // ── Resaltar fila ─────────────────────────────────────────────────────────
+}());
+
+// ── QR inventario: funciones a nivel de módulo ────────────────────────────
+function _qrUrl(id) {
+  return location.origin + '/reparo/app.php?inv=' + id;
+}
+
+function openQRModal(item) {
+  document.getElementById('qr-item-nombre').textContent = item.nombre;
+  const meta = [item.marca_compatible, item.modelo_compatible].filter(Boolean).join(' · ');
+  document.getElementById('qr-item-meta').textContent = meta || 'Sin marca/modelo registrado';
+
+  const wrap = document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML = '';
+  new QRCode(wrap, {
+    text:         _qrUrl(item.id_repuesto),
+    width:        200,
+    height:       200,
+    colorDark:    '#000000',
+    colorLight:   '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+
+  document.getElementById('modal-qr').classList.add('active');
+  document.getElementById('btn-qr-print').onclick = () => _printQR(item);
+}
+
+function _printQR(item) {
+  let label = document.getElementById('print-qr-label');
+  if (!label) {
+    label = document.createElement('div');
+    label.id = 'print-qr-label';
+    document.body.appendChild(label);
+  }
+  label.innerHTML = '';
+
+  const qrDiv = document.createElement('div');
+  new QRCode(qrDiv, {
+    text:         _qrUrl(item.id_repuesto),
+    width:        160,
+    height:       160,
+    colorDark:    '#000000',
+    colorLight:   '#ffffff',
+    correctLevel: QRCode.CorrectLevel.M,
+  });
+  label.appendChild(qrDiv);
+
+  const pNombre = document.createElement('p');
+  pNombre.className = 'pql-nombre';
+  pNombre.textContent = item.nombre;
+  label.appendChild(pNombre);
+
+  const meta = [item.marca_compatible, item.modelo_compatible].filter(Boolean).join(' · ');
+  if (meta) {
+    const pMeta = document.createElement('p');
+    pMeta.className = 'pql-meta';
+    pMeta.textContent = meta;
+    label.appendChild(pMeta);
+  }
+
+  const pCod = document.createElement('p');
+  pCod.className = 'pql-codigo';
+  pCod.textContent = 'ID: ' + item.id_repuesto;
+  label.appendChild(pCod);
+
+  setTimeout(() => window.print(), 150);
+}
+
+// ── Scanner QR: funciones a nivel de módulo ───────────────────────────────
+var _scannerStream   = null;
+var _scannerInterval = null;
+
+function _stopScanner() {
+  clearInterval(_scannerInterval);
+  _scannerInterval = null;
+  if (_scannerStream) { _scannerStream.getTracks().forEach(function(t) { t.stop(); }); _scannerStream = null; }
+  document.getElementById('modal-scanner').classList.remove('active');
+  document.getElementById('scanner-result').classList.add('hidden');
+  document.getElementById('scanner-wrap').classList.remove('hidden');
+  document.getElementById('scanner-fallback').classList.add('hidden');
+}
+
+function _highlightInvItem(id) {
+  _stopScanner();
+  switchView('inventario');
+  setTimeout(function() {
+    var row = document.querySelector('tr[data-inv-id="' + id + '"]');
+    if (!row) { toast('Repuesto no encontrado en inventario.', 'err'); return; }
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.add('row-highlight');
+    setTimeout(function() { row.classList.remove('row-highlight'); }, 2500);
+    var item = _invMap.get(id);
+    if (item) toast('Repuesto encontrado: ' + item.nombre, 'ok');
+  }, 300);
+}
+
+function _handleScannedUrl(text) {
+  try {
+    var url = new URL(text);
+    var inv = url.searchParams.get('inv');
+    if (inv) { _highlightInvItem(parseInt(inv)); return; }
+  } catch (_) {}
+  var num = parseInt(text.replace(/\D/g, ''));
+  if (num && _invMap.has(num)) { _highlightInvItem(num); return; }
+  toast('QR no reconocido como repuesto.', 'err');
+}
+
+async function openScanner() {
+  document.getElementById('modal-scanner').classList.add('active');
+  document.getElementById('scanner-result').classList.add('hidden');
+  document.getElementById('scanner-fallback').classList.add('hidden');
+  document.getElementById('scanner-wrap').classList.remove('hidden');
+
+  try {
+    _scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    var video = document.getElementById('scanner-video');
+    video.srcObject = _scannerStream;
+    var detector = new BarcodeDetector({ formats: ['qr_code'] });
+    _scannerInterval = setInterval(async function() {
+      if (video.readyState < 2) return;
+      try {
+        var codes = await detector.detect(video);
+        if (codes.length > 0) {
+          document.getElementById('scanner-wrap').classList.add('hidden');
+          document.getElementById('scanner-result').classList.remove('hidden');
+          document.getElementById('scanner-ok-text').textContent = 'Código detectado. Buscando repuesto...';
+          _handleScannedUrl(codes[0].rawValue);
+        }
+      } catch(_) {}
+    }, 300);
+  } catch(err) {
+    document.getElementById('scanner-wrap').classList.add('hidden');
+    document.getElementById('scanner-fallback').classList.remove('hidden');
+  }
+}
+
+// ── Listeners QR + scanner (DOM ya listo — script al final del body) ──────
+document.getElementById('modal-qr-close')?.addEventListener('click', function() {
+  document.getElementById('modal-qr').classList.remove('active');
+});
+document.getElementById('modal-qr-cancel')?.addEventListener('click', function() {
+  document.getElementById('modal-qr').classList.remove('active');
+});
+document.getElementById('modal-qr')?.addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) document.getElementById('modal-qr').classList.remove('active');
+});
+var _esMobil = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+if (!_esMobil) {
+  var _btnScanQr = document.getElementById('btn-scan-qr');
+  if (_btnScanQr) _btnScanQr.style.display = 'none';
+} else {
+  document.getElementById('btn-scan-qr')?.addEventListener('click', openScanner);
+}
+document.getElementById('modal-scanner-close')?.addEventListener('click', _stopScanner);
+document.getElementById('modal-scanner')?.addEventListener('click', function(e) {
+  if (e.target === e.currentTarget) _stopScanner();
+});
+
+// ── Detectar ?inv=ID al cargar (QR escaneado externamente) ────────────────
+(function() {
+  var invParam = new URLSearchParams(location.search).get('inv');
+  if (!invParam) return;
+  var invId = parseInt(invParam);
+  if (!invId) return;
+  function _waitAndHighlight() {
+    if (_invMap.has(invId)) { _highlightInvItem(invId); }
+    else { setTimeout(_waitAndHighlight, 400); }
+  }
+  switchView('inventario');
+  loadInventario().then(_waitAndHighlight);
 }());

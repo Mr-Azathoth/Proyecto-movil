@@ -211,6 +211,9 @@ try {
           <p class="page-sub">Repuestos y stock disponible</p>
         </div>
         <div class="topbar-actions">
+          <button class="btn-sec" id="btn-scan-qr">
+            <span class="material-icons-round">qr_code_scanner</span> Escanear QR
+          </button>
           <?php if(isAdmin()): ?>
           <div class="split-btn split-sec" id="split-exportar-inv">
             <button class="split-main" id="btn-exportar-inv-main">
@@ -336,7 +339,7 @@ try {
       </div>
 
       <!-- Modal: Nuevo técnico -->
-      <div class="modal-overlay hidden" id="modal-nuevo-tecnico">
+      <div class="modal-bg" id="modal-nuevo-tecnico">
         <div class="modal-box modal-sm">
           <div class="modal-header">
             <span class="modal-title">Agregar técnico</span>
@@ -930,7 +933,55 @@ try {
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
+<!-- Modal: Ver QR de repuesto -->
+<div class="modal-bg" id="modal-qr">
+  <div class="modal-box modal-qr-box">
+    <div class="qr-modal-topbar">
+      <button type="button" class="modal-close" id="modal-qr-close" aria-label="Cerrar">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="modal-body qr-modal-body">
+      <div id="qr-canvas-wrap"></div>
+      <p class="qr-item-nombre" id="qr-item-nombre"></p>
+      <p class="qr-item-meta" id="qr-item-meta"></p>
+      <button type="button" class="btn-primary w-full" id="btn-qr-print">
+        <span class="material-icons-round">print</span> Imprimir
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Escáner QR -->
+<div class="modal-bg" id="modal-scanner">
+  <div class="modal-box modal-sm">
+    <div class="qr-modal-topbar">
+      <button type="button" class="modal-close" id="modal-scanner-close" aria-label="Cerrar">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="scanner-wrap" id="scanner-wrap">
+        <video id="scanner-video" class="scanner-video" autoplay muted playsinline></video>
+        <div class="scanner-overlay">
+          <div class="scanner-frame"></div>
+          <p class="scanner-hint">Apunta al código QR del repuesto</p>
+        </div>
+      </div>
+      <div class="scanner-fallback hidden" id="scanner-fallback">
+        <span class="material-icons-round scanner-mobile-icon">smartphone</span>
+        <p class="scanner-fallback-msg">El escaneo de QR solo está disponible en dispositivos móviles.</p>
+      </div>
+      <div class="scanner-result hidden" id="scanner-result">
+        <span class="material-icons-round scanner-ok-icon">check_circle</span>
+        <p class="scanner-ok-text" id="scanner-ok-text"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="/reparo/assets/js/chart.umd.min.js"></script>
+<script src="/reparo/assets/js/qrcode.min.js"></script>
 <script src="/reparo/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 </body>
 </html>
