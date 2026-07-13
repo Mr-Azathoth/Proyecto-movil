@@ -4,13 +4,13 @@
 
 // ── Base de datos ─────────────────────────────────────────────
 define('DB_HOST',    'localhost');
-define('DB_NAME',    'reparo_db');
+define('DB_NAME',    'centrotec_db');
 define('DB_USER',    'root');          // En prod: usuario con permisos mínimos
 define('DB_PASS',    '');
 define('DB_CHARSET', 'utf8mb4');
 
 // ── App ───────────────────────────────────────────────────────
-define('APP_URL',   'http://localhost/reparo');
+define('APP_URL',   'http://localhost/centrotec');
 define('EMPRESA_ID', 1);              // ID de la empresa para instalaciones single-tenant
 
 define('VALID_STATUS', ['Ingresado', 'En Reparacion', 'Reparado', 'Entregado', 'Garantia']);

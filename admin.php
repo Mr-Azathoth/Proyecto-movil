@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
@@ -32,7 +32,7 @@ $actividad = $db->query("
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<?php $pageTitle = 'Reparo Admin'; ?>
+<?php $pageTitle = 'Centrotec Admin'; ?>
 <?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
@@ -80,7 +80,7 @@ $actividad = $db->query("
       <div class="ec-card-hdr">
         <span class="material-icons-round">business</span>
         Últimas empresas registradas
-        <a href="/reparo/admin_clientes.php" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;font-weight:400;">Ver todas →</a>
+        <a href="<?= BASE ?>/admin_clientes.php" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;font-weight:400;">Ver todas →</a>
       </div>
       <table class="adm-table" id="tbl">
         <thead><tr><th>Empresa</th><th>Estado</th><th>Registro</th></tr></thead>
@@ -88,7 +88,7 @@ $actividad = $db->query("
           <?php foreach ($nuevas as $e):
             $ini = sadmin_iniciales($e['nombre']);
           ?>
-          <tr data-href="/reparo/admin_empresa.php?id=<?= $e['id_empresa'] ?>">
+          <tr data-href="<?= BASE ?>/admin_empresa.php?id=<?= $e['id_empresa'] ?>">
             <td>
               <div class="tbl-name-cell">
                 <div class="tbl-avatar"><?= $ini ?></div>
@@ -115,7 +115,7 @@ $actividad = $db->query("
       <div class="ec-card-hdr">
         <span class="material-icons-round">history</span>
         Actividad reciente
-        <a href="/reparo/admin_actividad.php" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;font-weight:400;">Ver todo →</a>
+        <a href="<?= BASE ?>/admin_actividad.php" style="margin-left:auto;font-size:12px;color:var(--accent);text-decoration:none;font-weight:400;">Ver todo →</a>
       </div>
       <div style="padding:4px 0;">
         <?php if (empty($actividad)): ?>
@@ -139,6 +139,6 @@ $actividad = $db->query("
 
   </div>
 </main>
-<script src="/reparo/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
 </body>
 </html>

@@ -14,14 +14,22 @@ $venc   = trim($_POST['plan_vencimiento'] ?? '');
 if (!$id) sadmin_json_err('Datos incompletos.');
 
 $estados_validos = ['Activo','Vencido','Suspendido','Gratis'];
-if ($estado && !in_array($estado, $estados_validos)) sadmin_json_err('Estado inválido.');
+$tipos_validos   = ['1mes','3meses','6meses','12meses','manual'];
+if ($estado && !in_array($estado, $estados_validos, true)) sadmin_json_err('Estado inválido.');
+if ($tipo  && !in_array($tipo,   $tipos_validos,   true)) sadmin_json_err('Tipo de plan inválido.');
 if ($venc && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $venc)) sadmin_json_err('Fecha inválida.');
 
 $db = getDB();
 $sets = [];
 $params = [];
 if ($tipo  !== '') { $sets[] = 'plan_tipo = ?';        $params[] = $tipo; }
-if ($estado !== '') { $sets[] = 'plan_estado = ?';     $params[] = $estado; }
+if ($estado !== '') {
+    $sets[] = 'plan_estado = ?';
+    $params[] = $estado;
+    // Sincronizar activa con el estado del plan
+    $sets[]   = 'activa = ?';
+    $params[] = ($estado === 'Activo' || $estado === 'Gratis') ? 1 : 0;
+}
 if ($venc   !== '') { $sets[] = 'plan_vencimiento = ?'; $params[] = $venc; }
 
 if (empty($sets)) sadmin_json_err('Nada que actualizar.');

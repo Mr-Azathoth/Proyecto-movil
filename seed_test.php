@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 // ── SEED DE DATOS DE PRUEBA ────────────────────────────────
 // Solo accesible desde localhost. Ejecutar una vez.
-// Acceder en: http://localhost/reparo/seed_test.php
+// Acceder en: http://localhost/centrotec/seed_test.php
 // ─────────────────────────────────────────────────────────
 
 if ($_SERVER['REMOTE_ADDR'] !== '127.0.0.1' && $_SERVER['REMOTE_ADDR'] !== '::1') {
@@ -103,7 +103,7 @@ foreach ($inv as $it) {
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><title>Seed Reparo</title>
+<head><meta charset="UTF-8"><title>Seed Centrotec</title>
 <style>
   body { font-family: monospace; background: #0d1117; color: #e6edf3; padding: 32px; }
   h2   { color: #2f81f7; margin-bottom: 20px; }
@@ -114,12 +114,12 @@ foreach ($inv as $it) {
 </style>
 </head>
 <body>
-  <h2>Seed de datos de prueba — Reparo</h2>
+  <h2>Seed de datos de prueba — Centrotec</h2>
   <?php foreach ($msg  as $m): ?><p class="ok"><?= htmlspecialchars($m) ?></p><?php endforeach; ?>
   <?php foreach ($errs as $e): ?><p class="err"><?= htmlspecialchars($e) ?></p><?php endforeach; ?>
   <p style="margin-top:16px;color:#8b949e">
     <?= count($msg) ?> insertados · <?= count($errs) ?> errores
   </p>
-  <a class="btn" href="/reparo/app.php">Ir a la app →</a>
+  <a class="btn" href="<?= BASE ?>/app.php">Ir a la app →</a>
 </body>
 </html>

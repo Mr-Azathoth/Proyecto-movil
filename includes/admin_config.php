@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Guard: este archivo solo debe ser incluido desde páginas admin_*.php y api/admin/
 // Nunca incluir desde código de tenant.
 
@@ -14,12 +14,12 @@ function superAdminLogueado(): bool {
 
 function requireSuperAdmin(): void {
     if (!superAdminLogueado()) {
-        header('Location: /reparo/admin_login.php');
+        header('Location: '.BASE.'/admin_login.php');
         exit;
     }
     if (isset($_SESSION['sadmin_last']) && time() - $_SESSION['sadmin_last'] > SADMIN_TIMEOUT) {
         session_destroy();
-        header('Location: /reparo/admin_login.php?timeout=1');
+        header('Location: '.BASE.'/admin_login.php?timeout=1');
         exit;
     }
     $_SESSION['sadmin_last'] = time();

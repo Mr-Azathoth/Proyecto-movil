@@ -1,16 +1,16 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
 
 $id = (int)($_GET['id'] ?? 0);
-if (!$id) { header('Location: /reparo/admin_clientes.php'); exit; }
+if (!$id) { header('Location: '.BASE.'/admin_clientes.php'); exit; }
 
 $db  = getDB();
 $emp = $db->prepare("SELECT * FROM empresas WHERE id_empresa = ? LIMIT 1");
 $emp->execute([$id]);
 $emp = $emp->fetch();
-if (!$emp) { header('Location: /reparo/admin_clientes.php'); exit; }
+if (!$emp) { header('Location: '.BASE.'/admin_clientes.php'); exit; }
 
 $usuarios = $db->prepare("SELECT id_usuario, nombre, user, cargo, activo FROM usuarios WHERE id_empresa = ? ORDER BY cargo, nombre");
 $usuarios->execute([$id]);
@@ -34,7 +34,7 @@ $planOk = $emp['plan_estado'] === 'Activo' && ($emp['plan_vencimiento'] === null
 
 $iniciales = sadmin_iniciales($emp['nombre']);
 ?>
-<?php $pageTitle = 'Reparo Admin — ' . htmlspecialchars($emp['nombre']); ?>
+<?php $pageTitle = 'Centrotec Admin — ' . htmlspecialchars($emp['nombre']); ?>
 <!DOCTYPE html>
 <html lang="es">
 <?php include __DIR__ . '/includes/admin_head.php'; ?>
@@ -55,7 +55,7 @@ $iniciales = sadmin_iniciales($emp['nombre']);
       </div>
     </div>
     <div class="emp-hero-actions">
-      <a href="/reparo/admin_clientes.php" class="adm-btn adm-btn-ghost">
+      <a href="<?= BASE ?>/admin_clientes.php" class="adm-btn adm-btn-ghost">
         <span class="material-icons-round">arrow_back</span>Volver
       </a>
       <button class="adm-btn <?= $emp['activa'] ? 'adm-btn-danger' : 'adm-btn-ghost' ?>"
@@ -318,6 +318,6 @@ $iniciales = sadmin_iniciales($emp['nombre']);
   <span id="toast-msg"></span>
 </div>
 
-<script src="/reparo/assets/js/admin_empresa.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_empresa.js"></script>
 </body>
 </html>

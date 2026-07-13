@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // ── SEED DE MODELOS ────────────────────────────────────────
 // Solo accesible desde localhost. Agrega modelos masivamente.
 // ─────────────────────────────────────────────────────────
@@ -421,7 +421,7 @@ foreach ($modelos as [$marca, $nombre]) {
 // ── 5. RESULTADO ──────────────────────────────────────────
 ?><!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><title>Seed Modelos — Reparo</title>
+<head><meta charset="UTF-8"><title>Seed Modelos — Centrotec</title>
 <style>
   body { font-family:monospace; background:#0d1117; color:#e6edf3; padding:32px; }
   h2   { color:#2f81f7; }
@@ -433,13 +433,13 @@ foreach ($modelos as [$marca, $nombre]) {
 </style>
 </head>
 <body>
-<h2>Seed de modelos — Reparo</h2>
+<h2>Seed de modelos — Centrotec</h2>
 <p class="ok">✔ Insertados: <?= $ok ?></p>
 <p class="skip">— Ya existían (ignorados): <?= $skip ?></p>
 <?php foreach ($err as $e): ?>
   <p class="err">✘ <?= htmlspecialchars($e) ?></p>
 <?php endforeach; ?>
 <p>Total procesados: <?= count($modelos) ?> | Errores: <?= count($err) ?></p>
-<a href="/reparo/app.php">Ir a la app →</a>
+<a href="<?= BASE ?>/app.php">Ir a la app →</a>
 </body>
 </html>

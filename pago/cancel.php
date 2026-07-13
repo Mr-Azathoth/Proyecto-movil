@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__.'/../includes/config.php';
 requireLogin();
 
@@ -17,7 +17,7 @@ $msg = $mensajes[$status] ?? 'El pago no se completó.';
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Pago no completado – Reparo</title>
+<title>Pago no completado – Centrotec</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <style>
@@ -36,9 +36,9 @@ $msg = $mensajes[$status] ?? 'El pago no se completó.';
   <span class="material-icons-round" style="font-size:52px;color:#f85149">error_outline</span>
   <h2><?= $msg ?></h2>
   <p>Gateway: <?= ucfirst($gateway) ?></p>
-  <a href="/reparo/app.php">
+  <a href="<?= BASE ?>/app.php">
     <span class="material-icons-round" style="font-size:18px">arrow_back</span>
-    Volver a Reparo
+    Volver a Centrotec
   </a>
 </body>
 </html>

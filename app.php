@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 require_once __DIR__.'/includes/config.php';
 requireLogin();
 $_SESSION['last_activity'] = time();
 
 // Cargar datos de la empresa + migración silenciosa de columnas
-$empresa = ['nombre'=>'Reparo','logo_path'=>null,'direccion'=>'','telefono'=>'','correo'=>'','comuna'=>'','region'=>''];
+$empresa = ['nombre'=>'Centrotec','logo_path'=>null,'direccion'=>'','telefono'=>'','correo'=>'','comuna'=>'','region'=>''];
 try {
     $_db = getDB();
     try { $_db->exec("ALTER TABLE empresas
@@ -24,10 +24,10 @@ try {
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Reparo</title>
+<title>Centrotec</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
 </head>
 <body data-csrf="<?= csrf_token() ?>"
       data-role="<?= htmlspecialchars(ucargo()) ?>"
@@ -44,7 +44,7 @@ try {
     <div class="sidebar-logo" id="logo-display">
       <div class="logo-icon" id="logo-icon-wrap">
         <?php if(!empty($empresa['logo_path'])): ?>
-          <img class="logo-img" id="logo-img" src="/reparo/<?=htmlspecialchars($empresa['logo_path'])?>" alt="Logo">
+          <img class="logo-img" id="logo-img" src="<?= BASE ?>/<?=htmlspecialchars($empresa['logo_path'])?>" alt="Logo">
         <?php else: ?>
           <span id="logo-letra"><?=strtoupper(substr($empresa['nombre'],0,1))?></span>
         <?php endif; ?>
@@ -99,7 +99,7 @@ try {
           <span class="user-role"><?=ucargo()?></span>
         </div>
       </div>
-      <a href="/reparo/logout.php" class="btn-logout" title="Salir">
+      <a href="<?= BASE ?>/logout.php" class="btn-logout" title="Salir">
         <span class="material-icons-round">logout</span>
       </a>
     </div>
@@ -235,9 +235,19 @@ try {
               </button>
             </div>
           </div>
-          <button class="btn-primary" id="btn-abrir-repuesto">
-            <span class="material-icons-round">add</span> Agregar repuesto
-          </button>
+          <div class="split-btn split-primary" id="split-agregar-inv">
+            <button class="split-main" id="btn-abrir-repuesto">
+              <span class="material-icons-round">add</span> Agregar repuesto
+            </button>
+            <button class="split-arrow" id="btn-agregar-inv-arrow" aria-label="Más opciones">
+              <span class="material-icons-round">expand_more</span>
+            </button>
+            <div class="split-dropdown" id="split-agregar-inv-menu">
+              <button data-split-action="imp-inv-csv" class="split-item-import">
+                <span class="material-icons-round">upload_file</span> Importar CSV
+              </button>
+            </div>
+          </div>
           <?php endif; ?>
         </div>
       </header>
@@ -526,6 +536,14 @@ try {
         </div>
       </div>
 
+      <!-- Gráficos fila 3 -->
+      <div class="est-charts-row">
+        <div class="est-chart-card est-chart-wide">
+          <div class="est-chart-title">Modelos más reparados</div>
+          <div class="chart-modelos-wrap"><canvas id="chart-modelos"></canvas></div>
+        </div>
+      </div>
+
     </div><!-- /view-estadisticas -->
 
     <!-- Modal: resetear contraseña de usuario -->
@@ -794,6 +812,51 @@ try {
 </div>
 
 <!-- ══════════════════════════════════════════════════
+     MODAL: Importar inventario CSV
+══════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-importar-inv">
+  <div class="modal-box modal-importar-box">
+    <div class="qr-modal-topbar">
+      <button type="button" class="modal-close" id="modal-importar-close" aria-label="Cerrar">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div class="imp-template-row">
+        <span class="material-icons-round imp-info-icon">info</span>
+        <span class="imp-info-txt">El CSV debe tener las columnas: <strong>nombre</strong>, marca_compatible, modelo_compatible, precio_venta, cantidad.</span>
+        <a class="imp-template-link" id="btn-descargar-plantilla" href="#">
+          <span class="material-icons-round">download</span> Descargar plantilla
+        </a>
+      </div>
+
+      <div class="imp-dropzone" id="imp-dropzone">
+        <span class="material-icons-round imp-upload-icon">upload_file</span>
+        <p class="imp-drop-txt">Arrastra tu CSV aquí o <label class="imp-file-label" for="imp-file-input">selecciona archivo</label></p>
+        <input type="file" id="imp-file-input" accept=".csv,.txt" class="imp-file-hidden">
+        <p class="imp-drop-hint">Solo archivos .csv — máximo 2 MB</p>
+      </div>
+
+      <div class="imp-preview-wrap hidden" id="imp-preview-wrap">
+        <p class="imp-preview-title" id="imp-preview-title"></p>
+        <div class="table-scroll">
+          <table class="tbl imp-preview-tbl" id="imp-preview-tbl"></table>
+        </div>
+      </div>
+
+      <div class="imp-result hidden" id="imp-result"></div>
+
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-primary" id="btn-importar-confirm" disabled>
+        <span class="material-icons-round">cloud_upload</span> Importar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      MODAL: Editar repuesto de inventario
 ══════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-edit-repuesto">
@@ -980,8 +1043,8 @@ try {
   </div>
 </div>
 
-<script src="/reparo/assets/js/chart.umd.min.js"></script>
-<script src="/reparo/assets/js/qrcode.min.js"></script>
-<script src="/reparo/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
+<script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
+<script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
 requireLogin();
 
@@ -25,7 +25,7 @@ $rep = $sr->fetch();
 if (!$rep) { echo 'Orden de servicio no encontrada.'; exit; }
 
 $logoSrc   = ($emp['logo_path'] && file_exists(__DIR__.'/'.$emp['logo_path']))
-           ? '/reparo/'.$emp['logo_path'] : '';
+           ? BASE.'/'.$emp['logo_path'] : '';
 $ubicacion = trim(implode(', ', array_filter([
     $emp['direccion'] ?? '', $emp['comuna'] ?? '',
 ])));
@@ -48,7 +48,7 @@ function hh(string $v): string { return htmlspecialchars($v ?? '', ENT_QUOTES, '
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orden #<?= $numFmt ?></title>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/orden.css">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/orden.css">
 </head>
 <body>
 <div class="page">
@@ -198,6 +198,6 @@ function hh(string $v): string { return htmlspecialchars($v ?? '', ENT_QUOTES, '
 
 </div><!-- /modal-box -->
 </div><!-- /page -->
-<script src="/reparo/assets/js/orden.js"></script>
+<script src="<?= BASE ?>/assets/js/orden.js"></script>
 </body>
 </html>

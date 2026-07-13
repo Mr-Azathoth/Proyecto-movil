@@ -37,8 +37,12 @@ $sql = "SELECT r.id_ingreso, r.fecha_ingreso, r.nombre_cliente, r.telefono_clien
          WHERE r.id_empresa = ?";
 $params = [$eid];
 
-if ($fecha_desde) { $sql .= " AND DATE(r.fecha_ingreso) >= ?"; $params[] = $fecha_desde; }
-if ($fecha_hasta) { $sql .= " AND DATE(r.fecha_ingreso) <= ?"; $params[] = $fecha_hasta; }
+if ($fecha_desde && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_desde)) {
+    $sql .= " AND DATE(r.fecha_ingreso) >= ?"; $params[] = $fecha_desde;
+}
+if ($fecha_hasta && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_hasta)) {
+    $sql .= " AND DATE(r.fecha_ingreso) <= ?"; $params[] = $fecha_hasta;
+}
 
 if (!empty($estados)) {
     $ph     = implode(',', array_fill(0, count($estados), '?'));
@@ -47,9 +51,10 @@ if (!empty($estados)) {
 }
 
 if ($q) {
-    $like     = '%' . $q . '%';
-    $sql     .= " AND (r.nombre_cliente LIKE ? OR r.marca_ingreso LIKE ? OR r.modelo_ingreso LIKE ? OR CAST(r.id_ingreso AS CHAR) LIKE ?)";
-    $params   = array_merge($params, [$like, $like, $like, $like]);
+    $safe   = addcslashes($q, '%_\\');
+    $like   = '%' . $safe . '%';
+    $sql   .= " AND (r.nombre_cliente LIKE ? OR r.marca_ingreso LIKE ? OR r.modelo_ingreso LIKE ? OR CAST(r.id_ingreso AS CHAR) LIKE ?)";
+    $params = array_merge($params, [$like, $like, $like, $like]);
 }
 if ($precio_min !== null) { $sql .= " AND r.valor_ingreso >= ?"; $params[] = $precio_min; }
 if ($precio_max !== null) { $sql .= " AND r.valor_ingreso <= ?"; $params[] = $precio_max; }

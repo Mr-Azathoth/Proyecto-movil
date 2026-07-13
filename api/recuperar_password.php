@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/mailer.php';
 header('Content-Type: application/json; charset=utf-8');
@@ -57,7 +57,7 @@ if ($user) {
 
         $link     = rtrim(APP_URL, '/') . '/reset_password.php?token=' . $token;
         $nombre   = htmlspecialchars($user['nombre'], ENT_QUOTES, 'UTF-8');
-        $empresa  = htmlspecialchars($emp['nombre'] ?? 'Reparo', ENT_QUOTES, 'UTF-8');
+        $empresa  = htmlspecialchars($emp['nombre'] ?? 'Centrotec', ENT_QUOTES, 'UTF-8');
 
         $html = "
 <!DOCTYPE html>
@@ -69,7 +69,7 @@ if ($user) {
       <table width='520' cellpadding='0' cellspacing='0' style='background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);'>
         <tr>
           <td style='background:#0d1117;padding:28px 32px;'>
-            <span style='font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;'>R</span>
+            <span style='font-size:22px;font-weight:800;color:#fff;letter-spacing:-0.5px;'>C</span>
             <span style='font-size:18px;font-weight:700;color:#e6edf3;'>eparo</span>
             <span style='font-size:12px;color:#8b949e;margin-left:8px;'>Servicios Técnicos</span>
           </td>
@@ -113,7 +113,7 @@ if ($user) {
 </body>
 </html>";
 
-        send_email($correo, $user['nombre'], 'Recuperar contraseña — Reparo', $html);
+        send_email($correo, $user['nombre'], 'Recuperar contraseña — Centrotec', $html);
     }
 }
 

@@ -1,9 +1,10 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/includes/config.php';
 $planes = [
-    ['nombre' => '1 mes',    'meses' => 1,  'precio' => 4990,  'featured' => false],
-    ['nombre' => '3 meses',  'meses' => 3,  'precio' => 13990, 'featured' => false],
-    ['nombre' => '6 meses',  'meses' => 6,  'precio' => 25990, 'featured' => false],
-    ['nombre' => '12 meses', 'meses' => 12, 'precio' => 49990, 'featured' => true],
+    ['key' => '1mes',    'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990,  'featured' => false],
+    ['key' => '3meses',  'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990, 'featured' => false],
+    ['key' => '6meses',  'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990, 'featured' => false],
+    ['key' => '12meses', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990, 'featured' => true],
 ];
 $precio_mensual = 4990;
 ?>
@@ -12,11 +13,11 @@ $precio_mensual = 4990;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo.cl — Gestión para servicios técnicos</title>
-<meta name="description" content="Digitaliza tu servicio técnico con Reparo.cl. Órdenes de trabajo, clientes, repuestos y más en un solo lugar.">
+<title>Centrotec — Gestión para servicios técnicos</title>
+<meta name="description" content="Digitaliza tu servicio técnico con Centrotec. Órdenes de trabajo, clientes, repuestos y más en un solo lugar.">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/landing.css?v=<?= filemtime(__DIR__.'/assets/css/landing.css') ?>">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/landing.css?v=<?= filemtime(__DIR__.'/assets/css/landing.css') ?>">
 </head>
 <body>
 
@@ -24,18 +25,19 @@ $precio_mensual = 4990;
 <nav class="nav" id="nav">
   <div class="nav-inner">
     <a href="#hero" class="nav-logo">
-      <div class="nav-logo-icon">R</div>
-      <span>Reparo.cl</span>
+      <div class="nav-logo-icon">C</div>
+      <span>Centrotec</span>
     </a>
     <div class="nav-links" id="nav-links">
       <a href="#caracteristicas" class="nav-link">Características</a>
       <a href="#precios" class="nav-link">Precios</a>
       <a href="#contacto" class="nav-link">Contacto</a>
-      <a href="/reparo/seguimiento" class="nav-seguimiento">
+      <a href="<?= BASE ?>/seguimiento" class="nav-seguimiento">
         <span class="material-icons-round">search</span>
         Seguir mi reparación
       </a>
-      <a href="/reparo/" class="nav-cta">Zona Clientes</a>
+      <a href="<?= BASE ?>/registro.php" class="nav-cta nav-cta-ghost">Crear cuenta</a>
+      <a href="<?= BASE ?>/" class="nav-cta">Zona Clientes</a>
     </div>
     <button class="nav-burger" id="nav-burger" aria-label="Abrir menú">
       <span class="material-icons-round" id="burger-icon">menu</span>
@@ -76,7 +78,7 @@ $precio_mensual = 4990;
           <span class="mockup-dot"></span>
           <span class="mockup-dot"></span>
           <span class="mockup-dot"></span>
-          <span class="mockup-url">reparo.cl/app</span>
+          <span class="mockup-url">Centrotec/app</span>
         </div>
         <div class="mockup-body">
           <div class="mockup-kpis">
@@ -199,13 +201,13 @@ $precio_mensual = 4990;
   <div class="container cta-inner anim">
     <div class="cta-glow"></div>
     <h2>¿Listo para digitalizar tu servicio técnico?</h2>
-    <p>Únete a los servicios técnicos que ya gestionan su negocio con Reparo.cl</p>
+    <p>Únete a los servicios técnicos que ya gestionan su negocio con Centrotec</p>
     <div class="cta-btns">
       <a href="#precios" class="btn-primary btn-lg">
         <span class="material-icons-round">rocket_launch</span>
         Ver planes y precios
       </a>
-      <a href="/reparo/seguimiento" class="btn-seguimiento-cta">
+      <a href="<?= BASE ?>/seguimiento" class="btn-seguimiento-cta">
         <span class="material-icons-round">search</span>
         Seguir mi reparación
       </a>
@@ -233,7 +235,7 @@ $precio_mensual = 4990;
         <div class="plan-nombre"><?= $plan['nombre'] ?></div>
         <div class="plan-precio">$<?= number_format($plan['precio'], 0, ',', '.') ?></div>
         <div class="plan-por-mes">$<?= number_format($por_mes, 0, ',', '.') ?> / mes</div>
-        <a href="/reparo/" class="btn-plan <?= $plan['featured'] ? 'btn-plan-featured' : '' ?>">
+        <a href="<?= BASE ?>/registro.php?plan=<?= urlencode($plan['key']) ?>" class="btn-plan <?= $plan['featured'] ? 'btn-plan-featured' : '' ?>">
           Suscribirse <span class="material-icons-round">arrow_forward</span>
         </a>
       </div>
@@ -250,23 +252,23 @@ $precio_mensual = 4990;
 <footer class="footer" id="contacto">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <div class="nav-logo-icon footer-logo-icon">R</div>
+      <div class="nav-logo-icon footer-logo-icon">C</div>
       <div>
-        <div class="footer-name">Reparo.cl</div>
+        <div class="footer-name">Centrotec</div>
         <div class="footer-sub">Gestión para servicios técnicos</div>
       </div>
     </div>
     <nav class="footer-links">
       <a href="#caracteristicas">Características</a>
       <a href="#precios">Precios</a>
-      <a href="/reparo/seguimiento">Seguir mi reparación</a>
-      <a href="mailto:contacto@reparo.cl">contacto@reparo.cl</a>
-      <a href="/reparo/">Ingresar al sistema</a>
+      <a href="<?= BASE ?>/seguimiento">Seguir mi reparación</a>
+      <a href="mailto:contacto@Centrotec">contacto@Centrotec</a>
+      <a href="<?= BASE ?>/">Ingresar al sistema</a>
     </nav>
-    <div class="footer-legal">© <?= date('Y') ?> Reparo.cl — Todos los derechos reservados</div>
+    <div class="footer-legal">© <?= date('Y') ?> Centrotec — Todos los derechos reservados</div>
   </div>
 </footer>
 
-<script src="/reparo/assets/js/landing.js?v=<?= filemtime(__DIR__.'/assets/js/landing.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/landing.js?v=<?= filemtime(__DIR__.'/assets/js/landing.js') ?>"></script>
 </body>
 </html>

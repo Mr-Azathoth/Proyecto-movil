@@ -20,6 +20,9 @@ if ($method === 'GET') {
         PRIMARY KEY (id_repuesto),
         FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    try {
+        $db->exec("ALTER TABLE inventario ADD UNIQUE KEY uq_inv_codigo (id_empresa, codigo)");
+    } catch (PDOException $e) {}
 
     $q   = trim($_GET['q'] ?? '');
     $sql = "SELECT * FROM inventario WHERE id_empresa = ?";
@@ -27,7 +30,7 @@ if ($method === 'GET') {
 
     if ($q) {
         $sql .= " AND (nombre LIKE ? OR marca_compatible LIKE ? OR modelo_compatible LIKE ?)";
-        $like = "%" . $q . "%";
+        $like = "%" . addcslashes($q, '%_\\') . "%";
         $p    = array_merge($p, [$like, $like, $like]);
     }
     $sql .= " ORDER BY nombre ASC";
@@ -63,6 +66,7 @@ if ($method === 'POST') {
        ->execute([$eid, $f['codigo'], $f['nombre'], $f['marca_compatible'],
                   $f['modelo_compatible'], $f['precio_venta'], $f['cantidad']]);
 
+    log_accion($db, 'repuesto_creado_inv', null);
     json_ok(['msg' => 'Repuesto agregado.']);
 }
 
@@ -91,6 +95,7 @@ if ($method === 'PUT') {
             SET nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?, cantidad=?
             WHERE id_repuesto=? AND id_empresa=?")
            ->execute([$nombre, $marca, $modelo, $precio, $qty, $rid, $eid]);
+        log_accion($db, 'repuesto_editado_inv', null);
         json_ok(['msg' => 'Repuesto actualizado.']);
     }
 
@@ -98,5 +103,6 @@ if ($method === 'PUT') {
     $qty = max(0, (int) ($in['cantidad'] ?? 0));
     $db->prepare("UPDATE inventario SET cantidad=? WHERE id_repuesto=? AND id_empresa=?")
        ->execute([$qty, $rid, $eid]);
+    log_accion($db, 'stock_actualizado_inv', null);
     json_ok(['msg' => 'Stock actualizado.']);
 }

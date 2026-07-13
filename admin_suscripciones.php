@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
@@ -49,7 +49,7 @@ $dist = $db->query("
     GROUP BY plan_tipo ORDER BY total DESC
 ")->fetchAll();
 $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
-<?php $pageTitle = 'Reparo Admin — Suscripciones'; ?>
+<?php $pageTitle = 'Centrotec Admin — Suscripciones'; ?>
 <!DOCTYPE html>
 <html lang="es">
 <?php include __DIR__ . '/includes/admin_head.php'; ?>
@@ -113,7 +113,7 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
         <thead><tr><th>Empresa</th><th>Plan</th><th>Vence</th><th>Días</th></tr></thead>
         <tbody>
           <?php foreach ($proximos as $p): ?>
-          <tr data-href="/reparo/admin_empresa.php?id=<?= $p['id_empresa'] ?>">
+          <tr data-href="<?= BASE ?>/admin_empresa.php?id=<?= $p['id_empresa'] ?>">
             <td>
               <div class="tbl-name-cell">
                 <div class="tbl-avatar"><?= sadmin_iniciales($p['nombre']) ?></div>
@@ -143,7 +143,7 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
       <thead><tr><th>Empresa</th><th>Plan</th><th>Venció</th><th>Días vencido</th></tr></thead>
       <tbody>
         <?php foreach ($morosos as $m): ?>
-        <tr data-href="/reparo/admin_empresa.php?id=<?= $m['id_empresa'] ?>">
+        <tr data-href="<?= BASE ?>/admin_empresa.php?id=<?= $m['id_empresa'] ?>">
           <td>
             <div class="tbl-name-cell">
               <div class="tbl-avatar" style="background:linear-gradient(135deg,#dc2626,#f87171);"><?= sadmin_iniciales($m['nombre']) ?></div>
@@ -183,7 +183,7 @@ $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
     <?php endif; ?>
   </div>
 </main>
-<script src="/reparo/assets/js/admin_common.js"></script>
-<script src="/reparo/assets/js/admin_suscripciones.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_suscripciones.js"></script>
 </body>
 </html>

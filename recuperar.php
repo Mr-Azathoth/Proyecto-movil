@@ -1,24 +1,24 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
-if (logueado()) { header('Location: /reparo/app.php'); exit; }
+if (logueado()) { header('Location: '.BASE.'/app.php'); exit; }
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo — Recuperar contraseña</title>
+<title>Centrotec — Recuperar contraseña</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css">
 </head>
 <body class="login-page">
 <div class="login-wrap">
   <div class="login-card">
     <div class="brand">
-      <div class="brand-icon">R</div>
+      <div class="brand-icon">C</div>
       <div>
-        <div class="brand-name">Reparo</div>
+        <div class="brand-name">Centrotec</div>
         <div class="brand-sub">Recuperar contraseña</div>
       </div>
     </div>
@@ -49,10 +49,10 @@ if (logueado()) { header('Location: /reparo/app.php'); exit; }
     </div>
 
     <div class="auth-back">
-      <a href="/reparo/index.php">← Volver al inicio de sesión</a>
+      <a href="<?= BASE ?>/index.php">← Volver al inicio de sesión</a>
     </div>
   </div>
 </div>
-<script src="/reparo/assets/js/recuperar.js"></script>
+<script src="<?= BASE ?>/assets/js/recuperar.js"></script>
 </body>
 </html>

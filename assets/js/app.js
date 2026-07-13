@@ -1,5 +1,5 @@
-// ═══════════════════════════════════════════════════════════
-// REPARO — SPA Frontend
+﻿// ═══════════════════════════════════════════════════════════
+// Centrotec — SPA Frontend
 // ═══════════════════════════════════════════════════════════
 
 // ── TagInput: entrada de etiquetas separadas por coma ────────
@@ -278,7 +278,42 @@ async function apiFetch(url, options = {}) {
     setTimeout(() => { window.location.href = '/reparo/index.php?expired=1'; }, 1500);
     throw new Error('session_expired');
   }
+  if (response.status === 403) {
+    var msg403 = '';
+    try { msg403 = (await response.clone().json()).msg || ''; } catch(_) {}
+    var m = msg403.toLowerCase();
+    if (m.includes('suscripci') || m.includes('vencid') || m.includes('suspendid') || m.includes('pendiente')) {
+      var isPending = m.includes('pendiente');
+      mostrarPantallaSuspendida(isPending);
+      throw new Error('account_suspended');
+    }
+  }
   return response;
+}
+
+function mostrarPantallaSuspendida(isPending) {
+  if (document.getElementById('overlay-suspendida')) return;
+  var el = document.createElement('div');
+  el.id = 'overlay-suspendida';
+  el.className = 'overlay-suspendida';
+  var titulo = isPending ? 'Completa tu pago para continuar' : 'Tu suscripción ha vencido';
+  var msg    = isPending
+    ? 'Tu cuenta fue creada. Completa el pago para activar Centrotec.'
+    : 'Para seguir usando Centrotec, renueva tu suscripción o contacta a soporte.';
+  var btnLabel = isPending ? 'Ir a pagar' : 'Renovar suscripción';
+  el.innerHTML =
+    '<div class="susp-card">' +
+      '<div class="susp-icon"><span class="material-icons-round">schedule</span></div>' +
+      '<h2 class="susp-title">' + titulo + '</h2>' +
+      '<p class="susp-msg">' + msg + '</p>' +
+      '<a href="/reparo/landing.php#precios" class="susp-btn">' +
+        '<span class="material-icons-round">rocket_launch</span>' + btnLabel +
+      '</a>' +
+      '<a href="mailto:soporte@centrotec.cl" class="susp-btn-ghost">' +
+        '<span class="material-icons-round">mail</span>Contactar soporte — soporte@centrotec.cl' +
+      '</a>' +
+    '</div>';
+  document.body.appendChild(el);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -589,7 +624,7 @@ async function submitNuevo(e) {
         const tel   = (document.querySelector('[name="telefono_cliente"]')?.value || '').replace(/\D/g, '');
         const nombre = document.querySelector('[name="nombre_cliente"]')?.value?.trim() || 'cliente';
         const local = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
-        const url   = `https://reparo.cl/seguimiento?codigo=${encodeURIComponent(codigo)}`;
+        const url   = `https://Centrotec/seguimiento?codigo=${encodeURIComponent(codigo)}`;
         const msg   = `Hola ${nombre}! Tu equipo ingresó a *${local}*.\n` +
                       `Código de seguimiento: *${codigo}*\n` +
                       `Consulta el estado en: ${url}`;
@@ -623,11 +658,11 @@ async function submitActualizar(e) {
     });
     const j = await r.json();
     if (j.ok) {
-      const msg = j.stock_descontado
+      const msg = j.data.stock_descontado
         ? '✔ Guardado · Repuestos descontados del inventario'
         : '✔ Guardado.';
       toast(msg, 'ok');
-      if (j.stock_descontado) _repuestosCache = null;
+      if (j.data.stock_descontado) _repuestosCache = null;
       closeModal('modal-detalle');
       loadServicios();
     } else toast(j.msg, 'err');
@@ -1359,8 +1394,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   // Split buttons — servicios
   _initSplitBtn('split-exportar', 'btn-exportar-main', 'btn-exportar-arrow', 'split-exportar-menu');
-  // Split buttons — inventario
+  // Split buttons — inventario exportar
   _initSplitBtn('split-exportar-inv', 'btn-exportar-inv-main', 'btn-exportar-inv-arrow', 'split-exportar-inv-menu');
+  // Split button — agregar repuesto (solo flecha abre dropdown; botón principal abre modal)
+  (function() {
+    var arrow = document.getElementById('btn-agregar-inv-arrow');
+    var menu  = document.getElementById('split-agregar-inv-menu');
+    if (!arrow || !menu) return;
+    arrow.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var open = menu.classList.toggle('open');
+      var ic = arrow.querySelector('.material-icons-round');
+      if (ic) ic.textContent = open ? 'expand_less' : 'expand_more';
+    });
+    document.addEventListener('click', function(e) {
+      if (!menu.classList.contains('open')) return;
+      if (!menu.contains(e.target) && e.target !== arrow) {
+        menu.classList.remove('open');
+        var ic = arrow.querySelector('.material-icons-round');
+        if (ic) ic.textContent = 'expand_more';
+      }
+    });
+  }());
 
   // Acciones del dropdown de exportar (servicios e inventario)
   document.addEventListener('click', e => {
@@ -1376,6 +1431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     else if (action === 'exp-inv-csv')           doExportInv('csv');
     else if (action === 'exp-inv-pdf')           doExportInv('pdf');
     else if (action === 'exp-inv-personalizar')  openExportInvModal();
+    else if (action === 'imp-inv-csv')           document.dispatchEvent(new Event('openImportModal'));
   });
 
   document.getElementById('btn-exp-csv')?.addEventListener('click', () => doExport('csv'));
@@ -1397,9 +1453,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btn.addEventListener('click', () => closeModal(btn.dataset.modal));
   });
 
-  document.addEventListener('click', e => {
-    if (e.target.classList.contains('modal-bg')) closeModal(e.target.id);
-  });
+  // Backdrop click removed — accidental clicks outside a modal no longer close it
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') document.querySelectorAll('.modal-bg.active').forEach(m => closeModal(m.id));
   });
@@ -1829,6 +1883,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   var chartIngresos = null;
   var chartFlujo    = null;
   var chartMarcas   = null;
+  var chartModelos  = null;
   var estIniciado   = false;
 
   var COLORS = {
@@ -1950,14 +2005,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.innerHTML = data.map(function(r) {
       var pct = Math.round(parseInt(r.total) / max * 100);
       return '<div class="est-falla-item">' +
-        '<div class="est-falla-txt"><span class="est-falla-lbl">' + escHtml(r.falla) + '</span><span class="est-falla-cnt">' + r.total + '</span></div>' +
+        '<div class="est-falla-txt"><span class="est-falla-lbl">' + esc(r.falla) + '</span><span class="est-falla-cnt">' + r.total + '</span></div>' +
         '<div class="est-falla-bar"><div class="est-falla-fill" style="width:' + pct + '%"></div></div>' +
       '</div>';
     }).join('');
   }
 
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function renderModelos(data) {
+    chartModelos = destroyChart(chartModelos);
+    var ctx = document.getElementById('chart-modelos').getContext('2d');
+    var palette = [COLORS.blue, COLORS.green, COLORS.purple, COLORS.orange, COLORS.yellow, COLORS.gray, '#60a5fa', '#34d399'];
+    chartModelos = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(function(r){ return r.modelo; }),
+        datasets: [{ data: data.map(function(r){ return parseInt(r.total); }), backgroundColor: data.map(function(_, i){ return palette[i % palette.length] + 'cc'; }), borderRadius: 4 }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 }, stepSize: 1, callback: function(v) { return Number.isInteger(v) ? v : ''; } }, beginAtZero: true },
+          y: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 11 } } }
+        }
+      }
+    });
   }
 
   async function cargarEstadisticas() {
@@ -1978,6 +2051,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderFlujo(d.flujo_mes);
       renderMarcas(d.marcas);
       renderFallas(d.fallas);
+      renderModelos(d.modelos);
     } catch(e) {
       if (e.message !== 'session_expired') toast('Error al cargar estadísticas.', 'err');
     }
@@ -2025,9 +2099,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-nuevo-tecnico')?.addEventListener('click', openModalTecnico);
   document.getElementById('modal-tecnico-close')?.addEventListener('click', closeModalTecnico);
   document.getElementById('modal-tecnico-cancel')?.addEventListener('click', closeModalTecnico);
-  document.getElementById('modal-nuevo-tecnico')?.addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeModalTecnico();
-  });
 
   document.getElementById('btn-tecnico-guardar')?.addEventListener('click', async () => {
     const nombre = document.getElementById('tecnico-nombre').value.trim();
@@ -2205,9 +2276,6 @@ document.getElementById('modal-qr-close')?.addEventListener('click', function() 
 document.getElementById('modal-qr-cancel')?.addEventListener('click', function() {
   document.getElementById('modal-qr').classList.remove('active');
 });
-document.getElementById('modal-qr')?.addEventListener('click', function(e) {
-  if (e.target === e.currentTarget) document.getElementById('modal-qr').classList.remove('active');
-});
 var _esMobil = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 if (!_esMobil) {
   var _btnScanQr = document.getElementById('btn-scan-qr');
@@ -2216,9 +2284,137 @@ if (!_esMobil) {
   document.getElementById('btn-scan-qr')?.addEventListener('click', openScanner);
 }
 document.getElementById('modal-scanner-close')?.addEventListener('click', _stopScanner);
-document.getElementById('modal-scanner')?.addEventListener('click', function(e) {
-  if (e.target === e.currentTarget) _stopScanner();
-});
+
+// ── Importar inventario CSV ───────────────────────────────────────────────
+(function() {
+  var _parsedRows = [];
+
+  function _csvToRows(text) {
+    var lines = text.trim().split(/\r?\n/);
+    if (!lines.length) return [];
+    var delim = (lines[0].split(';').length >= lines[0].split(',').length) ? ';' : ',';
+    return lines.map(function(line) {
+      var result = [], cur = '', inQ = false;
+      for (var i = 0; i < line.length; i++) {
+        var c = line[i];
+        if (c === '"') { inQ = !inQ; }
+        else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
+        else { cur += c; }
+      }
+      result.push(cur.trim());
+      return result;
+    });
+  }
+
+  function _renderPreview(rows) {
+    var header = rows[0] || [];
+    var body   = rows.slice(1, 6);
+    var tbl    = document.getElementById('imp-preview-tbl');
+    var html   = '<thead><tr>' + header.map(function(h){ return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead>';
+    html += '<tbody>' + body.map(function(r){
+      return '<tr>' + r.map(function(c){ return '<td>' + esc(c) + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody>';
+    tbl.innerHTML = html;
+    var total = rows.length - 1;
+    document.getElementById('imp-preview-title').textContent =
+      total + ' fila' + (total !== 1 ? 's' : '') + ' encontrada' + (total !== 1 ? 's' : '') +
+      (total > 5 ? ' (mostrando primeras 5)' : '');
+    document.getElementById('imp-preview-wrap').classList.remove('hidden');
+    document.getElementById('imp-result').classList.add('hidden');
+    document.getElementById('btn-importar-confirm').disabled = total === 0;
+  }
+
+  function _handleFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var rows = _csvToRows(e.target.result);
+      _parsedRows = rows;
+      _renderPreview(rows);
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  // Dropzone drag & drop
+  var dz = document.getElementById('imp-dropzone');
+  if (dz) {
+    dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', function() { dz.classList.remove('drag-over'); });
+    dz.addEventListener('drop', function(e) {
+      e.preventDefault(); dz.classList.remove('drag-over');
+      _handleFile(e.dataTransfer.files[0]);
+    });
+    dz.addEventListener('click', function() { document.getElementById('imp-file-input').click(); });
+  }
+
+  var fileInput = document.getElementById('imp-file-input');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() { _handleFile(this.files[0]); });
+  }
+
+  // Abrir modal
+  document.addEventListener('openImportModal', function() {
+    _parsedRows = [];
+    document.getElementById('imp-preview-wrap').classList.add('hidden');
+    document.getElementById('imp-result').classList.add('hidden');
+    document.getElementById('btn-importar-confirm').disabled = true;
+    if (fileInput) fileInput.value = '';
+    document.getElementById('modal-importar-inv').classList.add('active');
+  });
+
+  // Cerrar modal
+  function _closeImport() { document.getElementById('modal-importar-inv').classList.remove('active'); }
+  document.getElementById('modal-importar-close')?.addEventListener('click', _closeImport);
+  document.getElementById('btn-importar-cancel')?.addEventListener('click', _closeImport);
+
+  // Descargar plantilla
+  document.getElementById('btn-descargar-plantilla')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    var csv = 'nombre,marca_compatible,modelo_compatible,precio_venta,cantidad\n' +
+              'Batería iPhone 14,Apple,iPhone 14,28000,5\n' +
+              'Pantalla Samsung A54,Samsung,Galaxy A54,35000,3\n';
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'plantilla_inventario.csv';
+    a.click();
+  });
+
+  // Confirmar importación
+  document.getElementById('btn-importar-confirm')?.addEventListener('click', async function() {
+    if (!fileInput || !fileInput.files[0]) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Importando...';
+
+    var formData = new FormData();
+    formData.append('archivo', fileInput.files[0]);
+
+    try {
+      var res = await apiFetch('/reparo/api/importar_inventario.php', { method: 'POST', body: formData });
+      var j = await res.json();
+      var el = document.getElementById('imp-result');
+      el.classList.remove('hidden', 'ok', 'err');
+      if (j.ok) {
+        el.classList.add('ok');
+        el.innerHTML = '<strong>' + j.data.insertados + '</strong> repuesto' + (j.data.insertados !== 1 ? 's' : '') + ' importado' + (j.data.insertados !== 1 ? 's' : '') + ' correctamente.' +
+          (j.data.omitidos ? ' <span style="color:var(--txt2)">(' + j.data.omitidos + ' filas omitidas)</span>' : '') +
+          (j.data.errores?.length ? '<br><small>' + j.data.errores.join('<br>') + '</small>' : '');
+        loadInventario();
+      } else {
+        el.classList.add('err');
+        el.textContent = j.msg || 'Error al importar.';
+      }
+    } catch(err) {
+      var el = document.getElementById('imp-result');
+      el.classList.remove('hidden'); el.classList.add('err');
+      el.textContent = 'Error de conexión.';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<span class="material-icons-round">cloud_upload</span> Importar';
+  });
+}());
 
 // ── Detectar ?inv=ID al cargar (QR escaneado externamente) ────────────────
 (function() {
