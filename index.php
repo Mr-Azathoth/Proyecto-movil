@@ -1,10 +1,12 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
-if (logueado()) { header('Location: /reparo/app.php'); exit; }
+remember_check();
+if (logueado()) { header('Location: '.BASE.'/app.php'); exit; }
 
-$ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-$err     = '';
-$expired = isset($_GET['expired']);
+$ip        = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$err       = '';
+$suspended = false;
+$expired   = isset($_GET['expired']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -27,20 +29,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Buscar por nombre de usuario O correo de la empresa (Admin primero)
             $st = getDB()->prepare(
-                "SELECT u.* FROM usuarios u
+                "SELECT u.*, e.activa AS empresa_activa, e.plan_estado FROM usuarios u
                  LEFT JOIN empresas e ON e.id_empresa = u.id_empresa
-                 WHERE (u.user = ? OR e.correo = ?) AND u.id_empresa = ? AND u.activo = 1
+                 WHERE (u.user = ? OR e.correo = ?) AND u.activo = 1
                  ORDER BY FIELD(u.cargo, 'Admin', 'Tecnico') LIMIT 1"
             );
-            $st->execute([$u, $u, EMPRESA_ID]);
+            $st->execute([$u, $u]);
             $row = $st->fetch();
 
             // Soportar tanto bcrypt (nuevo) como MD5 (legacy) para migración gradual
             $autenticado = false;
             if ($row) {
-                if (password_needs_rehash($row['pass'], PASSWORD_BCRYPT) === false && str_starts_with($row['pass'], '$2')) {
-                    // Contraseña ya está en bcrypt
+                if (str_starts_with($row['pass'], '$2')) {
+                    // Contraseña en bcrypt — verificar siempre con password_verify
                     $autenticado = password_verify($p, $row['pass']);
+                    // Re-hashear si el cost factor cambió
+                    if ($autenticado && password_needs_rehash($row['pass'], PASSWORD_BCRYPT)) {
+                        getDB()->prepare("UPDATE usuarios SET pass = ? WHERE id_usuario = ?")
+                               ->execute([password_hash($p, PASSWORD_BCRYPT), $row['id_usuario']]);
+                    }
                 } elseif ($row['pass'] === md5($p)) {
                     // Contraseña legacy MD5 — autenticar y migrar al vuelo
                     $autenticado = true;
@@ -51,18 +58,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($autenticado) {
-                login_ok($ip);
-                // Regenerar ID de sesión tras login exitoso (previene session fixation)
-                session_regenerate_id(true);
-                $_SESSION['user_id']       = $row['id_usuario'];
-                $_SESSION['user']          = $row['user'];
-                $_SESSION['nombre']        = $row['nombre'];
-                $_SESSION['cargo']         = $row['cargo'];
-                $_SESSION['empresa_id']    = $row['id_empresa'];
-                $_SESSION['last_activity'] = time();
-                log_accion(getDB(), 'login_ok');
-                header('Location: /reparo/app.php');
-                exit;
+                if (!(bool)$row['empresa_activa']) {
+                    $suspended = $row['plan_estado'] === 'Pendiente' ? 'pendiente' : 'vencido';
+                } else {
+                    login_ok($ip);
+                    session_regenerate_id(true);
+                    $_SESSION['user_id']       = $row['id_usuario'];
+                    $_SESSION['user']          = $row['user'];
+                    $_SESSION['nombre']        = $row['nombre'];
+                    $_SESSION['cargo']         = $row['cargo'];
+                    $_SESSION['empresa_id']    = $row['id_empresa'];
+                    $_SESSION['last_activity'] = time();
+                    if (!empty($_POST['remember'])) {
+                        remember_set($row['id_usuario'], $row['id_empresa']);
+                    }
+                    log_accion(getDB(), 'login_ok');
+                    header('Location: '.BASE.'/app.php');
+                    exit;
+                }
             } else {
                 login_fallo($ip);
                 log_accion(getDB(), 'login_fallo');
@@ -81,18 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Reparo — Acceso</title>
+<title>Centrotec — Acceso</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/style.css">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css">
 </head>
 <body class="login-page">
 <div class="login-wrap">
   <div class="login-card">
     <div class="brand">
-      <div class="brand-icon">R</div>
+      <div class="brand-icon">C</div>
       <div>
-        <div class="brand-name">Reparo</div>
+        <div class="brand-name">Centrotec</div>
         <div class="brand-sub">Servicios técnicos</div>
       </div>
     </div>
@@ -102,7 +115,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if (isset($_GET['reset']) && !$err): ?>
       <div class="alert-ok">Contraseña actualizada correctamente. Ya puedes ingresar.</div>
     <?php endif; ?>
-    <?php if ($err): ?>
+    <?php if ($suspended === 'pendiente'): ?>
+      <div class="alert-susp">
+        <span class="material-icons-round" style="font-size:18px;vertical-align:middle;margin-right:6px;">schedule</span>
+        Pago pendiente. Completa tu suscripción para acceder.
+        <div class="alert-susp-links">
+          <a href="<?= BASE ?>/landing.php#precios">Ver planes</a>
+          <a href="mailto:soporte@centrotec.cl">soporte@centrotec.cl</a>
+        </div>
+      </div>
+    <?php elseif ($suspended === 'vencido'): ?>
+      <div class="alert-susp">
+        <span class="material-icons-round" style="font-size:18px;vertical-align:middle;margin-right:6px;">schedule</span>
+        Tu suscripción ha vencido.
+        <div class="alert-susp-links">
+          <a href="<?= BASE ?>/landing.php#precios">Renovar suscripción</a>
+          <a href="mailto:soporte@centrotec.cl">soporte@centrotec.cl</a>
+        </div>
+      </div>
+    <?php elseif ($err): ?>
       <div class="alert-err"><?= htmlspecialchars($err) ?></div>
     <?php endif; ?>
     <form method="POST">
@@ -116,11 +147,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Contraseña</label>
         <input type="password" name="pass" placeholder="••••••••" required autocomplete="current-password">
       </div>
+      <div class="remember-row">
+        <input type="checkbox" name="remember" id="remember" value="1">
+        <label for="remember">Recordar este dispositivo por 30 días</label>
+      </div>
       <button type="submit" class="btn-login">
         Ingresar <span class="material-icons-round">arrow_forward</span>
       </button>
       <div class="auth-back">
-        <a href="/reparo/recuperar.php">¿Olvidaste tu contraseña?</a>
+        <a href="<?= BASE ?>/recuperar.php">¿Olvidaste tu contraseña?</a>
       </div>
     </form>
   </div>

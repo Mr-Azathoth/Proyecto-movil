@@ -33,4 +33,8 @@ $db->prepare("UPDATE usuarios SET pass = ? WHERE id_usuario = ? AND id_empresa =
 $db->prepare("UPDATE password_resets SET used = 1 WHERE id = ?")
    ->execute([$row['id']]);
 
+$db->prepare("INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip)
+              VALUES (?, ?, NULL, 'password_reset_exitoso', NULL, ?)")
+   ->execute([$row['id_empresa'], $row['id_usuario'], $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0']);
+
 json_ok(['msg' => 'Contraseña actualizada. Ya puedes iniciar sesión.']);

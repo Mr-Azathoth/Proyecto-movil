@@ -25,16 +25,31 @@ $kpi = $db->prepare("
         COUNT(*)                                                AS total_ordenes,
         COALESCE(SUM(valor_ingreso), 0)                         AS ingresos_totales,
         COALESCE(AVG(valor_ingreso), 0)                         AS ticket_promedio,
-        COALESCE(SUM(status IN ('Reparado','Entregado')), 0)    AS ordenes_cerradas,
-        COALESCE(AVG(
-            CASE WHEN status IN ('Reparado','Entregado','Garantia')
-                 THEN DATEDIFF(NOW(), fecha_ingreso) END
-        ), 0)                                                   AS dias_promedio
+        COALESCE(SUM(status IN ('Reparado','Entregado')), 0)    AS ordenes_cerradas
     FROM reparaciones
     WHERE id_empresa = ? AND fecha_ingreso BETWEEN ? AND ?
 ");
 $kpi->execute([$eid, $desde_dt, $hasta_dt]);
 $kpis = $kpi->fetch();
+
+// dias_promedio: tiempo real desde ingreso hasta primer cierre registrado en historial
+$dias_q = $db->prepare("
+    SELECT COALESCE(AVG(
+        DATEDIFF(
+            (SELECT MIN(h.fecha_cambio)
+               FROM historial h
+              WHERE h.id_reparacion = r.id_ingreso
+                AND h.id_empresa    = r.id_empresa
+                AND h.status_cambio IN ('Reparado','Entregado')),
+            r.fecha_ingreso
+        )
+    ), 0) AS dias_promedio
+    FROM reparaciones r
+    WHERE r.id_empresa = ? AND r.fecha_ingreso BETWEEN ? AND ?
+      AND r.status IN ('Reparado','Entregado','Garantia')
+");
+$dias_q->execute([$eid, $desde_dt, $hasta_dt]);
+$kpis['dias_promedio'] = (float) ($dias_q->fetchColumn() ?? 0);
 
 // ── Ingresos por mes (últimos 12 meses desde $hasta) ─────────────────────────
 $ing_mes = $db->prepare("
@@ -76,6 +91,21 @@ $marcas = $db->prepare("
 $marcas->execute([$eid, $desde_dt, $hasta_dt]);
 $top_marcas = $marcas->fetchAll();
 
+// ── Modelos más reparados ─────────────────────────────────────────────────────
+$modelos = $db->prepare("
+    SELECT CONCAT(
+               COALESCE(NULLIF(TRIM(marca_ingreso),''), 'Sin marca'), ' ',
+               COALESCE(NULLIF(TRIM(modelo_ingreso),''), 'Sin modelo')
+           ) AS modelo,
+           COUNT(*) AS total
+    FROM reparaciones
+    WHERE id_empresa = ? AND fecha_ingreso BETWEEN ? AND ?
+      AND (marca_ingreso IS NOT NULL OR modelo_ingreso IS NOT NULL)
+    GROUP BY modelo ORDER BY total DESC LIMIT 8
+");
+$modelos->execute([$eid, $desde_dt, $hasta_dt]);
+$top_modelos = $modelos->fetchAll();
+
 // ── Fallas más frecuentes (agrupadas por palabra clave) ───────────────────────
 $fallas = $db->prepare("
     SELECT
@@ -114,6 +144,7 @@ json_ok([
     'por_mes'   => $por_mes,
     'flujo_mes' => $flujo_mes,
     'marcas'    => $top_marcas,
+    'modelos'   => $top_modelos,
     'fallas'    => $top_fallas,
     'filtro'    => ['desde' => $desde, 'hasta' => $hasta],
 ]);

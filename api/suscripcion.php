@@ -9,7 +9,9 @@ $eid = eid();
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS plan_tipo VARCHAR(50) NOT NULL DEFAULT 'Básico'"); }        catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS plan_estado VARCHAR(20) NOT NULL DEFAULT 'Activo'"); }      catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS plan_vencimiento DATE NULL"); }                              catch(PDOException $e) {}
-try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS notif_vencimiento TINYINT(1) NOT NULL DEFAULT 1"); }        catch(PDOException $e) {}
+// Migrar notif_vencimiento TINYINT→DATE: DROP+ADD es el único camino seguro en strict mode
+try { $db->exec("ALTER TABLE empresas DROP COLUMN notif_vencimiento"); }                                        catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE empresas ADD COLUMN notif_vencimiento DATE NULL DEFAULT NULL"); }                  catch(PDOException $e) {}
 
 try {
     $db->exec("CREATE TABLE IF NOT EXISTS historial_pagos (
@@ -45,7 +47,7 @@ if ($method === 'GET') {
         'plan_tipo'         => $data['plan_tipo']  ?? 'Básico',
         'plan_estado'       => $data['plan_estado'] ?? 'Activo',
         'plan_vencimiento'  => $data['plan_vencimiento'] ?? null,
-        'notif_vencimiento' => (bool)($data['notif_vencimiento'] ?? true),
+        'notif_vencimiento' => ($data['notif_vencimiento'] ?? '') !== '2099-12-31',
         'dias_restantes'    => $dias,
         'historial'         => $pagos->fetchAll(),
     ]);
@@ -58,8 +60,9 @@ if ($method === 'PUT') {
     $input = json_decode(file_get_contents('php://input'), true) ?? [];
 
     if (array_key_exists('notif_vencimiento', $input)) {
+        // NULL = habilitadas; '2099-12-31' = desactivadas (el cron no enviará)
         $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id_empresa = ?")
-           ->execute([$input['notif_vencimiento'] ? 1 : 0, $eid]);
+           ->execute([$input['notif_vencimiento'] ? null : '2099-12-31', $eid]);
         json_ok([]);
     }
 

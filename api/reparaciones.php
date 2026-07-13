@@ -156,60 +156,72 @@ if ($method === 'PUT') {
 
     $obs_txt = trim($in['obs'] ?? '');
 
-    $db->prepare("UPDATE reparaciones
-                  SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?
-                  WHERE id_ingreso = ? AND id_empresa = ?")
-       ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $id, $eid]);
-
-    // Descuento de stock al pasar a Entregado (solo una vez por repuesto)
     $ya_descontado = (bool) ($row['stock_descontado'] ?? 0);
-    if ($nuevo_status === 'Entregado' && $row['status'] !== 'Entregado') {
-        // Descontar repuesto inicial
-        if ($id_repuesto_nuevo && !$ya_descontado) {
-            $chk = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto = ? AND id_empresa = ?");
-            $chk->execute([$id_repuesto_nuevo, $eid]);
-            $rep_row = $chk->fetch();
-            if ($rep_row) {
-                $db->prepare("UPDATE inventario SET cantidad = cantidad - 1 WHERE id_repuesto = ? AND id_empresa = ?")
-                   ->execute([$id_repuesto_nuevo, $eid]);
-                $db->prepare("UPDATE reparaciones SET stock_descontado = 1 WHERE id_ingreso = ? AND id_empresa = ?")
-                   ->execute([$id, $eid]);
+    $stock_dec = 0;
+
+    $db->beginTransaction();
+    try {
+        $db->prepare("UPDATE reparaciones
+                      SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?
+                      WHERE id_ingreso = ? AND id_empresa = ?")
+           ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $id, $eid]);
+
+        // Descuento de stock al pasar a Entregado (solo una vez por repuesto)
+        if ($nuevo_status === 'Entregado' && $row['status'] !== 'Entregado') {
+            // Descontar repuesto inicial
+            if ($id_repuesto_nuevo && !$ya_descontado) {
+                $chk = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0");
+                $chk->execute([$id_repuesto_nuevo, $eid]);
+                $rep_row = $chk->fetch();
+                if ($rep_row) {
+                    $db->prepare("UPDATE inventario SET cantidad = cantidad - 1 WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0")
+                       ->execute([$id_repuesto_nuevo, $eid]);
+                    $db->prepare("UPDATE reparaciones SET stock_descontado = 1 WHERE id_ingreso = ? AND id_empresa = ?")
+                       ->execute([$id, $eid]);
+                    $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
+                       ->execute([$eid, $id, "Repuesto descontado del inventario: {$rep_row['nombre']}", uname()]);
+                    $stock_dec = 1;
+                }
+            }
+            // Descontar repuestos adicionales (reparacion_repuestos)
+            $adicionales = $db->prepare(
+                "SELECT * FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0"
+            );
+            $adicionales->execute([$id, $eid]);
+            foreach ($adicionales->fetchAll() as $ar) {
+                $db->prepare("UPDATE inventario SET cantidad = GREATEST(0, cantidad - ?) WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0")
+                   ->execute([(int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid]);
+                $db->prepare("UPDATE reparacion_repuestos SET stock_desc = 1 WHERE id = ?")
+                   ->execute([(int)$ar['id']]);
                 $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
-                   ->execute([$eid, $id, "Repuesto descontado del inventario: {$rep_row['nombre']}", uname()]);
+                   ->execute([$eid, $id, "Repuesto descontado: {$ar['nombre_snap']} x{$ar['cantidad']}", uname()]);
+                $stock_dec = 1;
             }
         }
-        // Descontar repuestos adicionales (reparacion_repuestos)
-        $adicionales = $db->prepare(
-            "SELECT * FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0"
-        );
-        $adicionales->execute([$id, $eid]);
-        foreach ($adicionales->fetchAll() as $ar) {
-            $db->prepare("UPDATE inventario SET cantidad = cantidad - ? WHERE id_repuesto = ? AND id_empresa = ?")
-               ->execute([(int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid]);
-            $db->prepare("UPDATE reparacion_repuestos SET stock_desc = 1 WHERE id = ?")
-               ->execute([(int)$ar['id']]);
-            $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
-               ->execute([$eid, $id, "Repuesto descontado: {$ar['nombre_snap']} x{$ar['cantidad']}", uname()]);
+
+        if ($nuevo_status !== $row['status']) {
+            $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user)
+                          VALUES (?, ?, ?, ?, ?)")
+               ->execute([$eid, $id, $row['status'], $nuevo_status, uname()]);
+            log_accion($db, 'cambio_status', $id);
         }
+        if (isAdmin() && isset($in['valor']) && $nuevo_valor !== (int)$row['valor_ingreso']) {
+            log_accion($db, 'cambio_valor', $id);
+        }
+
+        if ($obs_txt) {
+            $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user)
+                          VALUES (?, ?, ?, ?)")
+               ->execute([$eid, $id, $obs_txt, uname()]);
+        }
+
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        json_err('Error al guardar. Intente nuevamente.', 500);
     }
 
-    if ($nuevo_status !== $row['status']) {
-        $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user)
-                      VALUES (?, ?, ?, ?, ?)")
-           ->execute([$eid, $id, $row['status'], $nuevo_status, uname()]);
-        log_accion($db, 'cambio_status', $id);
-    }
-    if (isAdmin() && isset($in['valor']) && $nuevo_valor !== (int)$row['valor_ingreso']) {
-        log_accion($db, 'cambio_valor', $id);
-    }
-
-    if ($obs_txt) {
-        $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user)
-                      VALUES (?, ?, ?, ?)")
-           ->execute([$eid, $id, $obs_txt, uname()]);
-    }
-
-    json_ok(['msg' => 'Guardado.', 'stock_descontado' => (int) ($nuevo_status === 'Reparado' && !$ya_descontado && $id_repuesto_nuevo)]);
+    json_ok(['msg' => 'Guardado.', 'stock_descontado' => $stock_dec]);
 }
 
 if ($method === 'DELETE') {

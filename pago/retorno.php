@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__.'/../includes/config.php';
 requireLogin();
 
@@ -6,28 +6,40 @@ $gateway = $_GET['gateway'] ?? '';
 $eid     = eid();
 $db      = getDB();
 
-function activar_plan(PDO $db, int $eid, array $planInfo, string $estado): void {
-    $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id = ?");
+function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string $gateway = ''): void {
+    $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa = ?");
     $row->execute([$eid]);
     $actual = $row->fetchColumn();
 
+    // Si el plan vigente no ha vencido aún, extender desde ese día. Si ya venció, desde hoy.
     $base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
     $nuevaFecha = date('Y-m-d', strtotime($base . " +{$planInfo['meses']} month"));
+    $label      = $gateway ? 'Suscripción Centrotec – ' . $planInfo['nombre'] . ' – ' . $gateway
+                           : 'Suscripción Centrotec – ' . $planInfo['nombre'];
 
-    $db->prepare(
-        "UPDATE empresas SET plan_estado='Activo', plan_tipo=?, plan_vencimiento=? WHERE id=?"
-    )->execute([$planInfo['nombre'], $nuevaFecha, $eid]);
+    $db->beginTransaction();
+    try {
+        $db->prepare(
+            "UPDATE empresas
+             SET activa=1, plan_estado='Activo', plan_tipo=?, plan_vencimiento=?
+             WHERE id_empresa=?"
+        )->execute([$planInfo['nombre'], $nuevaFecha, $eid]);
 
-    $db->prepare(
-        "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
-         VALUES (?, ?, ?, ?, ?)"
-    )->execute([
-        $eid,
-        date('Y-m-d'),
-        $planInfo['precio'],
-        'Suscripción Reparo – ' . $planInfo['nombre'] . ' – Mercado Pago',
-        $estado,
-    ]);
+        $db->prepare(
+            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
+             VALUES (?, ?, ?, ?, ?)"
+        )->execute([
+            $eid,
+            date('Y-m-d'),
+            $planInfo['precio'],
+            $label,
+            $estado,
+        ]);
+        $db->commit();
+    } catch (Throwable $e) {
+        $db->rollBack();
+        throw $e;
+    }
 }
 
 // ── MERCADO PAGO — retorno de suscripción recurrente ─────────
@@ -60,58 +72,15 @@ if ($gateway === 'mp_sub') {
                 if ($planInfo) {
                     // Activar plan inmediatamente con estado Pendiente.
                     // El webhook actualizará a Pagado cuando MP confirme el cobro.
-                    activar_plan($db, $eid, $planInfo, 'Pendiente');
+                    activar_plan($db, $eid, $planInfo, 'Pendiente', 'Mercado Pago');
                 }
             }
         }
     }
 
-    header('Location: /reparo/app.php?pago=suscripcion');
+    header('Location: '.BASE.'/app.php?pago=suscripcion');
     exit;
 }
 
-// ── WEBPAY PLUS ──────────────────────────────────────────────
-if ($gateway === 'webpay') {
-    // Si el usuario canceló en Webpay, Transbank hace POST con TBK_TOKEN (sin token_ws)
-    if (!empty($_POST['TBK_TOKEN']) || empty($_POST['token_ws'])) {
-        header('Location: /reparo/pago/cancel.php?gateway=webpay&status=cancelled');
-        exit;
-    }
-
-    $tokenWs = $_POST['token_ws'];
-    $wpBase  = (WP_ENV === 'production')
-        ? 'https://webpay3g.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions/'
-        : 'https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions/';
-
-    $ch = curl_init($wpBase . urlencode($tokenWs));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CUSTOMREQUEST  => 'PUT',
-        CURLOPT_POSTFIELDS     => '{}',
-        CURLOPT_HTTPHEADER     => [
-            'Tbk-Api-Key-Id: '     . WP_COMMERCE_CODE,
-            'Tbk-Api-Key-Secret: ' . WP_API_KEY,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_TIMEOUT => 15,
-    ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($code === 200) {
-        $data = json_decode($resp, true);
-        if (($data['response_code'] ?? -1) === 0 && ($data['status'] ?? '') === 'AUTHORIZED') {
-            $montoReal = (int)($data['amount'] ?? $precio);
-            extender_plan($db, $eid, $meses, $montoReal, 'Suscripción Reparo – Webpay');
-            header('Location: /reparo/app.php?pago=ok');
-            exit;
-        }
-    }
-
-    header('Location: /reparo/pago/cancel.php?gateway=webpay&status=rejected');
-    exit;
-}
-
-header('Location: /reparo/app.php');
+header('Location: '.BASE.'/app.php');
 exit;

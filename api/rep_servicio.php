@@ -65,6 +65,7 @@ if ($method === 'GET') {
 
 // ── POST: agregar repuesto adicional ──────────────────────
 if ($method === 'POST') {
+    if (!isAdmin()) json_err('Sin permisos.', 403);
     csrf_check();
 
     $in            = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -120,6 +121,7 @@ if ($method === 'POST') {
 
 // ── DELETE: quitar repuesto adicional ─────────────────────
 if ($method === 'DELETE') {
+    if (!isAdmin()) json_err('Sin permisos.', 403);
     csrf_check();
 
     $in = json_decode(file_get_contents('php://input'), true) ?? [];

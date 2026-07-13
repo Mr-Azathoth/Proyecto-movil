@@ -138,6 +138,12 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
   transition: opacity 0.2s, transform 0.2s;
 }
 .nav-cta:hover { opacity: 0.88; transform: translateY(-1px); }
+.nav-cta-ghost {
+  background: transparent;
+  color: var(--txt2);
+  border: 1px solid var(--border2);
+}
+.nav-cta-ghost:hover { background: rgba(255,255,255,0.05); color: var(--txt); opacity: 1; }
 .nav-burger {
   display: none;
   background: none;

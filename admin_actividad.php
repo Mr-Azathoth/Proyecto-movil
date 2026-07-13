@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/admin_config.php';
 requireSuperAdmin();
@@ -38,7 +38,7 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<?php $pageTitle = 'Reparo Admin — Actividad'; ?>
+<?php $pageTitle = 'Centrotec Admin — Actividad'; ?>
 <?php include __DIR__ . '/includes/admin_head.php'; ?>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
@@ -61,7 +61,7 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
     <input type="text" name="accion" class="adm-search" placeholder="Filtrar por acción..." value="<?= htmlspecialchars($filtro_accion) ?>">
     <button type="submit" class="adm-btn adm-btn-primary"><span class="material-icons-round">filter_list</span>Filtrar</button>
     <?php if ($filtro_empresa || $filtro_accion): ?>
-    <a href="/reparo/admin_actividad.php" class="adm-btn adm-btn-ghost"><span class="material-icons-round">clear</span>Limpiar</a>
+    <a href="<?= BASE ?>/admin_actividad.php" class="adm-btn adm-btn-ghost"><span class="material-icons-round">clear</span>Limpiar</a>
     <?php endif; ?>
   </form>
 
@@ -79,7 +79,7 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
       </thead>
       <tbody>
         <?php foreach ($logs as $l): ?>
-        <tr data-href="/reparo/admin_empresa.php?id=<?= $l['id_empresa'] ?>">
+        <tr data-href="<?= BASE ?>/admin_empresa.php?id=<?= $l['id_empresa'] ?>">
           <td style="font-size:12px;color:var(--txt2);white-space:nowrap;"><?= date('d/m/Y H:i', strtotime($l['fecha'])) ?></td>
           <td>
             <div class="tbl-name-cell">
@@ -122,6 +122,6 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
   <?php endif; ?>
 
 </main>
-<script src="/reparo/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
 </body>
 </html>

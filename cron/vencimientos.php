@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Cron de notificaciones de vencimiento de plan.
  *
  * Ejecutar diariamente vía Windows Task Scheduler:
- *   C:\xampp\php\php.exe C:\xampp\htdocs\reparo\cron\vencimientos.php
+ *   C:\xampp\php\php.exe C:\xampp\htdocs\centrotec\cron\vencimientos.php
  *
  * También puede lanzarse desde el admin: admin_suscripciones.php → "Ejecutar ahora"
  * En ese caso se requiere desde api/admin/run_cron.php (CRON_CALL_INTERNAL).
@@ -70,7 +70,7 @@ foreach ($pronto as $e) {
       <div style='padding:24px 28px;color:#e6edf3;'>
         <p>Hola <strong>{$nombre}</strong>,</p>
         <p>Te informamos que <strong>{$plan}</strong> vence el <strong>{$fecha}</strong>.</p>
-        <p>Para continuar usando Reparo sin interrupciones, contacta a tu administrador para renovar tu suscripción.</p>
+        <p>Para continuar usando Centrotec sin interrupciones, contacta a tu administrador para renovar tu suscripción.</p>
         <div style='background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:14px 18px;margin-top:16px;'>
           <strong style='color:#fbbf24;'>Fecha límite: {$fecha}</strong>
         </div>
@@ -80,7 +80,7 @@ foreach ($pronto as $e) {
     $log[] = ['tipo' => 'pronto', 'empresa' => $e['nombre'], 'dias' => $dias, 'correo' => $e['correo'], 'enviado' => false];
 
     if (!$dry_run && $e['correo']) {
-        $ok = send_email($e['correo'], $e['nombre'], "Tu plan vence {$label} — Reparo", $html);
+        $ok = send_email($e['correo'], $e['nombre'], "Tu plan vence {$label} — Centrotec", $html);
         $log[array_key_last($log)]['enviado'] = $ok;
         if ($ok) $notif_ok_ids[] = $e['id_empresa'];
     }
@@ -100,14 +100,14 @@ foreach ($vencidas as $e) {
       <div style='padding:24px 28px;color:#e6edf3;'>
         <p>Hola <strong>{$nombre}</strong>,</p>
         <p>Tu <strong>{$plan}</strong> venció el <strong>{$fecha}</strong>.</p>
-        <p>Tu acceso a Reparo puede verse limitado. Contacta a tu administrador para renovar.</p>
+        <p>Tu acceso a Centrotec puede verse limitado. Contacta a tu administrador para renovar.</p>
       </div>
     </div>";
 
     $log[] = ['tipo' => 'vencida', 'empresa' => $e['nombre'], 'correo' => $e['correo'], 'enviado' => false];
 
     if (!$dry_run && $e['correo']) {
-        $ok = send_email($e['correo'], $e['nombre'], 'Tu plan ha vencido — Reparo', $html);
+        $ok = send_email($e['correo'], $e['nombre'], 'Tu plan ha vencido — Centrotec', $html);
         $log[array_key_last($log)]['enviado'] = $ok;
         if ($ok) $notif_ok_ids[] = $e['id_empresa'];
     }
@@ -118,6 +118,30 @@ if ($notif_ok_ids) {
     $ph = implode(',', array_fill(0, count($notif_ok_ids), '?'));
     $db->prepare("UPDATE empresas SET notif_vencimiento = ? WHERE id_empresa IN ($ph)")
        ->execute(array_merge([$hoy], $notif_ok_ids));
+}
+
+// ── Auto-suspender empresas con plan vencido ─────────────────────
+// Consulta independiente: cubre casos donde la notif ya fue enviada en días anteriores
+// pero la cuenta nunca fue suspendida (p.ej. primera vez que corre esta lógica).
+$auto_susp = $db->query("
+    SELECT id_empresa, nombre FROM empresas
+    WHERE activa = 1
+      AND plan_vencimiento IS NOT NULL
+      AND plan_vencimiento < CURDATE()
+")->fetchAll();
+
+$total_auto_susp = 0;
+if ($auto_susp) {
+    $ids_susp = array_column($auto_susp, 'id_empresa');
+    foreach ($auto_susp as $e) {
+        $log[] = ['tipo' => 'auto-suspendida', 'empresa' => $e['nombre'], 'correo' => null, 'enviado' => null];
+    }
+    if (!$dry_run) {
+        $ph2 = implode(',', array_fill(0, count($ids_susp), '?'));
+        $db->prepare("UPDATE empresas SET activa = 0, plan_estado = 'Vencido' WHERE id_empresa IN ($ph2) AND activa = 1")
+           ->execute($ids_susp);
+        $total_auto_susp = count($ids_susp);
+    }
 }
 
 // ── Email resumen al super admin ─────────────────────────────────
@@ -146,7 +170,7 @@ if ($sadmin_to && ($total_pronto > 0 || $total_vencidas > 0)) {
     $resumen_html = "
     <div style='font-family:Inter,sans-serif;max-width:600px;margin:0 auto;background:#161b22;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;'>
       <div style='background:linear-gradient(135deg,#7c3aed,#a78bfa);padding:24px 28px;'>
-        <h2 style='color:#fff;margin:0;font-size:18px;'>Reparo — Resumen diario de vencimientos</h2>
+        <h2 style='color:#fff;margin:0;font-size:18px;'>Centrotec — Resumen diario de vencimientos</h2>
         <p style='color:rgba(255,255,255,0.8);margin:6px 0 0;font-size:13px;'>" . date('d/m/Y') . "</p>
       </div>
       <div style='padding:24px 28px;color:#e6edf3;'>
@@ -174,16 +198,21 @@ if ($sadmin_to && ($total_pronto > 0 || $total_vencidas > 0)) {
     </div>";
 
     if (!$dry_run) {
-        send_email($sadmin_to, $sadmin_nombre, 'Reparo — Resumen vencimientos ' . date('d/m/Y'), $resumen_html);
+        send_email($sadmin_to, $sadmin_nombre, 'Centrotec — Resumen vencimientos ' . date('d/m/Y'), $resumen_html);
     }
 }
 
 // ── Respuesta ────────────────────────────────────────────────────
 if (php_sapi_name() === 'cli') {
-    echo ($dry_run ? '[DRY RUN] ' : '') . "Procesadas: {$total_pronto} por vencer, {$total_vencidas} vencidas.\n";
+    echo ($dry_run ? '[DRY RUN] ' : '') . "Procesadas: {$total_pronto} por vencer, {$total_vencidas} vencidas, {$total_auto_susp} auto-suspendidas.\n";
     foreach ($log as $l) {
-        $icon = $l['enviado'] ? '✓' : ($dry_run ? '~' : '✗');
-        echo "  $icon [{$l['tipo']}] {$l['empresa']} → {$l['correo']}\n";
+        if ($l['tipo'] === 'auto-suspendida') {
+            $icon = $dry_run ? '~' : '✓';
+            echo "  $icon [auto-suspendida] {$l['empresa']}\n";
+        } else {
+            $icon = $l['enviado'] ? '✓' : ($dry_run ? '~' : '✗');
+            echo "  $icon [{$l['tipo']}] {$l['empresa']} → {$l['correo']}\n";
+        }
     }
 }
 // Si CRON_CALL_INTERNAL: $log, $total_pronto, $total_vencidas quedan disponibles en el scope de run_cron.php

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/config.php';
 
 $db = getDB();
@@ -106,18 +106,18 @@ function fmt_fecha(string $fecha): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Seguimiento de reparación — Reparo.cl</title>
+<title>Seguimiento de reparación — Centrotec.cl</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-<link rel="stylesheet" href="/reparo/assets/css/seguimiento.css?v=<?= filemtime(__DIR__.'/assets/css/seguimiento.css') ?>">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/seguimiento.css?v=<?= filemtime(__DIR__.'/assets/css/seguimiento.css') ?>">
 </head>
 <body>
 
 <nav class="seg-nav">
-  <a href="/reparo/landing.php" class="seg-nav-logo">
-    <div class="seg-nav-icon">R</div>
-    <span>Reparo.cl</span>
+  <a href="<?= BASE ?>/landing.php" class="seg-nav-logo">
+    <div class="seg-nav-icon">C</div>
+    <span>Centrotec</span>
   </a>
 </nav>
 
@@ -129,7 +129,7 @@ function fmt_fecha(string $fecha): string {
       <p>Ingresa el código de 6 caracteres que te entregaron al dejar tu equipo.</p>
     </div>
 
-    <form class="seg-form" method="GET" action="/reparo/seguimiento.php">
+    <form class="seg-form" method="GET" action="<?= BASE ?>/seguimiento.php">
       <div class="seg-input-wrap">
         <input
           type="text"
@@ -285,7 +285,7 @@ function fmt_fecha(string $fecha): string {
 </main>
 
 <footer class="seg-footer">
-  <a href="/reparo/landing.php">Reparo.cl</a> — Software para servicios técnicos
+  <a href="<?= BASE ?>/landing.php">Centrotec</a> — Software para servicios técnicos
 </footer>
 
 </body>

@@ -10,8 +10,10 @@ $id   = (int)($_POST['id_empresa'] ?? 0);
 $nota = trim($_POST['nota'] ?? '');
 if (!$id) sadmin_json_err('Datos incompletos.');
 
-$db = getDB();
-$db->prepare("UPDATE empresas SET notas_internas = ? WHERE id_empresa = ?")
-   ->execute([$nota ?: null, $id]);
+$db   = getDB();
+$stmt = $db->prepare("UPDATE empresas SET notas_internas = ? WHERE id_empresa = ?");
+$stmt->execute([$nota ?: null, $id]);
+
+if ($stmt->rowCount() === 0) sadmin_json_err('Empresa no encontrada.', 404);
 
 sadmin_json_ok(['msg' => 'Nota guardada.']);
