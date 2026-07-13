@@ -1,5 +1,4 @@
 # ── Configuración sensible ────────────────────────────────────
-includes/config.php
 .env
 *.env
 
