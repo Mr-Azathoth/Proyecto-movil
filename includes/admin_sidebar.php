@@ -6,6 +6,7 @@ $links = [
   'admin_suscripciones'  => ['workspace_premium','Suscripciones'],
   'admin_actividad'      => ['history',          'Actividad'],
   'admin_soporte'        => ['support_agent',    'Soporte'],
+  'admin_papelera'       => ['delete_sweep',     'Papelera'],
 ];
 // admin_empresa es sub-página de clientes
 if ($current === 'admin_empresa') $current = 'admin_clientes';

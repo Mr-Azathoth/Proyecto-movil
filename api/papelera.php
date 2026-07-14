@@ -1,58 +1,34 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/admin_config.php';
 header('Content-Type: application/json; charset=utf-8');
-guard();
+sadmin_guard();
+sadmin_csrf_check();
 
-if (!isDueno()) json_err('Sin permiso.', 403);
+$db  = getDB();
+$eid = (int) ($_POST['id_empresa'] ?? 0);
+if (!$eid) sadmin_json_err('Empresa requerida.');
 
-$db     = getDB();
-$eid    = eid();
-$method = $_SERVER['REQUEST_METHOD'];
+$accion = $_POST['accion'] ?? '';
+$tipo   = $_POST['tipo']   ?? '';
+$id     = (int) ($_POST['id'] ?? 0);
 
-if ($method === 'GET') {
-    $reps = $db->prepare(
-        "SELECT id_ingreso, nombre_cliente, telefono_cliente,
-                marca_ingreso, modelo_ingreso, status, deleted_at
-           FROM reparaciones
-          WHERE id_empresa = ? AND deleted_at IS NOT NULL
-          ORDER BY deleted_at DESC"
-    );
-    $reps->execute([$eid]);
-
-    $inv = $db->prepare(
-        "SELECT id_repuesto, nombre, marca_compatible, modelo_compatible,
-                precio_venta, cantidad, deleted_at
-           FROM inventario
-          WHERE id_empresa = ? AND deleted_at IS NOT NULL
-          ORDER BY deleted_at DESC"
-    );
-    $inv->execute([$eid]);
-
-    json_ok([
-        'reparaciones' => $reps->fetchAll(),
-        'inventario'   => $inv->fetchAll(),
-    ]);
+if (!$id || !in_array($tipo, ['reparacion', 'repuesto'], true)) {
+    sadmin_json_err('Parámetros inválidos.');
 }
 
-if ($method === 'PUT') {
-    csrf_check();
-    $in   = json_decode(file_get_contents('php://input'), true) ?? [];
-    $tipo = $in['tipo'] ?? '';
-    $id   = (int) ($in['id'] ?? 0);
-
-    if (!$id || !in_array($tipo, ['reparacion', 'repuesto'], true)) {
-        json_err('Parámetros inválidos.');
-    }
-
+if ($accion === 'restaurar') {
     if ($tipo === 'reparacion') {
         $st = $db->prepare(
             "UPDATE reparaciones SET deleted_at = NULL
               WHERE id_ingreso = ? AND id_empresa = ? AND deleted_at IS NOT NULL"
         );
         $st->execute([$id, $eid]);
-        if ($st->rowCount() === 0) json_err('Registro no encontrado o ya activo.');
-        log_accion($db, 'reparacion_restaurada', $id);
-        json_ok(['msg' => "Servicio #{$id} restaurado."]);
+        if ($st->rowCount() === 0) sadmin_json_err('Registro no encontrado o ya activo.');
+        $db->prepare("INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip)
+                      VALUES (?, ?, ?, 'reparacion_restaurada', ?, ?)")
+           ->execute([$eid, sadmin_id(), sadmin_user(), $id, $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0']);
+        sadmin_json_ok(['msg' => "Servicio #{$id} restaurado."]);
     }
 
     if ($tipo === 'repuesto') {
@@ -61,8 +37,9 @@ if ($method === 'PUT') {
               WHERE id_repuesto = ? AND id_empresa = ? AND deleted_at IS NOT NULL"
         );
         $st->execute([$id, $eid]);
-        if ($st->rowCount() === 0) json_err('Registro no encontrado o ya activo.');
-        log_accion($db, 'repuesto_restaurado', $id);
-        json_ok(['msg' => 'Repuesto restaurado.']);
+        if ($st->rowCount() === 0) sadmin_json_err('Registro no encontrado o ya activo.');
+        sadmin_json_ok(['msg' => 'Repuesto restaurado.']);
     }
 }
+
+sadmin_json_err('Acción desconocida.');
