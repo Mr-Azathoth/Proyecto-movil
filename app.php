@@ -1064,27 +1064,5 @@ try {
 <script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('<?= BASE ?>/sw.js', { scope: '<?= BASE ?>/' });
-}
-// Hamburguesa móvil
-(function() {
-  var btn     = document.getElementById('btn-hamburger');
-  var sidebar = document.getElementById('sidebar');
-  var overlay = document.getElementById('sidebar-overlay');
-  if (!btn || !sidebar || !overlay) return;
-  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('active'); }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
-  btn.addEventListener('click', function() {
-    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
-  });
-  overlay.addEventListener('click', closeSidebar);
-  // Cerrar al cambiar de vista
-  document.querySelectorAll('.nav-link').forEach(function(l) {
-    l.addEventListener('click', closeSidebar);
-  });
-}());
-</script>
 </body>
 </html>

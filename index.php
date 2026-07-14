@@ -104,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Centrotec">
+<meta name="base-path" content="<?= BASE ?>">
 </head>
 <body class="login-page">
 <div class="login-wrap">
@@ -166,10 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
   </div>
 </div>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('<?= BASE ?>/sw.js', { scope: '<?= BASE ?>/' });
-}
-</script>
+<script src="<?= BASE ?>/assets/js/sw-register.js"></script>
 </body>
 </html>

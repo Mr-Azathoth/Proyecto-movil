@@ -2431,3 +2431,25 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   switchView('inventario');
   loadInventario().then(_waitAndHighlight);
 }());
+
+// PWA Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register(BASE_PATH + '/sw.js', { scope: BASE_PATH + '/' });
+}
+
+// Hamburguesa móvil
+(function() {
+  var btn     = document.getElementById('btn-hamburger');
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (!btn || !sidebar || !overlay) return;
+  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('active'); }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
+  btn.addEventListener('click', function() {
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  overlay.addEventListener('click', closeSidebar);
+  document.querySelectorAll('.nav-link').forEach(function(l) {
+    l.addEventListener('click', closeSidebar);
+  });
+}());
