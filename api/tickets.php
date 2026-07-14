@@ -7,6 +7,9 @@ $db  = getDB();
 $eid = eid();
 $uid = uid();
 
+$method = $_SERVER['REQUEST_METHOD'];
+if ($method === 'POST') csrf_check();
+
 // Auto-migrate
 try {
     $db->exec("CREATE TABLE IF NOT EXISTS tickets (
@@ -32,8 +35,6 @@ try {
     $db->exec("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS visto TINYINT NOT NULL DEFAULT 0");
 } catch (PDOException $e) {}
 
-$method = $_SERVER['REQUEST_METHOD'];
-
 // GET — listar tickets de la empresa
 if ($method === 'GET') {
     $st = $db->prepare(
@@ -47,7 +48,6 @@ if ($method === 'GET') {
     json_ok($st->fetchAll());
 }
 
-// POST
 if ($method === 'POST') {
     $action = trim($_POST['action'] ?? 'nuevo');
 
