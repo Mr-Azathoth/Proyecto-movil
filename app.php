@@ -28,6 +28,12 @@ try {
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
+<link rel="manifest" href="<?= BASE ?>/manifest.php">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="<?= BASE ?>/assets/img/icon.php?s=192">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Centrotec">
 </head>
 <body data-csrf="<?= csrf_token() ?>"
       data-role="<?= htmlspecialchars(ucargo()) ?>"
@@ -1047,5 +1053,10 @@ try {
 <script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('<?= BASE ?>/sw.js', { scope: '<?= BASE ?>/' });
+}
+</script>
 </body>
 </html>

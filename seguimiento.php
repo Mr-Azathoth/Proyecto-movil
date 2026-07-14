@@ -111,6 +111,11 @@ function fmt_fecha(string $fecha): string {
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/seguimiento.css?v=<?= filemtime(__DIR__.'/assets/css/seguimiento.css') ?>">
+<link rel="manifest" href="<?= BASE ?>/manifest.php">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="<?= BASE ?>/assets/img/icon.php?s=192">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Centrotec">
 </head>
 <body>
 
