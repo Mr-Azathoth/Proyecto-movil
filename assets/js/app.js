@@ -2252,18 +2252,23 @@ async function openScanner() {
     _scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     var video = document.getElementById('scanner-video');
     video.srcObject = _scannerStream;
-    var detector = new BarcodeDetector({ formats: ['qr_code'] });
-    _scannerInterval = setInterval(async function() {
-      if (video.readyState < 2) return;
-      try {
-        var codes = await detector.detect(video);
-        if (codes.length > 0) {
-          document.getElementById('scanner-wrap').classList.add('hidden');
-          document.getElementById('scanner-result').classList.remove('hidden');
-          document.getElementById('scanner-ok-text').textContent = 'Código detectado. Buscando repuesto...';
-          _handleScannedUrl(codes[0].rawValue);
-        }
-      } catch(_) {}
+    var _scanCanvas = document.createElement('canvas');
+    var _scanCtx    = _scanCanvas.getContext('2d');
+    _scannerInterval = setInterval(function() {
+      if (video.readyState < 2 || !video.videoWidth) return;
+      _scanCanvas.width  = video.videoWidth;
+      _scanCanvas.height = video.videoHeight;
+      _scanCtx.drawImage(video, 0, 0);
+      var imgData = _scanCtx.getImageData(0, 0, _scanCanvas.width, _scanCanvas.height);
+      var code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' });
+      if (code) {
+        clearInterval(_scannerInterval);
+        _scannerInterval = null;
+        document.getElementById('scanner-wrap').classList.add('hidden');
+        document.getElementById('scanner-result').classList.remove('hidden');
+        document.getElementById('scanner-ok-text').textContent = 'Código detectado. Buscando repuesto...';
+        _handleScannedUrl(code.data);
+      }
     }, 300);
   } catch(err) {
     document.getElementById('scanner-wrap').classList.add('hidden');

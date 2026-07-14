@@ -58,7 +58,9 @@ header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 // Google Fonts y Material Icons necesitan fonts.googleapis.com / fonts.gstatic.com
-header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'");
+$_csp_nonce = base64_encode(random_bytes(16));
+define('CSP_NONCE', $_csp_nonce);
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'nonce-{$_csp_nonce}'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'");
 
 function getDB(): PDO {
     static $pdo = null;

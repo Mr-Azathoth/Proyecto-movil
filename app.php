@@ -25,6 +25,7 @@ try {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Centrotec</title>
+<style nonce="<?= CSP_NONCE ?>">html,body{background:#0d1117;margin:0}</style>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
@@ -1063,6 +1064,7 @@ try {
 
 <script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
+<script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 </body>
 </html>
