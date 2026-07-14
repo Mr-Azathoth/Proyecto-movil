@@ -46,12 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Si se agrega o cambia la respuesta, marcar como no visto para notificar al cliente
+    $resetVisto = ($respuesta !== '') ? 1 : 0;
     $st = $db->prepare(
         "UPDATE tickets
-            SET estado = ?, respuesta = ?, respondido_por = ?, updated_at = NOW()
+            SET estado = ?, respuesta = ?, respondido_por = ?, visto = IF(? = 1, 0, visto), updated_at = NOW()
           WHERE id_ticket = ?"
     );
-    $st->execute([$estado, $respuesta ?: null, sadmin_nombre(), $id]);
+    $st->execute([$estado, $respuesta ?: null, sadmin_nombre(), $resetVisto, $id]);
 
     // Notificar al cliente si el ticket fue resuelto
     if ($estado === 'Resuelto' && $respuesta && SMTP_USER) {

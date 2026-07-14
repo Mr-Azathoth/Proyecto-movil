@@ -114,6 +114,7 @@ try {
       <?php endif; ?>
       <a class="nav-link" data-view="soporte">
         <span class="material-icons-round">support_agent</span><span>Soporte</span>
+        <span class="nav-badge oculto" id="nav-soporte-badge"></span>
       </a>
     </nav>
 
@@ -618,6 +619,26 @@ try {
         </div>
       </div>
     </div><!-- /modal-soporte -->
+
+    <!-- Modal: detalle ticket de soporte -->
+    <div class="modal-bg" id="modal-sop-detalle">
+      <div class="modal-box modal-box-sm">
+        <div class="modal-hd">
+          <h3 id="msd-titulo"></h3>
+          <button class="modal-close" id="btn-msd-close"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="msd-sub" id="msd-sub"></div>
+          <p class="msd-sublabel">Tu mensaje</p>
+          <div class="msd-msg" id="msd-msg"></div>
+          <div id="msd-resp-wrap" class="sop-hidden">
+            <p class="msd-sublabel"><span class="msd-resp-label">Respuesta del equipo</span></p>
+            <div class="msd-resp" id="msd-resp-txt"></div>
+          </div>
+          <p class="msd-no-resp sop-hidden" id="msd-no-resp">Sin respuesta aún. Te notificaremos por correo cuando el equipo responda.</p>
+        </div>
+      </div>
+    </div><!-- /modal-sop-detalle -->
 
     <!-- Modal: resetear contraseña de usuario -->
     <div class="modal-bg" id="modal-reset-pass">

@@ -1087,28 +1087,32 @@ input.hidden           { display:none !important; }
 }
 
 
-/* == Soporte - lista de tickets == */
+/* == Nav badge (notificaciones sidebar) == */
+.nav-badge { background:#f97316; color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 5px; line-height:1; }
+.nav-badge.oculto { display:none; }
+
+/* == Soporte - tabla de tickets == */
 .soporte-empty {
   display:flex; flex-direction:column; align-items:center;
   gap:12px; padding:60px 20px; color:var(--txt3); text-align:center;
 }
 .soporte-empty .material-icons-round { font-size:48px; }
-.soporte-ticket-card {
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); padding:16px 18px;
-  margin-bottom:10px; cursor:default;
-}
-.stk-header {
-  display:flex; align-items:center; gap:8px; margin-bottom:8px;
-}
-.stk-id { font-size:12px; color:var(--txt3); font-weight:600; }
-.stk-fecha { font-size:11px; color:var(--txt3); margin-left:auto; }
-.stk-asunto { font-weight:600; font-size:14px; color:var(--txt); margin-bottom:4px; }
-.stk-preview { font-size:13px; color:var(--txt2); line-height:1.5; }
-.stk-respuesta {
-  display:flex; align-items:flex-start; gap:6px;
-  margin-top:10px; padding:10px 12px;
-  background:rgba(74,222,128,0.06); border:1px solid rgba(74,222,128,0.2);
-  border-radius:var(--radius); font-size:13px; color:var(--txt2); line-height:1.5;
-}
-.stk-respuesta .material-icons-round { font-size:16px; color:#4ade80; flex-shrink:0; margin-top:1px; }
+.sop-hidden { display:none; }
+.sop-table { width:100%; border-collapse:collapse; }
+.sop-table th { text-align:left; font-size:11px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:.06em; padding:0 12px 10px; border-bottom:1px solid var(--border); }
+.sop-table td { padding:11px 12px; border-bottom:1px solid var(--border); font-size:13px; color:var(--txt2); vertical-align:middle; }
+.sop-row { cursor:pointer; transition:background .12s; }
+.sop-row:hover td { background:rgba(255,255,255,0.03); }
+.sop-td-id { color:var(--txt3); font-weight:600; width:44px; }
+.sop-td-asunto { color:var(--txt); font-weight:500; }
+.sop-td-fecha { font-size:12px; white-space:nowrap; }
+.sop-asunto-wrap { display:flex; align-items:center; gap:8px; }
+.sop-dot { width:7px; height:7px; border-radius:50%; background:#f97316; flex-shrink:0; display:inline-block; }
+.sop-dot-placeholder { width:7px; height:7px; flex-shrink:0; display:inline-block; }
+.sop-hint { font-size:11px; color:var(--txt3); margin-top:12px; }
+.msd-msg { background:var(--bg3); border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; font-size:13px; color:var(--txt2); line-height:1.6; margin-bottom:14px; white-space:pre-wrap; }
+.msd-resp { background:rgba(63,185,80,0.05); border:1px solid rgba(63,185,80,0.2); border-radius:var(--r); padding:11px 13px; font-size:13px; color:var(--txt2); line-height:1.6; white-space:pre-wrap; }
+.msd-sublabel { font-size:11px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.msd-resp-label { font-size:11px; font-weight:700; color:#3fb950; text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:4px; }
+.msd-no-resp { font-size:13px; color:var(--txt3); font-style:italic; }
+.msd-sub { font-size:13px; color:var(--txt2); margin-bottom:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }

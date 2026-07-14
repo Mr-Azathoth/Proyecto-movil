@@ -19,10 +19,20 @@
   function fmt(dt) {
     if (!dt) return '';
     const d = new Date(dt.replace(' ', 'T'));
-    return d.toLocaleDateString('es-CL') + ' ' + d.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('es-CL');
   }
 
-  // ── Cargar lista de tickets ────────────────────────────────
+  function updateBadge(count) {
+    const badge = document.getElementById('nav-soporte-badge');
+    if (!badge) return;
+    badge.textContent = count;
+    if (count > 0) badge.classList.remove('oculto');
+    else           badge.classList.add('oculto');
+  }
+
+  // ── Lista de tickets ───────────────────────────────────────
+  let ticketsData = [];
+
   async function loadTickets() {
     const list = document.getElementById('soporte-ticket-list');
     if (!list) return;
@@ -38,24 +48,105 @@
   }
 
   function renderTickets(tickets) {
-    const list = document.getElementById('soporte-ticket-list');
+    ticketsData = tickets;
+    const list  = document.getElementById('soporte-ticket-list');
+
     if (!tickets.length) {
       list.innerHTML = '<div class="soporte-empty"><span class="material-icons-round">support_agent</span><p>No tienes tickets de soporte aún.<br>Usa el botón para enviar una consulta.</p></div>';
+      updateBadge(0);
       return;
     }
-    list.innerHTML = tickets.map(t => `
-      <div class="soporte-ticket-card" data-id="${t.id_ticket}">
-        <div class="stk-header">
-          <span class="stk-id">#${t.id_ticket}</span>
-          <span class="pill ${ESTADO_BADGE[t.estado] || ''}">${esc(ESTADO_LABEL[t.estado] || t.estado)}</span>
-          <span class="stk-fecha">${fmt(t.created_at)}</span>
-        </div>
-        <div class="stk-asunto">${esc(t.asunto)}</div>
-        <div class="stk-preview">${esc(t.mensaje_preview)}${t.mensaje_preview && t.mensaje_preview.length >= 120 ? '…' : ''}</div>
-        ${t.respuesta ? `<div class="stk-respuesta"><span class="material-icons-round">reply</span>${esc(t.respuesta)}</div>` : ''}
-      </div>
-    `).join('');
+
+    const unread = tickets.filter(t => t.respuesta && !parseInt(t.visto)).length;
+    updateBadge(unread);
+
+    const rows = tickets.map(t => {
+      const esNoLeido = t.respuesta && !parseInt(t.visto);
+      const dot = esNoLeido
+        ? '<span class="sop-dot" title="Nueva respuesta"></span>'
+        : '<span class="sop-dot-placeholder"></span>';
+      return `<tr class="sop-row" data-id="${t.id_ticket}">
+        <td class="sop-td-id">#${t.id_ticket}</td>
+        <td class="sop-td-asunto"><div class="sop-asunto-wrap">${dot}${esc(t.asunto)}</div></td>
+        <td><span class="pill ${ESTADO_BADGE[t.estado] || ''}">${esc(ESTADO_LABEL[t.estado] || t.estado)}</span></td>
+        <td class="sop-td-fecha">${fmt(t.created_at)}</td>
+      </tr>`;
+    }).join('');
+
+    list.innerHTML = `
+      <table class="sop-table">
+        <thead><tr><th>#</th><th>Asunto</th><th>Estado</th><th>Fecha</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p class="sop-hint">Doble clic en un ticket para ver el detalle</p>
+    `;
+
+    list.querySelectorAll('.sop-row').forEach(row => {
+      row.addEventListener('dblclick', () => openDetalle(parseInt(row.dataset.id)));
+    });
   }
+
+  // ── Modal detalle ──────────────────────────────────────────
+  const modalDetalle = document.getElementById('modal-sop-detalle');
+  const btnMsdClose  = document.getElementById('btn-msd-close');
+
+  function openDetalle(id) {
+    const t = ticketsData.find(x => parseInt(x.id_ticket) === id);
+    if (!t || !modalDetalle) return;
+
+    document.getElementById('msd-titulo').textContent = 'Ticket #' + t.id_ticket;
+
+    const subEl = document.getElementById('msd-sub');
+    subEl.innerHTML = '<span>' + esc(t.asunto) + '</span>'
+      + '<span class="pill ' + (ESTADO_BADGE[t.estado] || '') + '">'
+      + esc(ESTADO_LABEL[t.estado] || t.estado) + '</span>';
+
+    document.getElementById('msd-msg').textContent = t.mensaje || '';
+
+    const respWrap = document.getElementById('msd-resp-wrap');
+    const respTxt  = document.getElementById('msd-resp-txt');
+    const noResp   = document.getElementById('msd-no-resp');
+
+    if (t.respuesta) {
+      respWrap.classList.remove('sop-hidden');
+      noResp.classList.add('sop-hidden');
+      respTxt.textContent = t.respuesta;
+    } else {
+      respWrap.classList.add('sop-hidden');
+      noResp.classList.remove('sop-hidden');
+    }
+
+    modalDetalle.classList.add('active');
+
+    if (t.respuesta && !parseInt(t.visto)) {
+      marcarVisto(id);
+    }
+  }
+
+  async function marcarVisto(id) {
+    try {
+      const fd = new FormData();
+      fd.append('action',    'marcar_visto');
+      fd.append('id_ticket', id);
+      const r = await apiFetch('/reparo/api/tickets.php', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.ok) return;
+
+      const t = ticketsData.find(x => parseInt(x.id_ticket) === id);
+      if (t) t.visto = 1;
+
+      const unread = ticketsData.filter(x => x.respuesta && !parseInt(x.visto)).length;
+      updateBadge(unread);
+
+      const dot = document.querySelector('.sop-row[data-id="' + id + '"] .sop-dot');
+      if (dot) dot.className = 'sop-dot-placeholder';
+    } catch (_) {}
+  }
+
+  if (btnMsdClose) btnMsdClose.addEventListener('click', () => modalDetalle.classList.remove('active'));
+  if (modalDetalle) modalDetalle.addEventListener('click', e => {
+    if (e.target === modalDetalle) modalDetalle.classList.remove('active');
+  });
 
   // ── Modal nuevo ticket ─────────────────────────────────────
   const btnNuevo   = document.getElementById('btn-nuevo-ticket');
@@ -67,7 +158,7 @@
   const sopError   = document.getElementById('sop-error');
 
   if (btnNuevo) btnNuevo.addEventListener('click', () => {
-    inpAsunto.value = '';
+    inpAsunto.value  = '';
     inpMensaje.value = '';
     sopError.textContent = '';
     modalSop.classList.add('active');
@@ -78,7 +169,7 @@
   if (btnCerrar) btnCerrar.addEventListener('click', cerrarModal);
   const btnCerrarFt = document.getElementById('btn-sop-close-ft');
   if (btnCerrarFt) btnCerrarFt.addEventListener('click', cerrarModal);
-  if (modalSop)  modalSop.addEventListener('click', e => { if (e.target === modalSop) cerrarModal(); });
+  if (modalSop) modalSop.addEventListener('click', e => { if (e.target === modalSop) cerrarModal(); });
 
   if (btnEnviar) btnEnviar.addEventListener('click', async () => {
     const asunto  = inpAsunto.value.trim();
@@ -89,7 +180,7 @@
 
     btnEnviar.disabled = true;
     const fd = new FormData();
-    fd.append('asunto', asunto);
+    fd.append('asunto',  asunto);
     fd.append('mensaje', mensaje);
     try {
       const r = await apiFetch('/reparo/api/tickets.php', { method: 'POST', body: fd });
@@ -107,11 +198,10 @@
     btnEnviar.disabled = false;
   });
 
-  // ── Inicializar cuando se active la vista ─────────────────
+  // ── Activar cuando se muestre la vista ────────────────────
   document.addEventListener('viewchange', e => {
     if (e.detail === 'soporte') loadTickets();
   });
 
-  // Cargar inmediatamente si la vista ya está activa al cargar
   if (document.getElementById('view-soporte')?.classList.contains('active')) loadTickets();
 }());
