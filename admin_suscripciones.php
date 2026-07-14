@@ -49,7 +49,8 @@ $dist = $db->query("
     GROUP BY plan_tipo ORDER BY total DESC
 ")->fetchAll();
 $dist_total = array_sum(array_column($dist, 'total')) ?: 1;
-<?php $pageTitle = 'Centrotec Admin — Suscripciones'; ?>
+$pageTitle = 'Centrotec Admin — Suscripciones';
+?>
 <!DOCTYPE html>
 <html lang="es">
 <?php include __DIR__ . '/includes/admin_head.php'; ?>

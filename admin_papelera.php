@@ -42,25 +42,6 @@ $total_inv = count($inventario);
 <html lang="es">
 <?php $pageTitle = 'Centrotec Admin — Papelera'; ?>
 <?php include __DIR__ . '/includes/admin_head.php'; ?>
-<style>
-.pap-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px; }
-.pap-tab  {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:10px 18px; background:none; border:none;
-  font-size:13px; font-weight:600; color:var(--txt2);
-  cursor:pointer; border-bottom:2px solid transparent;
-  margin-bottom:-1px; transition:var(--tr);
-}
-.pap-tab:hover  { color:var(--txt); }
-.pap-tab.active { color:#a78bfa; border-bottom-color:#7c3aed; }
-.pap-tab .material-icons-round { font-size:16px; }
-.pap-empty {
-  text-align:center; padding:60px 20px;
-  color:var(--txt3); display:flex; flex-direction:column;
-  align-items:center; gap:12px;
-}
-.pap-empty .material-icons-round { font-size:48px; color:#4ade80; }
-</style>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 <main class="adm-main">
@@ -146,7 +127,7 @@ $total_inv = count($inventario);
   </div>
 
   <!-- Tab: Repuestos -->
-  <div id="tab-repuestos" class="pap-panel" style="display:none;">
+  <div id="tab-repuestos" class="pap-panel pap-hidden">
     <?php if (empty($inventario)): ?>
       <div class="pap-empty">
         <span class="material-icons-round">check_circle</span>
@@ -205,8 +186,8 @@ $total_inv = count($inventario);
     btn.addEventListener('click', () => {
       document.querySelectorAll('.pap-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      document.querySelectorAll('.pap-panel').forEach(p => p.style.display = 'none');
-      document.getElementById('tab-' + btn.dataset.tab).style.display = '';
+      document.querySelectorAll('.pap-panel').forEach(p => p.classList.add('pap-hidden'));
+      document.getElementById('tab-' + btn.dataset.tab).classList.remove('pap-hidden');
     });
   });
 
