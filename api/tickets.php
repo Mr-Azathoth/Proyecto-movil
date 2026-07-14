@@ -1,13 +1,12 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 guard();
-csrf_check();
 
-$db  = getDB();
-$eid = eid();
-$uid = uid();
-
+$db     = getDB();
+$eid    = eid();
+$uid    = uid();
 $method = $_SERVER['REQUEST_METHOD'];
+
 if ($method === 'POST') csrf_check();
 
 // Auto-migrate
