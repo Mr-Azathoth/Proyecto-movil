@@ -391,16 +391,16 @@ tr[data-href]:hover td { background: rgba(124,58,237,0.06); }
 }
 .dblclick-hint .material-icons-round { font-size: 14px; }
 
-/* ── Papelera ──────────────────────────────────────────── */
+/* == Papelera == */
 .pap-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px; }
-.pap-tab  {
+.pap-tab {
   display:inline-flex; align-items:center; gap:6px;
   padding:10px 18px; background:none; border:none;
   font-size:13px; font-weight:600; color:var(--txt2);
   cursor:pointer; border-bottom:2px solid transparent;
   margin-bottom:-1px; transition:var(--tr);
 }
-.pap-tab:hover  { color:var(--txt); }
+.pap-tab:hover { color:var(--txt); }
 .pap-tab.active { color:#a78bfa; border-bottom-color:#7c3aed; }
 .pap-tab .material-icons-round { font-size:16px; }
 .pap-empty {
