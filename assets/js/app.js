@@ -2219,16 +2219,10 @@ function _stopScanner() {
 
 function _highlightInvItem(id) {
   _stopScanner();
+  var item = _invMap.get(id);
+  if (!item) { toast('Repuesto no encontrado en inventario.', 'err'); return; }
   switchView('inventario');
-  setTimeout(function() {
-    var row = document.querySelector('tr[data-inv-id="' + id + '"]');
-    if (!row) { toast('Repuesto no encontrado en inventario.', 'err'); return; }
-    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    row.classList.add('row-highlight');
-    setTimeout(function() { row.classList.remove('row-highlight'); }, 2500);
-    var item = _invMap.get(id);
-    if (item) toast('Repuesto encontrado: ' + item.nombre, 'ok');
-  }, 300);
+  setTimeout(function() { openInvEdit(item); }, 300);
 }
 
 function _handleScannedUrl(text) {
