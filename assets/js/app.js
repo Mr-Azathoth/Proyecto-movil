@@ -686,6 +686,9 @@ function _buildInventarioRow(rep) {
       </button>
       ${isAdmin ? `<button type="button" class="btn-row-action btn-inv-edit" title="Editar repuesto">
         <span class="material-icons-round">edit</span>
+      </button>
+      <button type="button" class="btn-row-action btn-inv-del" data-id="${rep.id_repuesto}" data-nombre="${esc(rep.nombre)}" title="Eliminar repuesto" style="color:#f87171">
+        <span class="material-icons-round">delete</span>
       </button>` : ''}
       <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${parseInt(rep.cantidad)+1}" title="Aumentar">+</button>
       <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${Math.max(0,parseInt(rep.cantidad)-1)}" title="Disminuir">−</button>
@@ -1643,6 +1646,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (editBtn) {
       const row = editBtn.closest('tr[data-inv-id]');
       if (row) { const item = _invMap.get(parseInt(row.dataset.invId)); if (item) openInvEdit(item); }
+      return;
+    }
+    const delBtn = e.target.closest('.btn-inv-del');
+    if (delBtn) {
+      const id     = parseInt(delBtn.dataset.id);
+      const nombre = delBtn.dataset.nombre;
+      openConfirm(`¿Eliminar "${nombre}" del inventario? Esta acción no se puede deshacer.`, async () => {
+        try {
+          const r = await apiFetch(`/reparo/api/inventario.php?id=${id}`, { method: 'DELETE' });
+          const j = await r.json();
+          if (j.ok) { toast('Repuesto eliminado.', 'ok'); _invMap.delete(id); _applySortInventario(); }
+          else toast(j.msg || 'Error al eliminar.', 'err');
+        } catch(err) { if (err.message !== 'session_expired') toast('Error de red.', 'err'); }
+      });
       return;
     }
     const btn = e.target.closest('.btn-stock[data-id]');

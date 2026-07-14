@@ -106,3 +106,14 @@ if ($method === 'PUT') {
     log_accion($db, 'stock_actualizado_inv', null);
     json_ok(['msg' => 'Stock actualizado.']);
 }
+
+if ($method === 'DELETE') {
+    if (ucargo() !== 'Admin') json_err('Sin permiso.', 403);
+    $rid = (int) ($_GET['id'] ?? 0);
+    if (!$rid) json_err('ID inválido.');
+    $st = $db->prepare("DELETE FROM inventario WHERE id_repuesto=? AND id_empresa=?");
+    $st->execute([$rid, $eid]);
+    if ($st->rowCount() === 0) json_err('Repuesto no encontrado.');
+    log_accion($db, 'repuesto_eliminado', $rid);
+    json_ok(['msg' => 'Repuesto eliminado.']);
+}
