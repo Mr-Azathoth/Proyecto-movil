@@ -112,6 +112,9 @@ try {
         <span class="material-icons-round">settings</span><span>Configuración</span>
       </a>
       <?php endif; ?>
+      <a class="nav-link" data-view="soporte">
+        <span class="material-icons-round">support_agent</span><span>Soporte</span>
+      </a>
     </nav>
 
     <div class="sidebar-bottom">
@@ -568,6 +571,53 @@ try {
       </div>
 
     </div><!-- /view-estadisticas -->
+
+    <!-- ═══════════════════════ VIEW: SOPORTE ══════════════════════════ -->
+    <div id="view-soporte" class="view">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Soporte</h1>
+          <p class="page-sub">Envía consultas o reporta problemas al equipo Centrotec</p>
+        </div>
+        <button class="btn btn-primary" id="btn-nuevo-ticket">
+          <span class="material-icons-round">add</span>Nuevo ticket
+        </button>
+      </header>
+
+      <div id="soporte-ticket-list">
+        <div class="soporte-empty">
+          <span class="material-icons-round">support_agent</span>
+          <p>Cargando tickets...</p>
+        </div>
+      </div>
+    </div><!-- /view-soporte -->
+
+    <!-- Modal: nuevo ticket de soporte -->
+    <div class="modal-bg" id="modal-soporte">
+      <div class="modal-box modal-box-sm">
+        <div class="modal-hd">
+          <h3>Nuevo ticket de soporte</h3>
+          <button class="modal-close" id="btn-sop-close"><span class="material-icons-round">close</span></button>
+        </div>
+        <div class="modal-body">
+          <div class="fg">
+            <label>Asunto</label>
+            <input type="text" id="sop-asunto" placeholder="Describe brevemente el problema" maxlength="200">
+          </div>
+          <div class="fg">
+            <label>Mensaje</label>
+            <textarea id="sop-mensaje" rows="5" placeholder="Detalla tu consulta o el problema que estás experimentando..."></textarea>
+          </div>
+          <p id="sop-error" style="color:#f87171;font-size:13px;min-height:18px;"></p>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-sec" id="btn-sop-close-ft">Cancelar</button>
+          <button class="btn btn-primary" id="btn-sop-enviar">
+            <span class="material-icons-round">send</span>Enviar
+          </button>
+        </div>
+      </div>
+    </div><!-- /modal-soporte -->
 
     <!-- Modal: resetear contraseña de usuario -->
     <div class="modal-bg" id="modal-reset-pass">
@@ -1071,5 +1121,6 @@ try {
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/soporte.js?v=<?= filemtime(__DIR__.'/assets/js/soporte.js') ?>"></script>
 </body>
 </html>

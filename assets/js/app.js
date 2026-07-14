@@ -236,6 +236,7 @@ function switchView(name, el) {
   if (name === 'inventario')   loadInventario();
   if (name === 'config')       loadConfigData();
   if (name === 'estadisticas') initEstadisticas();
+  document.dispatchEvent(new CustomEvent('viewchange', { detail: name }));
 }
 
 function openModal(id) {
