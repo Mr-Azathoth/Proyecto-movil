@@ -44,6 +44,17 @@ try {
 
 <div class="app">
 
+  <!-- Barra superior móvil (hamburguesa + nombre app) -->
+  <div class="mobile-topbar" id="mobile-topbar">
+    <button class="hamburger" id="btn-hamburger" aria-label="Menú">
+      <span class="material-icons-round">menu</span>
+    </button>
+    <span class="mobile-app-name">Centrotec</span>
+  </div>
+
+  <!-- Overlay para cerrar sidebar en móvil -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
   <!-- ── SIDEBAR ─────────────────────────────────────── -->
   <aside class="sidebar" id="sidebar">
 
@@ -1040,7 +1051,7 @@ try {
       </div>
       <div class="scanner-fallback hidden" id="scanner-fallback">
         <span class="material-icons-round scanner-mobile-icon">smartphone</span>
-        <p class="scanner-fallback-msg">El escaneo de QR solo está disponible en dispositivos móviles.</p>
+        <p class="scanner-fallback-msg">No se pudo acceder a la cámara. Verifica que el sitio use HTTPS y que hayas dado permiso de cámara al navegador.</p>
       </div>
       <div class="scanner-result hidden" id="scanner-result">
         <span class="material-icons-round scanner-ok-icon">check_circle</span>
@@ -1057,6 +1068,23 @@ try {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('<?= BASE ?>/sw.js', { scope: '<?= BASE ?>/' });
 }
+// Hamburguesa móvil
+(function() {
+  var btn     = document.getElementById('btn-hamburger');
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (!btn || !sidebar || !overlay) return;
+  function openSidebar()  { sidebar.classList.add('open');    overlay.classList.add('active'); }
+  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); }
+  btn.addEventListener('click', function() {
+    sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+  });
+  overlay.addEventListener('click', closeSidebar);
+  // Cerrar al cambiar de vista
+  document.querySelectorAll('.nav-link').forEach(function(l) {
+    l.addEventListener('click', closeSidebar);
+  });
+}());
 </script>
 </body>
 </html>

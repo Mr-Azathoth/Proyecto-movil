@@ -978,3 +978,93 @@ input.hidden           { display:none !important; }
 .susp-btn-ghost .material-icons-round { font-size:16px; }
 .susp-btn-ghost:hover { color:var(--txt); border-color:rgba(255,255,255,0.2); }
 
+/* ══════════════════════════════════════════════════════════
+   MÓVIL — breakpoint principal ≤ 640px
+══════════════════════════════════════════════════════════ */
+
+/* Barra superior móvil */
+.mobile-topbar {
+  display:none;
+  position:fixed; top:0; left:0; right:0; z-index:200;
+  height:52px; background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  align-items:center; gap:12px; padding:0 16px;
+}
+.mobile-app-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:16px; color:var(--txt); }
+.hamburger {
+  background:none; border:none; color:var(--txt); cursor:pointer;
+  display:flex; align-items:center; padding:6px; border-radius:8px;
+}
+.hamburger:hover { background:rgba(255,255,255,0.08); }
+
+/* Overlay oscuro detrás del sidebar en móvil */
+.sidebar-overlay {
+  display:none; position:fixed; inset:0; z-index:149;
+  background:rgba(0,0,0,0.55); backdrop-filter:blur(2px);
+}
+.sidebar-overlay.active { display:block; }
+
+@media (max-width:640px) {
+  /* Mostrar barra móvil */
+  .mobile-topbar { display:flex; }
+
+  /* Empujar contenido bajo la barra móvil */
+  .app { padding-top:52px; }
+
+  /* Sidebar fuera de pantalla por defecto */
+  .sidebar {
+    position:fixed; top:0; left:0; bottom:0; z-index:150;
+    width:220px !important;
+    transform:translateX(-100%);
+    transition:transform 0.25s ease;
+    overflow-y:auto;
+  }
+  .sidebar.open { transform:translateX(0); }
+
+  /* Main ocupa todo el ancho */
+  .main { margin-left:0 !important; }
+
+  /* Tablas: scroll horizontal en vez de desbordarse */
+  .tbl-wrap, .table-wrap, .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .tbl { min-width:480px; }
+
+  /* Ocultar columnas secundarias en tabla de reparaciones */
+  /* Columnas: 1=# 2=Cliente 3=Equipo 4=Falla 5=Valor 6=Ingresado 7=Fecha 8=Estado 9=Acciones */
+  #view-servicios .tbl th:nth-child(4),
+  #view-servicios .tbl td:nth-child(4),
+  #view-servicios .tbl th:nth-child(5),
+  #view-servicios .tbl td:nth-child(5),
+  #view-servicios .tbl th:nth-child(6),
+  #view-servicios .tbl td:nth-child(6),
+  #view-servicios .tbl th:nth-child(7),
+  #view-servicios .tbl td:nth-child(7) { display:none; }
+
+  /* Ocultar columnas secundarias en tabla de inventario */
+  /* Columnas: 1=Repuesto 2=Marca 3=Modelo 4=Precio 5=Stock 6=Acciones */
+  #view-inventario .tbl th:nth-child(2),
+  #view-inventario .tbl td:nth-child(2),
+  #view-inventario .tbl th:nth-child(3),
+  #view-inventario .tbl td:nth-child(3) { display:none; }
+
+  /* Modales a pantalla completa */
+  .modal-box {
+    width:100% !important; max-width:100% !important;
+    height:100dvh; max-height:100dvh !important;
+    border-radius:0 !important; margin:0;
+  }
+  .modal { align-items:flex-end; }
+
+  /* Stats en 2 columnas */
+  .stats-row { grid-template-columns:repeat(3,1fr) !important; gap:6px !important; }
+  .stat-card { padding:10px 8px !important; }
+  .stat-val  { font-size:18px !important; }
+  .stat-lbl  { font-size:10px !important; }
+
+  /* Topbar acciones apiladas */
+  .topbar { flex-wrap:wrap; gap:8px; }
+  .topbar-actions { flex-wrap:wrap; gap:6px; }
+
+  /* Botón de acción más fácil de tocar */
+  .btn-row-action { width:36px; height:36px; }
+}
+
