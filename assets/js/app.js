@@ -1652,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (delBtn) {
       const id     = parseInt(delBtn.dataset.id);
       const nombre = delBtn.dataset.nombre;
-      openConfirm(`¿Eliminar "${nombre}" del inventario? Esta acción no se puede deshacer.`, async () => {
+      showConfirm('Eliminar repuesto', `¿Eliminar "${nombre}" del inventario? Esta acción no se puede deshacer.`, async () => {
         try {
           const r = await apiFetch(`/reparo/api/inventario.php?id=${id}`, { method: 'DELETE' });
           const j = await r.json();
