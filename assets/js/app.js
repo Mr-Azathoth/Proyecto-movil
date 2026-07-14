@@ -336,7 +336,7 @@ function _buildServicioRow(rep) {
         <div class="cell-main">${esc(rep.marca_ingreso)} ${esc(rep.modelo_ingreso)}</div>
         <div class="cell-sub">${esc(rep.tipo_ingreso)}</div>
       </td>
-      <td class="cell-sub">${esc(rep.daño_ingreso)}</td>
+      <td class="cell-sub">${esc(rep.dano_ingreso)}</td>
       <td class="cell-val">${v}</td>
       <td class="cell-sub">${esc(rep.ingresado_por)}</td>
       <td class="cell-sub">${fmtDate(rep.fecha_ingreso)}</td>
@@ -439,7 +439,7 @@ function openDetalle(rep) {
   document.getElementById('det-tel').textContent     = rep.telefono_cliente || '—';
   document.getElementById('det-equipo').textContent  = `${rep.marca_ingreso} ${rep.modelo_ingreso} (${rep.tipo_ingreso})`;
   document.getElementById('det-imei').textContent    = `IMEI: ${rep.imei||'—'} · Clave: ${rep.pass_ingreso||'—'}`;
-  document.getElementById('det-daño').textContent    = rep.daño_ingreso;
+  document.getElementById('det-daño').textContent    = rep.dano_ingreso;
   document.getElementById('det-tecnico').textContent = rep.ingresado_por;
   document.getElementById('det-hidden-id').value     = rep.id_ingreso;
   document.getElementById('det-status').value        = rep.status;

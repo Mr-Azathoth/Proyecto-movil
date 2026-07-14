@@ -70,7 +70,7 @@ if ($method === 'POST') {
         'modelo_ingreso'   => trim($_POST['modelo_ingreso']   ?? ''),
         'imei'             => trim($_POST['imei']             ?? ''),
         'pass_ingreso'     => trim($_POST['pass_ingreso']     ?? 'Sin contraseña'),
-        'daño_ingreso'     => trim($_POST['daño_ingreso']     ?? ''),
+        'dano_ingreso'     => trim($_POST['dano_ingreso']     ?? ''),
         'valor_ingreso'    => max(0, (int) ($_POST['valor_ingreso'] ?? 0)),
         'status'           => trim($_POST['status']           ?? 'Ingresado'),
         'obs'              => trim($_POST['obs']              ?? ''),
@@ -80,7 +80,7 @@ if ($method === 'POST') {
     if (!$f['nombre_cliente'])                            json_err('El nombre del cliente es obligatorio.');
     if (strlen($f['nombre_cliente']) > 120)               json_err('Nombre demasiado largo.');
     if (!$f['telefono_cliente'])                          json_err('El teléfono del cliente es obligatorio.');
-    if (!$f['daño_ingreso'])                              json_err('La descripción de la falla es obligatoria.');
+    if (!$f['dano_ingreso'])                              json_err('La descripción de la falla es obligatoria.');
     if (!in_array($f['status'], VALID_STATUS, true))      json_err('Estado inicial inválido.');
 
     $tipos_validos = ['Telefono', 'Tablet', 'Notebook', 'Televisor', 'Otro'];
@@ -99,13 +99,13 @@ if ($method === 'POST') {
 
     $db->prepare("INSERT INTO reparaciones
         (id_empresa, nombre_cliente, telefono_cliente, rut_cliente, tipo_ingreso,
-         marca_ingreso, modelo_ingreso, imei, pass_ingreso, daño_ingreso,
+         marca_ingreso, modelo_ingreso, imei, pass_ingreso, dano_ingreso,
          valor_ingreso, status, obs, ingresado_por, id_repuesto_usado, codigo_seguimiento)
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
        ->execute([
             $eid, $f['nombre_cliente'], $f['telefono_cliente'], $f['rut_cliente'],
             $f['tipo_ingreso'], $f['marca_ingreso'], $f['modelo_ingreso'], $f['imei'],
-            $f['pass_ingreso'], $f['daño_ingreso'], $f['valor_ingreso'],
+            $f['pass_ingreso'], $f['dano_ingreso'], $f['valor_ingreso'],
             $f['status'], $f['obs'], uname(), $id_repuesto_inicial, $codigo,
         ]);
     $newId = (int) $db->lastInsertId();

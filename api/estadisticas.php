@@ -110,30 +110,30 @@ $top_modelos = $modelos->fetchAll();
 $fallas = $db->prepare("
     SELECT
       CASE
-        WHEN LOWER(daño_ingreso) REGEXP 'pantalla|cristal|display|lcd|touch|t[aá]ctil|ghost|fisurad'
+        WHEN LOWER(dano_ingreso) REGEXP 'pantalla|cristal|display|lcd|touch|t[aá]ctil|ghost|fisurad'
           THEN 'Pantalla / táctil'
-        WHEN LOWER(daño_ingreso) REGEXP 'bater[ií]a|no carga|puerto.*carga|carga.*lenta|carga lenta'
+        WHEN LOWER(dano_ingreso) REGEXP 'bater[ií]a|no carga|puerto.*carga|carga.*lenta|carga lenta'
           THEN 'Batería / carga'
-        WHEN LOWER(daño_ingreso) REGEXP 'no enciende|no prende|apagado|agua|mojado|l[ií]quido'
+        WHEN LOWER(dano_ingreso) REGEXP 'no enciende|no prende|apagado|agua|mojado|l[ií]quido'
           THEN 'No enciende / daño por agua'
-        WHEN LOWER(daño_ingreso) REGEXP 'bot[oó]n|volumen|power|encendido|traba|home'
+        WHEN LOWER(dano_ingreso) REGEXP 'bot[oó]n|volumen|power|encendido|traba|home'
           THEN 'Botones'
-        WHEN LOWER(daño_ingreso) REGEXP 'c[aá]mara|foto|lente|flash'
+        WHEN LOWER(dano_ingreso) REGEXP 'c[aá]mara|foto|lente|flash'
           THEN 'Cámara'
-        WHEN LOWER(daño_ingreso) REGEXP 'altavoz|bocina|parlante|micr[oó]fono|audio|sonido'
+        WHEN LOWER(dano_ingreso) REGEXP 'altavoz|bocina|parlante|micr[oó]fono|audio|sonido'
           THEN 'Audio / micrófono'
-        WHEN LOWER(daño_ingreso) REGEXP 'vidrio trasero|bisel|marco|carcasa|chasis'
+        WHEN LOWER(dano_ingreso) REGEXP 'vidrio trasero|bisel|marco|carcasa|chasis'
           THEN 'Vidrio trasero / carcasa'
-        WHEN LOWER(daño_ingreso) REGEXP 'wifi|bluetooth|se[ñn]al|red|datos|sim'
+        WHEN LOWER(dano_ingreso) REGEXP 'wifi|bluetooth|se[ñn]al|red|datos|sim'
           THEN 'Conectividad'
-        WHEN LOWER(daño_ingreso) REGEXP 'lento|cuelga|reinicia|virus|software|sistema|actualiz'
+        WHEN LOWER(dano_ingreso) REGEXP 'lento|cuelga|reinicia|virus|software|sistema|actualiz'
           THEN 'Software / sistema'
-        ELSE TRIM(daño_ingreso)
+        ELSE TRIM(dano_ingreso)
       END AS falla,
       COUNT(*) AS total
     FROM reparaciones
     WHERE id_empresa = ? AND fecha_ingreso BETWEEN ? AND ?
-      AND daño_ingreso IS NOT NULL AND daño_ingreso <> ''
+      AND dano_ingreso IS NOT NULL AND dano_ingreso <> ''
     GROUP BY falla ORDER BY total DESC LIMIT 10
 ");
 $fallas->execute([$eid, $desde_dt, $hasta_dt]);

@@ -54,7 +54,7 @@ if ($codigo !== '') {
         $_SESSION[$rl_key]['cnt']++;
         $st = $db->prepare(
             "SELECT id_ingreso, nombre_cliente, tipo_ingreso, marca_ingreso, modelo_ingreso,
-                    daño_ingreso, status, fecha_ingreso, obs, ingresado_por, valor_ingreso
+                    dano_ingreso, status, fecha_ingreso, obs, ingresado_por, valor_ingreso
                FROM reparaciones
               WHERE codigo_seguimiento = ? LIMIT 1"
         );
@@ -184,7 +184,7 @@ function fmt_fecha(string $fecha): string {
           </div>
           <div class="seg-field">
             <div class="seg-field-label">Falla reportada</div>
-            <div class="seg-field-val"><?= htmlspecialchars($orden['daño_ingreso']) ?></div>
+            <div class="seg-field-val"><?= htmlspecialchars($orden['dano_ingreso']) ?></div>
           </div>
           <div class="seg-field">
             <div class="seg-field-label">Valor del servicio</div>

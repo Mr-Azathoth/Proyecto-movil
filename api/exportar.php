@@ -29,7 +29,7 @@ $sort_dir    = ($_GET['sort_dir'] ?? '') === 'desc' ? 'DESC' : 'ASC';
 
 $sql = "SELECT r.id_ingreso, r.fecha_ingreso, r.nombre_cliente, r.telefono_cliente,
                r.rut_cliente, r.tipo_ingreso, r.marca_ingreso, r.modelo_ingreso,
-               r.daño_ingreso, r.status, r.valor_ingreso, r.ingresado_por,
+               r.dano_ingreso, r.status, r.valor_ingreso, r.ingresado_por,
                i.nombre AS repuesto_inicial
           FROM reparaciones r
           LEFT JOIN inventario i ON i.id_repuesto = r.id_repuesto_usado
@@ -97,7 +97,7 @@ if ($formato === 'csv') {
             $r['tipo_ingreso'],
             $r['marca_ingreso'],
             $r['modelo_ingreso'],
-            $r['daño_ingreso'],
+            $r['dano_ingreso'],
             $r['status'],
             $r['valor_ingreso'],
             $r['repuesto_inicial'] ?: '—',
@@ -207,7 +207,7 @@ header('Content-Type: text/html; charset=utf-8');
       <td><?= hesc($r['nombre_cliente']) ?></td>
       <td><?= hesc($r['telefono_cliente']) ?></td>
       <td><?= hesc($r['marca_ingreso'] . ' ' . $r['modelo_ingreso']) ?><br><small><?= hesc($r['tipo_ingreso']) ?></small></td>
-      <td><?= hesc($r['daño_ingreso']) ?></td>
+      <td><?= hesc($r['dano_ingreso']) ?></td>
       <td><span class="status <?= hesc($stClass) ?>"><?= hesc($r['status']) ?></span></td>
       <td class="val"><?= fmtNum((int) $r['valor_ingreso']) ?></td>
       <td><?= hesc($r['repuesto_inicial'] ?: '—') ?></td>

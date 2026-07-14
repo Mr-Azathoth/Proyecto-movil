@@ -34,7 +34,7 @@ $reps = [
 $ins_rep = $db->prepare("
     INSERT INTO reparaciones
         (id_empresa, nombre_cliente, telefono_cliente, rut_cliente, tipo_ingreso,
-         marca_ingreso, modelo_ingreso, imei, pass_ingreso, daño_ingreso,
+         marca_ingreso, modelo_ingreso, imei, pass_ingreso, dano_ingreso,
          valor_ingreso, status, obs, ingresado_por)
     VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?)
 ");

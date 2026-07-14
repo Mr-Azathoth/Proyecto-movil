@@ -652,7 +652,7 @@ try {
         </div>
         <p class="section-label">Servicio</p>
         <div class="form-grid2">
-          <div class="fg fg-full"><label>Falla / Daño <span class="req">*</span></label><input type="text" name="daño_ingreso" placeholder="Cambio de pantalla, revisión..." required></div>
+          <div class="fg fg-full"><label>Falla / Daño <span class="req">*</span></label><input type="text" name="dano_ingreso" placeholder="Cambio de pantalla, revisión..." required></div>
           <div class="fg"><label>Valor ($)</label><input type="number" name="valor_ingreso" placeholder="0" value="0" min="0"></div>
           <div class="fg"><label>Estado inicial</label>
             <select name="status">

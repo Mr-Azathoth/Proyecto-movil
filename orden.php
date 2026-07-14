@@ -17,7 +17,7 @@ $emp = $se->fetch();
 if (!$emp) { echo 'Empresa no encontrada.'; exit; }
 
 $sr = $db->prepare("SELECT id_ingreso, fecha_ingreso, nombre_cliente, telefono_cliente, rut_cliente,
-                           tipo_ingreso, marca_ingreso, modelo_ingreso, daño_ingreso,
+                           tipo_ingreso, marca_ingreso, modelo_ingreso, dano_ingreso,
                            valor_ingreso, obs, ingresado_por
                     FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
 $sr->execute([$id, $eid]);
@@ -141,7 +141,7 @@ function hh(string $v): string { return htmlspecialchars($v ?? '', ENT_QUOTES, '
         </div>
         <div class="eq-cell">
           <div class="eq-lbl">Trabajo a realizar</div>
-          <div class="eq-val"><?= hh($rep['daño_ingreso']) ?></div>
+          <div class="eq-val"><?= hh($rep['dano_ingreso']) ?></div>
         </div>
       </div>
     </div>
