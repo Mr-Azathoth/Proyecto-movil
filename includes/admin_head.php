@@ -7,6 +7,7 @@ $pageTitle = $pageTitle ?? 'Centrotec Admin';
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= htmlspecialchars($pageTitle) ?></title>
 <meta name="sadmin-csrf" content="<?= htmlspecialchars($_SESSION['sadmin_csrf'] ?? '') ?>">
+<meta name="base-path" content="<?= BASE ?>">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css">

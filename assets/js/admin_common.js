@@ -1,9 +1,11 @@
 // CSRF token para todas las llamadas AJAX del super admin
 const sadminCsrf = document.querySelector('meta[name="sadmin-csrf"]')?.content ?? '';
+const SADMIN_BASE = document.querySelector('meta[name="base-path"]')?.content ?? '';
 
-// Wrapper fetch autenticado: añade el header X-CSRF-Token en todos los POST
+// Wrapper fetch autenticado: normaliza rutas /reparo/ → BASE_PATH y añade CSRF
 function sadminFetch(url, fd) {
-  return fetch(url, { method: 'POST', body: fd, headers: { 'X-CSRF-Token': sadminCsrf } });
+  const normalizedUrl = SADMIN_BASE + url.replace(/^\/reparo/, '');
+  return fetch(normalizedUrl, { method: 'POST', body: fd, headers: { 'X-CSRF-Token': sadminCsrf } });
 }
 
 // Filas con data-href: doble clic navega al detalle
