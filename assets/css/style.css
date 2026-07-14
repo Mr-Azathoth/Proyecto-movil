@@ -1053,7 +1053,24 @@ input.hidden           { display:none !important; }
     height:100dvh; max-height:100dvh !important;
     border-radius:0 !important; margin:0;
   }
-  .modal { align-items:flex-end; }
+  .modal { align-items:flex-start; }
+
+  /* Reducir paddings internos en móvil */
+  .modal-hd  { padding:12px 14px; }
+  .modal-body { padding:10px 14px; }
+  .modal-ft  { padding:10px 14px; flex-wrap:wrap; }
+  .modal-ft .btn, .modal-ft .btn-sec { flex:1; min-width:120px; justify-content:center; }
+
+  /* Form grids: 1 columna en móvil */
+  .form-grid2 { grid-template-columns:1fr !important; }
+
+  /* Inputs y selects: tamaño táctil mínimo */
+  .fg input, .fg select, .fg textarea { font-size:16px; min-height:42px; }
+
+  /* Scanner: llenar la pantalla */
+  #modal-scanner .modal-box { height:100dvh; }
+  .scanner-wrap { max-height:calc(100dvh - 140px) !important; aspect-ratio:unset !important; height:calc(100dvh - 140px); }
+  .scanner-frame { width:220px; height:220px; }
 
   /* Stats en 2 columnas */
   .stats-row { grid-template-columns:repeat(3,1fr) !important; gap:6px !important; }
