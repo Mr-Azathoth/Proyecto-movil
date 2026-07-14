@@ -39,10 +39,13 @@ ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Strict');
 ini_set('session.use_strict_mode', '1');
 
-// Producción: ocultar errores y forzar cookie segura (HTTPS)
+// Producción: ocultar errores; cookie segura solo si la conexión es realmente HTTPS
 if (defined('APP_ENV') && APP_ENV === 'production') {
     ini_set('display_errors', '0');
-    ini_set('session.cookie_secure', '1');
+    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    if ($is_https) ini_set('session.cookie_secure', '1');
+    unset($is_https);
 } else {
     ini_set('display_errors', '1');
 }
