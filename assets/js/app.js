@@ -49,6 +49,7 @@ class TagInput {
 }
 
 // Contexto del usuario desde atributos data del <body>
+const BASE_PATH = document.body.dataset.base || '';
 const CURRENT_USER = {
   role:   document.body.dataset.role   || '',
   user:   document.body.dataset.user   || '',
@@ -265,6 +266,7 @@ function debounce(fn, ms) {
 }
 
 async function apiFetch(url, options = {}) {
+  url = BASE_PATH + url.replace(/^\/reparo/, '');
   const method = (options.method || 'GET').toUpperCase();
   if (method !== 'GET' && options.headers?.['Content-Type'] === 'application/json') {
     options.headers['X-CSRF-Token'] = CURRENT_USER.csrf;

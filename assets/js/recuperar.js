@@ -18,7 +18,7 @@ if (recForm) {
     try {
       const fd = new FormData();
       fd.append('user', user);
-      const r = await fetch('/reparo/api/recuperar_password.php', { method: 'POST', body: fd });
+      const r = await fetch('/api/recuperar_password.php', { method: 'POST', body: fd });
       const j = await r.json();
       if (j.ok) {
         document.getElementById('rec-form-wrap').style.display = 'none';
@@ -70,10 +70,10 @@ if (rstForm) {
       fd.append('token', token);
       fd.append('password', pass);
       fd.append('confirm', confirm);
-      const r = await fetch('/reparo/api/reset_password.php', { method: 'POST', body: fd });
+      const r = await fetch('/api/reset_password.php', { method: 'POST', body: fd });
       const j = await r.json();
       if (j.ok) {
-        window.location.href = '/reparo/index.php?reset=1';
+        window.location.href = '/index.php?reset=1';
       } else {
         err.textContent = j.msg || 'Error al actualizar la contraseña.';
         err.removeAttribute('hidden');

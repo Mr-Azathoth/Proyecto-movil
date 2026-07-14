@@ -246,7 +246,7 @@
       btnSubmit.disabled = true;
       btnSubmit.textContent = 'Creando cuenta...';
 
-      fetch('/reparo/api/registro.php', { method: 'POST', body: new FormData(form) })
+      fetch('/api/registro.php', { method: 'POST', body: new FormData(form) })
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (j.ok) {

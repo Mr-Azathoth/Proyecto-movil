@@ -33,7 +33,8 @@ try {
       data-role="<?= htmlspecialchars(ucargo()) ?>"
       data-user="<?= htmlspecialchars(uname()) ?>"
       data-nombre="<?= htmlspecialchars(unombre()) ?>"
-      data-uid="<?= uid() ?>">
+      data-uid="<?= uid() ?>"
+      data-base="<?= BASE ?>">
 
 <div class="app">
 
