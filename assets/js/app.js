@@ -277,7 +277,7 @@ async function apiFetch(url, options = {}) {
   const response = await fetch(url, options);
   if (response.status === 401) {
     toast('Sesión expirada. Redirigiendo...', 'err');
-    setTimeout(() => { window.location.href = '/reparo/index.php?expired=1'; }, 1500);
+    setTimeout(() => { window.location.href = BASE_PATH + '/index.php?expired=1'; }, 1500);
     throw new Error('session_expired');
   }
   if (response.status === 403) {
@@ -308,7 +308,7 @@ function mostrarPantallaSuspendida(isPending) {
       '<div class="susp-icon"><span class="material-icons-round">schedule</span></div>' +
       '<h2 class="susp-title">' + titulo + '</h2>' +
       '<p class="susp-msg">' + msg + '</p>' +
-      '<a href="/reparo/landing.php#precios" class="susp-btn">' +
+      '<a href="' + BASE_PATH + '/landing.php#precios" class="susp-btn">' +
         '<span class="material-icons-round">rocket_launch</span>' + btnLabel +
       '</a>' +
       '<a href="mailto:soporte@centrotec.cl" class="susp-btn-ghost">' +
@@ -626,7 +626,7 @@ async function submitNuevo(e) {
         const tel   = (document.querySelector('[name="telefono_cliente"]')?.value || '').replace(/\D/g, '');
         const nombre = document.querySelector('[name="nombre_cliente"]')?.value?.trim() || 'cliente';
         const local = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
-        const url   = `https://Centrotec/seguimiento?codigo=${encodeURIComponent(codigo)}`;
+        const url   = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
         const msg   = `Hola ${nombre}! Tu equipo ingresó a *${local}*.\n` +
                       `Código de seguimiento: *${codigo}*\n` +
                       `Consulta el estado en: ${url}`;
@@ -1141,7 +1141,7 @@ function doExportInv(formato) {
   const q = document.getElementById('search-inv').value;
   if (q) params.set('q', q);
   if (_invSortCol) { params.set('sort_col', _invSortCol); params.set('sort_dir', _invSortDir); }
-  const url = `/reparo/api/exportar_inventario.php?${params.toString()}`;
+  const url = `${BASE_PATH}/api/exportar_inventario.php?${params.toString()}`;
   closeModal('modal-exportar-inv');
   if (formato === 'csv') {
     window.open(url, '_blank');
@@ -1186,7 +1186,7 @@ function _buildExportParams(formato) {
 
 function doExportView(formato) {
   const params = _buildViewParams(formato);
-  const url    = `/reparo/api/exportar.php?${params.toString()}`;
+  const url    = `${BASE_PATH}/api/exportar.php?${params.toString()}`;
   if (formato === 'csv') { window.open(url, '_blank'); return; }
   const w = window.open(url, 'serv_export', 'width=1000,height=700,scrollbars=yes,resizable=yes');
   if (w) { w.focus(); setTimeout(() => w.print(), 800); }
@@ -1194,7 +1194,7 @@ function doExportView(formato) {
 
 function doExport(formato) {
   const params = _buildExportParams(formato);
-  const url    = `/reparo/api/exportar.php?${params.toString()}`;
+  const url    = `${BASE_PATH}/api/exportar.php?${params.toString()}`;
   closeModal('modal-exportar');
 
   if (formato === 'csv') {
@@ -1224,7 +1224,7 @@ function doExport(formato) {
 // ─── Orden de servicio técnico (popup ventana) ────────────────
 function doOrden(id) {
   if (!id) return;
-  const url = `/reparo/orden.php?id=${id}`;
+  const url = `${BASE_PATH}/orden.php?id=${id}`;
   const w = window.open(url, `orden_${id}`,
     'width=600,height=720,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no');
   if (w) w.focus();
@@ -1719,7 +1719,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (j.data.logo_path) {
         const img = document.createElement('img');
         img.className = 'logo-img'; img.id = 'logo-img'; img.alt = 'Logo';
-        img.src = '/reparo/' + j.data.logo_path + '?t=' + Date.now();
+        img.src = BASE_PATH + '/' + j.data.logo_path + '?t=' + Date.now();
         iconWrap.innerHTML = ''; iconWrap.appendChild(img);
       } else {
         iconWrap.innerHTML = `<span id="logo-letra">${esc(j.data.nombre.charAt(0).toUpperCase())}</span>`;
@@ -1805,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
   const pagoParam = urlParams.get('pago');
   if (pagoParam === 'ok' || pagoParam === 'suscripcion') {
-    history.replaceState({}, '', '/reparo/app.php');
+    history.replaceState({}, '', BASE_PATH + '/app.php');
     const msg = pagoParam === 'suscripcion'
       ? '✔ Suscripción activada. El pago se confirmará en breve.'
       : '✔ Pago exitoso. Suscripción actualizada.';
@@ -2139,7 +2139,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ── QR inventario: funciones a nivel de módulo ────────────────────────────
 function _qrUrl(id) {
-  return location.origin + '/reparo/app.php?inv=' + id;
+  return location.origin + BASE_PATH + '/app.php?inv=' + id;
 }
 
 function openQRModal(item) {
