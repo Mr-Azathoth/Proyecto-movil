@@ -31,10 +31,11 @@ try {
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
 <link rel="manifest" href="<?= BASE ?>/manifest.php">
 <meta name="theme-color" content="#7c3aed">
-<link rel="apple-touch-icon" href="<?= BASE ?>/assets/img/icon.php?s=192">
+<link rel="apple-touch-icon" href="<?= BASE ?>/assets/img/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Centrotec">
+<meta name="base-path" content="<?= BASE ?>">
 </head>
 <body data-csrf="<?= csrf_token() ?>"
       data-role="<?= htmlspecialchars(ucargo()) ?>"
@@ -51,6 +52,9 @@ try {
       <span class="material-icons-round">menu</span>
     </button>
     <span class="mobile-app-name">Centrotec</span>
+    <button class="btn-pwa-install" onclick="pwaInstall()" title="Instalar app" style="display:none">
+      <span class="material-icons-round">install_mobile</span>
+    </button>
   </div>
 
   <!-- Overlay para cerrar sidebar en móvil -->
@@ -1062,6 +1066,7 @@ try {
   </div>
 </div>
 
+<script src="<?= BASE ?>/assets/js/sw-register.js"></script>
 <script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>

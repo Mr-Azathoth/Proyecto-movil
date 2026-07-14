@@ -15,14 +15,7 @@ echo json_encode([
     'theme_color'      => '#7c3aed',
     'lang'             => 'es',
     'icons'            => [
-        ['src' => $base . '/assets/img/icon.php?s=192', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any maskable'],
-        ['src' => $base . '/assets/img/icon.php?s=512', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any maskable'],
-    ],
-    'shortcuts' => [
-        [
-            'name'      => 'Nueva reparación',
-            'url'       => $base . '/app.php?new=1',
-            'icons'     => [['src' => $base . '/assets/img/icon-192.png', 'sizes' => '192x192']],
-        ],
+        ['src' => $base . '/assets/img/icon-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any maskable'],
+        ['src' => $base . '/assets/img/icon-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any maskable'],
     ],
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

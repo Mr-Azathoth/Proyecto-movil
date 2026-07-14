@@ -990,12 +990,13 @@ input.hidden           { display:none !important; }
   border-bottom:1px solid var(--border);
   align-items:center; gap:12px; padding:0 16px;
 }
-.mobile-app-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:16px; color:var(--txt); }
-.hamburger {
+.mobile-app-name { font-family:'Outfit',sans-serif; font-weight:700; font-size:16px; color:var(--txt); flex:1; }
+.hamburger, .btn-pwa-install {
   background:none; border:none; color:var(--txt); cursor:pointer;
   display:flex; align-items:center; padding:6px; border-radius:8px;
 }
-.hamburger:hover { background:rgba(255,255,255,0.08); }
+.hamburger:hover, .btn-pwa-install:hover { background:rgba(255,255,255,0.08); }
+.btn-pwa-install { color:var(--accent); }
 
 /* Overlay oscuro detrás del sidebar en móvil */
 .sidebar-overlay {

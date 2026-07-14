@@ -2437,11 +2437,6 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   loadInventario().then(_waitAndHighlight);
 }());
 
-// PWA Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(BASE_PATH + '/sw.js', { scope: BASE_PATH + '/' });
-}
-
 // Hamburguesa móvil
 (function() {
   var btn     = document.getElementById('btn-hamburger');
