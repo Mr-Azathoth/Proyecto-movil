@@ -12,6 +12,7 @@ try { $db->exec("ALTER TABLE reparaciones ADD COLUMN id_repuesto_usado INT NULL"
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN stock_descontado TINYINT(1) NOT NULL DEFAULT 0"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN codigo_seguimiento VARCHAR(6) NULL"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (codigo_seguimiento)"); } catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE reparaciones ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch(PDOException $e) {}
 
 function generar_codigo_seguimiento(PDO $db): string {
     $chars = 'ABCDEFGHJKMNPQRSTUVWXY3456789';
@@ -39,7 +40,7 @@ if ($method === 'GET') {
               FROM reparaciones r
               LEFT JOIN inventario i
                      ON i.id_repuesto = r.id_repuesto_usado AND i.id_empresa = r.id_empresa
-             WHERE r.id_empresa = ?";
+             WHERE r.id_empresa = ? AND r.deleted_at IS NULL";
     $p   = [$eid];
 
     if ($q) {
@@ -229,16 +230,15 @@ if ($method === 'DELETE') {
     csrf_check();
 
     $in = json_decode(file_get_contents('php://input'), true) ?? [];
-    $id = (int) ($in['id'] ?? 0);
+    $id = (int) ($in['id'] ?? $_GET['id'] ?? 0);
     if (!$id) json_err('ID inválido.');
 
-    $cur = $db->prepare("SELECT id_ingreso FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+    $cur = $db->prepare("SELECT id_ingreso FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ? AND deleted_at IS NULL");
     $cur->execute([$id, $eid]);
     if (!$cur->fetch()) json_err('Registro no encontrado.', 404);
 
-    $db->prepare("DELETE FROM observaciones WHERE id_registro  = ? AND id_empresa = ?")->execute([$id, $eid]);
-    $db->prepare("DELETE FROM historial     WHERE id_reparacion = ? AND id_empresa = ?")->execute([$id, $eid]);
-    $db->prepare("DELETE FROM reparaciones  WHERE id_ingreso    = ? AND id_empresa = ?")->execute([$id, $eid]);
+    $db->prepare("UPDATE reparaciones SET deleted_at = NOW() WHERE id_ingreso = ? AND id_empresa = ?")
+       ->execute([$id, $eid]);
 
     log_accion($db, 'eliminacion', $id);
     json_ok(['msg' => "Servicio #{$id} eliminado."]);

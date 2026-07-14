@@ -213,7 +213,8 @@ function uid(): int           { return (int)($_SESSION['user_id']    ?? 0); }
 function uname(): string      { return $_SESSION['user']   ?? ''; }
 function unombre(): string    { return $_SESSION['nombre'] ?? ''; }
 function ucargo(): string     { return $_SESSION['cargo']  ?? ''; }
-function isAdmin(): bool      { return ucargo() === 'Admin'; }
+function isDueno(): bool      { return ucargo() === 'Dueno'; }
+function isAdmin(): bool      { return ucargo() === 'Admin' || isDueno(); }
 
 function json_ok(mixed $d): void {
     header('Content-Type: application/json');

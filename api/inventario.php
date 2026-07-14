@@ -23,9 +23,12 @@ if ($method === 'GET') {
     try {
         $db->exec("ALTER TABLE inventario ADD UNIQUE KEY uq_inv_codigo (id_empresa, codigo)");
     } catch (PDOException $e) {}
+    try {
+        $db->exec("ALTER TABLE inventario ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
+    } catch (PDOException $e) {}
 
     $q   = trim($_GET['q'] ?? '');
-    $sql = "SELECT * FROM inventario WHERE id_empresa = ?";
+    $sql = "SELECT * FROM inventario WHERE id_empresa = ? AND deleted_at IS NULL";
     $p   = [$eid];
 
     if ($q) {
@@ -108,10 +111,10 @@ if ($method === 'PUT') {
 }
 
 if ($method === 'DELETE') {
-    if (ucargo() !== 'Admin') json_err('Sin permiso.', 403);
+    if (!isAdmin()) json_err('Sin permiso.', 403);
     $rid = (int) ($_GET['id'] ?? 0);
     if (!$rid) json_err('ID inválido.');
-    $st = $db->prepare("DELETE FROM inventario WHERE id_repuesto=? AND id_empresa=?");
+    $st = $db->prepare("UPDATE inventario SET deleted_at = NOW() WHERE id_repuesto=? AND id_empresa=? AND deleted_at IS NULL");
     $st->execute([$rid, $eid]);
     if ($st->rowCount() === 0) json_err('Repuesto no encontrado.');
     log_accion($db, 'repuesto_eliminado', $rid);

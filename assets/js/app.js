@@ -56,6 +56,7 @@ const CURRENT_USER = {
   nombre: document.body.dataset.nombre || '',
   csrf:   document.body.dataset.csrf   || '',
   uid:    parseInt(document.body.dataset.uid || '0', 10),
+  dueno:  document.body.dataset.dueno === '1',
 };
 
 const STATUS_COLORS = {
@@ -236,6 +237,7 @@ function switchView(name, el) {
   if (name === 'inventario')   loadInventario();
   if (name === 'config')       loadConfigData();
   if (name === 'estadisticas') initEstadisticas();
+  if (name === 'papelera')     loadPapelera();
 }
 
 function openModal(id) {
@@ -2450,6 +2452,99 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
 
 // Hamburguesa móvil
 (function() {
+// ═══════════════════════════════════════════════════════════
+// PAPELERA (solo Dueño)
+// ═══════════════════════════════════════════════════════════
+function loadPapelera() {
+  if (!CURRENT_USER.dueno) return;
+
+  // Tabs
+  document.querySelectorAll('[data-papelera-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-papelera-tab]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.papeleraTab;
+      document.getElementById('papelera-tab-reparaciones').style.display = tab === 'reparaciones' ? '' : 'none';
+      document.getElementById('papelera-tab-repuestos').style.display    = tab === 'repuestos'    ? '' : 'none';
+    });
+  });
+
+  apiFetch('/reparo/api/papelera.php').then(r => r.json()).then(j => {
+    if (!j.ok) { toast('Error al cargar papelera.', 'err'); return; }
+    const { reparaciones, inventario } = j.data;
+
+    // ── Reparaciones ──
+    const tbodyRep = document.getElementById('tbody-papelera-rep');
+    const tblRep   = document.getElementById('tbl-papelera-rep');
+    const emptyRep = document.getElementById('papelera-rep-empty');
+    if (!reparaciones.length) {
+      tblRep.style.display   = 'none';
+      emptyRep.style.display = '';
+    } else {
+      emptyRep.style.display = 'none';
+      tblRep.style.display   = '';
+      tbodyRep.innerHTML = reparaciones.map(r => `
+        <tr>
+          <td>#${r.id_ingreso}</td>
+          <td>${esc(r.nombre_cliente)}</td>
+          <td>${esc(r.marca_ingreso)} ${esc(r.modelo_ingreso)}</td>
+          <td><span class="pill">${esc(r.status)}</span></td>
+          <td>${new Date(r.deleted_at).toLocaleString('es-CL')}</td>
+          <td>
+            <button type="button" class="btn-sm btn-primary btn-restaurar"
+              data-tipo="reparacion" data-id="${r.id_ingreso}"
+              title="Restaurar servicio">
+              <span class="material-icons-round" style="font-size:16px">restore</span> Restaurar
+            </button>
+          </td>
+        </tr>`).join('');
+    }
+
+    // ── Repuestos ──
+    const tbodyInv = document.getElementById('tbody-papelera-inv');
+    const tblInv   = document.getElementById('tbl-papelera-inv');
+    const emptyInv = document.getElementById('papelera-inv-empty');
+    if (!inventario.length) {
+      tblInv.style.display   = 'none';
+      emptyInv.style.display = '';
+    } else {
+      emptyInv.style.display = 'none';
+      tblInv.style.display   = '';
+      tbodyInv.innerHTML = inventario.map(i => `
+        <tr>
+          <td>${esc(i.nombre)}</td>
+          <td>${esc(i.marca_compatible || '—')}</td>
+          <td>${esc(i.modelo_compatible || '—')}</td>
+          <td>${new Date(i.deleted_at).toLocaleString('es-CL')}</td>
+          <td>
+            <button type="button" class="btn-sm btn-primary btn-restaurar"
+              data-tipo="repuesto" data-id="${i.id_repuesto}"
+              title="Restaurar repuesto">
+              <span class="material-icons-round" style="font-size:16px">restore</span> Restaurar
+            </button>
+          </td>
+        </tr>`).join('');
+    }
+
+    // ── Evento restaurar ──
+    document.querySelectorAll('.btn-restaurar').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const { tipo, id } = btn.dataset;
+        try {
+          const r = await apiFetch('/reparo/api/papelera.php', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CURRENT_USER.csrf },
+            body: JSON.stringify({ tipo, id: parseInt(id) }),
+          });
+          const j = await r.json();
+          if (j.ok) { toast(j.data.msg, 'ok'); loadPapelera(); }
+          else toast(j.msg || 'Error al restaurar.', 'err');
+        } catch(err) { if (err.message !== 'session_expired') toast('Error de red.', 'err'); }
+      });
+    });
+  }).catch(() => toast('Error al cargar papelera.', 'err'));
+}
+
   var btn     = document.getElementById('btn-hamburger');
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('sidebar-overlay');

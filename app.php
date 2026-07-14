@@ -42,7 +42,8 @@ try {
       data-user="<?= htmlspecialchars(uname()) ?>"
       data-nombre="<?= htmlspecialchars(unombre()) ?>"
       data-uid="<?= uid() ?>"
-      data-base="<?= BASE ?>">
+      data-base="<?= BASE ?>"
+      data-dueno="<?= isDueno() ? '1' : '0' ?>">
 
 <div class="app">
 
@@ -110,6 +111,11 @@ try {
       </a>
       <a class="nav-link" data-view="config">
         <span class="material-icons-round">settings</span><span>Configuración</span>
+      </a>
+      <?php endif; ?>
+      <?php if(isDueno()): ?>
+      <a class="nav-link" data-view="papelera">
+        <span class="material-icons-round">delete_sweep</span><span>Papelera</span>
       </a>
       <?php endif; ?>
     </nav>
@@ -568,6 +574,60 @@ try {
       </div>
 
     </div><!-- /view-estadisticas -->
+
+    <!-- ══════════════════════════════════════════════════
+         VIEW: PAPELERA (solo dueño del sistema)
+    ════════════════════════════════════════════════════ -->
+    <?php if(isDueno()): ?>
+    <div id="view-papelera" class="view">
+      <header class="topbar">
+        <div>
+          <h1 class="page-title">Papelera</h1>
+          <p class="page-sub">Registros eliminados — solo visible para el dueño del sistema</p>
+        </div>
+      </header>
+
+      <div class="cfg-tabs" style="margin-bottom:16px">
+        <button class="cfg-tab active" data-papelera-tab="reparaciones">Reparaciones</button>
+        <button class="cfg-tab"        data-papelera-tab="repuestos">Repuestos</button>
+      </div>
+
+      <div id="papelera-tab-reparaciones">
+        <div id="papelera-rep-empty" class="empty-state" style="display:none">
+          <span class="material-icons-round" style="font-size:48px;color:#4ade80">check_circle</span>
+          <p>No hay reparaciones eliminadas.</p>
+        </div>
+        <table class="tbl" id="tbl-papelera-rep" style="display:none">
+          <thead><tr>
+            <th>#</th>
+            <th>Cliente</th>
+            <th>Equipo</th>
+            <th>Estado</th>
+            <th>Eliminado</th>
+            <th>Acción</th>
+          </tr></thead>
+          <tbody id="tbody-papelera-rep"></tbody>
+        </table>
+      </div>
+
+      <div id="papelera-tab-repuestos" style="display:none">
+        <div id="papelera-inv-empty" class="empty-state" style="display:none">
+          <span class="material-icons-round" style="font-size:48px;color:#4ade80">check_circle</span>
+          <p>No hay repuestos eliminados.</p>
+        </div>
+        <table class="tbl" id="tbl-papelera-inv" style="display:none">
+          <thead><tr>
+            <th>Repuesto</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+            <th>Eliminado</th>
+            <th>Acción</th>
+          </tr></thead>
+          <tbody id="tbody-papelera-inv"></tbody>
+        </table>
+      </div>
+    </div><!-- /view-papelera -->
+    <?php endif; ?>
 
     <!-- Modal: resetear contraseña de usuario -->
     <div class="modal-bg" id="modal-reset-pass">
