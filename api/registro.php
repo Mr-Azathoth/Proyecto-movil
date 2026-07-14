@@ -125,7 +125,7 @@ if ($logo_tmp && is_uploaded_file($logo_tmp)) {
 // Crear empresa + usuario en una transacción
 $db->beginTransaction();
 try {
-    $plan_nombre = $planes[$plan_key]['nombre'] ?? $plan_key;
+    $plan_nombre = (MP_PLANES[$plan_key]['nombre'] ?? null) ?: $plan_key;
     $db->prepare(
         "INSERT INTO empresas (nombre, subdominio, rut, telefono, correo, direccion, comuna, activa, plan_tipo, plan_estado, creada_en)
          VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, 'Pendiente', NOW())"
