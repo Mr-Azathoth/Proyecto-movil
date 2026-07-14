@@ -11,7 +11,6 @@ $reparaciones = [];
 $inventario   = [];
 
 if ($eid_sel) {
-    // Migración silenciosa por si la columna aún no existe en este servidor
     try { $db->exec("ALTER TABLE reparaciones ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch (PDOException $e) {}
     try { $db->exec("ALTER TABLE inventario   ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch (PDOException $e) {}
 
@@ -35,11 +34,33 @@ if ($eid_sel) {
     $si->execute([$eid_sel]);
     $inventario = $si->fetchAll();
 }
+
+$total_rep = count($reparaciones);
+$total_inv = count($inventario);
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <?php $pageTitle = 'Centrotec Admin — Papelera'; ?>
 <?php include __DIR__ . '/includes/admin_head.php'; ?>
+<style>
+.pap-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+.pap-tab  {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:10px 18px; background:none; border:none;
+  font-size:13px; font-weight:600; color:var(--txt2);
+  cursor:pointer; border-bottom:2px solid transparent;
+  margin-bottom:-1px; transition:var(--tr);
+}
+.pap-tab:hover  { color:var(--txt); }
+.pap-tab.active { color:#a78bfa; border-bottom-color:#7c3aed; }
+.pap-tab .material-icons-round { font-size:16px; }
+.pap-empty {
+  text-align:center; padding:60px 20px;
+  color:var(--txt3); display:flex; flex-direction:column;
+  align-items:center; gap:12px;
+}
+.pap-empty .material-icons-round { font-size:48px; color:#4ade80; }
+</style>
 <body class="admin-body">
 <?php include __DIR__ . '/includes/admin_sidebar.php'; ?>
 <main class="adm-main">
@@ -52,49 +73,45 @@ if ($eid_sel) {
   </div>
 
   <!-- Selector de empresa -->
-  <form method="GET" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-    <label style="font-size:13px;color:var(--txt2);white-space:nowrap;">Empresa:</label>
-    <select name="empresa" onchange="this.form.submit()" style="
-      background:var(--surface2);border:1px solid var(--border);
-      color:var(--txt);padding:7px 12px;border-radius:8px;font-size:14px;min-width:220px;">
-      <?php foreach ($empresas as $e): ?>
-        <option value="<?= $e['id_empresa'] ?>" <?= $e['id_empresa'] === $eid_sel ? 'selected' : '' ?>>
-          <?= htmlspecialchars($e['nombre']) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
-    <div style="margin-left:auto;font-size:13px;color:var(--txt3);">
-      <?= count($reparaciones) ?> reparación<?= count($reparaciones) !== 1 ? 'es' : '' ?> ·
-      <?= count($inventario) ?> repuesto<?= count($inventario) !== 1 ? 's' : '' ?> eliminados
-    </div>
-  </form>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <label style="font-size:13px;color:var(--txt2);white-space:nowrap;font-weight:500;">Empresa:</label>
+    <form method="GET" style="display:contents;">
+      <select name="empresa" onchange="this.form.submit()" class="adm-search" style="max-width:260px;padding:8px 12px;">
+        <?php foreach ($empresas as $e): ?>
+          <option value="<?= $e['id_empresa'] ?>" <?= $e['id_empresa'] === $eid_sel ? 'selected' : '' ?>>
+            <?= htmlspecialchars($e['nombre']) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+    </form>
+    <span style="font-size:12px;color:var(--txt3);margin-left:auto;">
+      <?= $total_rep ?> reparación<?= $total_rep !== 1 ? 'es' : '' ?> ·
+      <?= $total_inv ?> repuesto<?= $total_inv !== 1 ? 's' : '' ?> en papelera
+    </span>
+  </div>
 
   <!-- Tabs -->
-  <div style="display:flex;gap:4px;border-bottom:2px solid var(--border);margin-bottom:20px;">
-    <button class="pap-tab active" data-tab="reparaciones"
-      style="background:none;border:none;padding:10px 18px;font-size:14px;font-weight:600;
-             color:var(--txt);border-bottom:2px solid var(--accent);margin-bottom:-2px;cursor:pointer;">
-      <span class="material-icons-round" style="font-size:16px;vertical-align:-3px;">build</span>
-      Reparaciones (<?= count($reparaciones) ?>)
+  <div class="pap-tabs">
+    <button class="pap-tab active" data-tab="reparaciones">
+      <span class="material-icons-round">build</span>
+      Reparaciones (<?= $total_rep ?>)
     </button>
-    <button class="pap-tab" data-tab="repuestos"
-      style="background:none;border:none;padding:10px 18px;font-size:14px;font-weight:600;
-             color:var(--txt2);cursor:pointer;">
-      <span class="material-icons-round" style="font-size:16px;vertical-align:-3px;">inventory_2</span>
-      Repuestos (<?= count($inventario) ?>)
+    <button class="pap-tab" data-tab="repuestos">
+      <span class="material-icons-round">inventory_2</span>
+      Repuestos (<?= $total_inv ?>)
     </button>
   </div>
 
   <!-- Tab: Reparaciones -->
   <div id="tab-reparaciones" class="pap-panel">
     <?php if (empty($reparaciones)): ?>
-      <div style="text-align:center;padding:60px 20px;color:var(--txt3);">
-        <span class="material-icons-round" style="font-size:48px;color:#4ade80;">check_circle</span>
-        <p style="margin-top:12px;">No hay reparaciones eliminadas para esta empresa.</p>
+      <div class="pap-empty">
+        <span class="material-icons-round">check_circle</span>
+        <p>No hay reparaciones eliminadas para esta empresa.</p>
       </div>
     <?php else: ?>
     <div class="ec-card">
-      <table class="adm-table" id="tbl-rep">
+      <table class="adm-table">
         <thead><tr>
           <th>#</th>
           <th>Cliente</th>
@@ -105,19 +122,19 @@ if ($eid_sel) {
         </tr></thead>
         <tbody>
           <?php foreach ($reparaciones as $r): ?>
-          <tr data-q="<?= htmlspecialchars(strtolower($r['nombre_cliente'].' '.$r['marca_ingreso'].' '.$r['modelo_ingreso']), ENT_QUOTES) ?>">
-            <td style="color:var(--txt2);font-weight:600;">#<?= $r['id_ingreso'] ?></td>
+          <tr>
+            <td><span style="font-weight:700;color:var(--txt2);">#<?= $r['id_ingreso'] ?></span></td>
             <td>
-              <div style="font-weight:600;"><?= htmlspecialchars($r['nombre_cliente']) ?></div>
-              <div style="font-size:12px;color:var(--txt2);"><?= htmlspecialchars($r['telefono_cliente'] ?? '') ?></div>
+              <div class="tbl-name-main"><?= htmlspecialchars($r['nombre_cliente']) ?></div>
+              <div style="font-size:11px;color:var(--txt2);"><?= htmlspecialchars($r['telefono_cliente'] ?? '') ?></div>
             </td>
             <td><?= htmlspecialchars($r['marca_ingreso'] . ' ' . $r['modelo_ingreso']) ?></td>
             <td><span class="adm-badge adm-badge-off"><?= htmlspecialchars($r['status']) ?></span></td>
             <td style="font-size:12px;color:var(--txt2);"><?= date('d/m/Y H:i', strtotime($r['deleted_at'])) ?></td>
             <td style="text-align:center;">
-              <button class="adm-btn adm-btn-ghost btn-restaurar" style="gap:4px;"
+              <button class="adm-btn adm-btn-ghost btn-restaurar"
                 data-tipo="reparacion" data-id="<?= $r['id_ingreso'] ?>" data-eid="<?= $eid_sel ?>">
-                <span class="material-icons-round" style="font-size:16px;">restore</span> Restaurar
+                <span class="material-icons-round">restore</span> Restaurar
               </button>
             </td>
           </tr>
@@ -131,17 +148,16 @@ if ($eid_sel) {
   <!-- Tab: Repuestos -->
   <div id="tab-repuestos" class="pap-panel" style="display:none;">
     <?php if (empty($inventario)): ?>
-      <div style="text-align:center;padding:60px 20px;color:var(--txt3);">
-        <span class="material-icons-round" style="font-size:48px;color:#4ade80;">check_circle</span>
-        <p style="margin-top:12px;">No hay repuestos eliminados para esta empresa.</p>
+      <div class="pap-empty">
+        <span class="material-icons-round">check_circle</span>
+        <p>No hay repuestos eliminados para esta empresa.</p>
       </div>
     <?php else: ?>
     <div class="ec-card">
-      <table class="adm-table" id="tbl-inv">
+      <table class="adm-table">
         <thead><tr>
           <th>Repuesto</th>
-          <th>Marca</th>
-          <th>Modelo</th>
+          <th>Marca / Modelo</th>
           <th>Precio</th>
           <th>Stock</th>
           <th>Eliminado el</th>
@@ -150,16 +166,17 @@ if ($eid_sel) {
         <tbody>
           <?php foreach ($inventario as $i): ?>
           <tr>
-            <td style="font-weight:600;"><?= htmlspecialchars($i['nombre']) ?></td>
-            <td><?= htmlspecialchars($i['marca_compatible'] ?: '—') ?></td>
-            <td><?= htmlspecialchars($i['modelo_compatible'] ?: '—') ?></td>
+            <td><span class="tbl-name-main"><?= htmlspecialchars($i['nombre']) ?></span></td>
+            <td style="color:var(--txt2);">
+              <?= htmlspecialchars(trim(($i['marca_compatible'] ?? '') . ' ' . ($i['modelo_compatible'] ?? '')) ?: '—') ?>
+            </td>
             <td>$<?= number_format((int)$i['precio_venta']) ?></td>
             <td><?= (int)$i['cantidad'] ?> un.</td>
             <td style="font-size:12px;color:var(--txt2);"><?= date('d/m/Y H:i', strtotime($i['deleted_at'])) ?></td>
             <td style="text-align:center;">
-              <button class="adm-btn adm-btn-ghost btn-restaurar" style="gap:4px;"
+              <button class="adm-btn adm-btn-ghost btn-restaurar"
                 data-tipo="repuesto" data-id="<?= $i['id_repuesto'] ?>" data-eid="<?= $eid_sel ?>">
-                <span class="material-icons-round" style="font-size:16px;">restore</span> Restaurar
+                <span class="material-icons-round">restore</span> Restaurar
               </button>
             </td>
           </tr>
@@ -170,42 +187,28 @@ if ($eid_sel) {
     <?php endif; ?>
   </div>
 
-  <!-- Toast -->
-  <div id="pap-toast" style="
-    position:fixed;bottom:24px;right:24px;
-    background:var(--surface2);border:1px solid var(--border);
-    color:var(--txt);padding:12px 20px;border-radius:10px;
-    font-size:14px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.3);
-    opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999;">
-  </div>
+  <div id="toast"></div>
 
 </main>
 <script src="<?= BASE ?>/assets/js/admin_common.js"></script>
 <script>
 (function () {
+  function toast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.innerHTML = '<span class="material-icons-round" style="font-size:16px;color:' + (ok ? '#4ade80' : '#f87171') + '">' + (ok ? 'check_circle' : 'error') + '</span>' + msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
   // Tabs
   document.querySelectorAll('.pap-tab').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.pap-tab').forEach(b => {
-        b.style.color        = 'var(--txt2)';
-        b.style.borderBottom = 'none';
-      });
-      btn.style.color        = 'var(--txt)';
-      btn.style.borderBottom = '2px solid var(--accent)';
-      btn.style.marginBottom = '-2px';
+      document.querySelectorAll('.pap-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
       document.querySelectorAll('.pap-panel').forEach(p => p.style.display = 'none');
       document.getElementById('tab-' + btn.dataset.tab).style.display = '';
     });
   });
-
-  // Toast
-  function toast(msg, ok) {
-    const t = document.getElementById('pap-toast');
-    t.textContent    = msg;
-    t.style.color    = ok ? '#4ade80' : '#f87171';
-    t.style.opacity  = '1';
-    setTimeout(() => { t.style.opacity = '0'; }, 3000);
-  }
 
   // Restaurar
   document.querySelectorAll('.btn-restaurar').forEach(btn => {
@@ -221,8 +224,10 @@ if ($eid_sel) {
         const j = await r.json();
         if (j.ok) {
           toast(j.data.msg, true);
-          btn.closest('tr').style.opacity = '0.3';
-          btn.textContent = '✔ Restaurado';
+          const row = btn.closest('tr');
+          row.style.transition = 'opacity .4s';
+          row.style.opacity = '0.3';
+          btn.innerHTML = '<span class="material-icons-round">check</span> Restaurado';
         } else {
           toast(j.msg || 'Error al restaurar.', false);
           btn.disabled = false;
