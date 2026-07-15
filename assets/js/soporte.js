@@ -173,11 +173,12 @@
 
   if (btnEnviar) btnEnviar.addEventListener('click', async () => {
     const asunto  = inpAsunto.value.trim();
-    const mensaje = inpMensaje.innerHTML;
     const mensajeText = inpMensaje.innerText.trim();
     sopError.textContent = '';
-    if (asunto.length < 3)      { sopError.textContent = 'El asunto es demasiado corto.'; return; }
+    if (asunto.length < 3)       { sopError.textContent = 'El asunto es demasiado corto.'; return; }
     if (mensajeText.length < 10) { sopError.textContent = 'El mensaje es demasiado corto.'; return; }
+    if (inpMensaje.querySelector('.ce-uploading')) { sopError.textContent = 'Espera a que termine de subir la imagen.'; return; }
+    const mensaje = inpMensaje.innerHTML;
 
     btnEnviar.disabled = true;
     const fd = new FormData();

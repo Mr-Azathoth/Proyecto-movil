@@ -111,6 +111,12 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
   color:#fff; font-family:'Outfit',sans-serif; font-size:15px; font-weight:600;
   padding:13px; cursor:pointer; transition:var(--tr); margin-top:4px; }
 .btn-login:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(47,129,247,0.4); }
+.btn-registro { display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  background:transparent; border:1px solid var(--accent); border-radius:var(--r);
+  color:var(--accent); font-family:'Outfit',sans-serif; font-size:15px; font-weight:600;
+  padding:11px 28px; cursor:pointer; transition:var(--tr); margin-top:10px; text-decoration:none; }
+.btn-registro:hover { background:rgba(124,58,237,0.08); }
+.btn-registro .material-icons-round { font-size:18px; }
 .login-demo { text-align:center; color:var(--txt3); font-size:12px; margin-top:20px; }
 .remember-row { display:flex; align-items:center; gap:8px; margin:12px 0 6px; }
 .remember-row input[type="checkbox"] { accent-color:var(--accent); width:15px; height:15px; cursor:pointer; flex-shrink:0; }

@@ -30,13 +30,17 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 } catch (PDOException $e) {}
 
-// Agregar columna visto si la tabla ya existía sin ella (compatible MySQL 5.7+)
-try {
-    $col = $db->query("SHOW COLUMNS FROM tickets LIKE 'visto'");
-    if ($col->rowCount() === 0) {
-        $db->exec("ALTER TABLE tickets ADD COLUMN visto TINYINT NOT NULL DEFAULT 0");
-    }
-} catch (PDOException $e) {}
+// Migración one-shot: solo corre una vez (flag en disco)
+$_mig_flag = __DIR__ . '/../.migration_visto_done';
+if (!file_exists($_mig_flag)) {
+    try {
+        $col = $db->query("SHOW COLUMNS FROM tickets LIKE 'visto'");
+        if ($col->rowCount() === 0) {
+            $db->exec("ALTER TABLE tickets ADD COLUMN visto TINYINT NOT NULL DEFAULT 0");
+        }
+        @file_put_contents($_mig_flag, '1');
+    } catch (PDOException $e) {}
+}
 
 // GET — listar tickets de la empresa
 if ($method === 'GET') {
@@ -91,7 +95,7 @@ if ($method === 'POST') {
             "<p><b>Empresa:</b> " . htmlspecialchars($emp_nombre) . "<br>
              <b>Usuario:</b> " . htmlspecialchars(unombre()) . "<br>
              <b>Asunto:</b> " . htmlspecialchars($asunto) . "</p>
-             <p>" . nl2br(htmlspecialchars($mensaje)) . "</p>"
+             <p>" . $mensaje . "</p>"
         );
     }
 

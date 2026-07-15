@@ -7,13 +7,17 @@ sadmin_csrf_check();
 
 $db = getDB();
 
-// Migración: agregar columna visto si aún no existe (compatible MySQL 5.7+)
-try {
-    $col = $db->query("SHOW COLUMNS FROM tickets LIKE 'visto'");
-    if ($col->rowCount() === 0) {
-        $db->exec("ALTER TABLE tickets ADD COLUMN visto TINYINT NOT NULL DEFAULT 0");
-    }
-} catch (PDOException $e) {}
+// Migración one-shot: solo corre una vez (flag en disco)
+$_mig_flag = __DIR__ . '/../.migration_visto_done';
+if (!file_exists($_mig_flag)) {
+    try {
+        $col = $db->query("SHOW COLUMNS FROM tickets LIKE 'visto'");
+        if ($col->rowCount() === 0) {
+            $db->exec("ALTER TABLE tickets ADD COLUMN visto TINYINT NOT NULL DEFAULT 0");
+        }
+        @file_put_contents($_mig_flag, '1');
+    } catch (PDOException $e) {}
+}
 
 // GET — listar todos los tickets (opcionalmente filtrar por empresa o estado)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -55,14 +59,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Si se agrega o cambia la respuesta, marcar como no visto para notificar al cliente
-    $resetVisto = ($respuesta !== '') ? 1 : 0;
-    $st = $db->prepare(
-        "UPDATE tickets
-            SET estado = ?, respuesta = ?, respondido_por = ?, visto = IF(? = 1, 0, visto), updated_at = NOW()
-          WHERE id_ticket = ?"
-    );
-    $st->execute([$estado, $respuesta ?: null, sadmin_nombre(), $resetVisto, $id]);
+    // Actualizar estado (y respuesta si se proporcionó — nunca borrar respuesta existente)
+    if ($respuesta !== '') {
+        $st = $db->prepare(
+            "UPDATE tickets SET estado = ?, respuesta = ?, respondido_por = ?, visto = 0, updated_at = NOW() WHERE id_ticket = ?"
+        );
+        $st->execute([$estado, $respuesta, sadmin_nombre(), $id]);
+    } else {
+        $st = $db->prepare(
+            "UPDATE tickets SET estado = ?, updated_at = NOW() WHERE id_ticket = ?"
+        );
+        $st->execute([$estado, $id]);
+    }
 
     // Notificar al cliente si el ticket fue resuelto
     if ($estado === 'Resuelto' && $respuesta && SMTP_USER) {
@@ -81,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "[Ticket #{$id} Resuelto] " . $t['asunto'],
                     "<p>Hola <b>" . htmlspecialchars($t['usuario_nombre']) . "</b>,</p>
                      <p>Tu solicitud de soporte <b>\"" . htmlspecialchars($t['asunto']) . "\"</b> ha sido resuelta.</p>
-                     <p><b>Respuesta:</b><br>" . nl2br(htmlspecialchars($respuesta)) . "</p>
+                     <p><b>Respuesta:</b><br>" . $respuesta . "</p>
                      <p>Saludos,<br>Equipo Centrotec</p>"
                 );
             }
