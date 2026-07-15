@@ -29,8 +29,8 @@
     ticketActual = null;
   }
 
-  document.querySelectorAll('.btn-ver-ticket').forEach(btn => {
-    btn.addEventListener('click', () => openModal(btn));
+  document.querySelectorAll('.adm-row-ticket').forEach(function (tr) {
+    tr.addEventListener('dblclick', function () { openModal(tr); });
   });
 
   const respEl = document.getElementById('mtk-respuesta');

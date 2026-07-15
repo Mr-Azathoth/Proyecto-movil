@@ -122,15 +122,22 @@ $kpis = $db->query(
         <th>Asunto</th>
         <th>Estado</th>
         <th>Fecha</th>
-        <th style="text-align:center;">Acción</th>
       </tr></thead>
       <tbody>
         <?php foreach ($tickets as $t): ?>
-        <tr>
+        <tr class="adm-row-ticket"
+          title="Doble clic para abrir"
+          data-id="<?= $t['id_ticket'] ?>"
+          data-empresa="<?= htmlspecialchars($t['empresa'], ENT_QUOTES) ?>"
+          data-usuario="<?= htmlspecialchars($t['usuario_nombre'], ENT_QUOTES) ?>"
+          data-asunto="<?= htmlspecialchars($t['asunto'], ENT_QUOTES) ?>"
+          data-mensaje="<?= htmlspecialchars($t['mensaje'], ENT_QUOTES) ?>"
+          data-estado="<?= htmlspecialchars($t['estado'], ENT_QUOTES) ?>"
+          data-respuesta="<?= htmlspecialchars($t['respuesta'] ?? '', ENT_QUOTES) ?>">
           <td style="font-weight:700;color:var(--txt2);">#<?= $t['id_ticket'] ?></td>
           <td style="font-size:12px;color:var(--txt2);"><?= htmlspecialchars($t['empresa']) ?></td>
           <td><?= htmlspecialchars($t['usuario_nombre']) ?></td>
-          <td style="max-width:280px;">
+          <td style="max-width:320px;">
             <div class="tbl-name-main" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               <?= htmlspecialchars($t['asunto']) ?>
             </div>
@@ -150,18 +157,6 @@ $kpis = $db->query(
             <span class="adm-badge <?= $badge ?>"><?= $t['estado'] ?></span>
           </td>
           <td style="font-size:12px;color:var(--txt2);"><?= date('d/m/Y H:i', strtotime($t['created_at'])) ?></td>
-          <td style="text-align:center;">
-            <button class="adm-btn adm-btn-ghost btn-ver-ticket"
-              data-id="<?= $t['id_ticket'] ?>"
-              data-empresa="<?= htmlspecialchars($t['empresa'], ENT_QUOTES) ?>"
-              data-usuario="<?= htmlspecialchars($t['usuario_nombre'], ENT_QUOTES) ?>"
-              data-asunto="<?= htmlspecialchars($t['asunto'], ENT_QUOTES) ?>"
-              data-mensaje="<?= htmlspecialchars($t['mensaje'], ENT_QUOTES) ?>"
-              data-estado="<?= htmlspecialchars($t['estado'], ENT_QUOTES) ?>"
-              data-respuesta="<?= htmlspecialchars($t['respuesta'] ?? '', ENT_QUOTES) ?>">
-              <span class="material-icons-round">open_in_new</span> Ver
-            </button>
-          </td>
         </tr>
         <?php endforeach; ?>
       </tbody>

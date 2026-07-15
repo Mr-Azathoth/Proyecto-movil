@@ -142,6 +142,8 @@
 }
 .adm-table tr:last-child td { border-bottom: none; }
 .adm-table tbody tr:hover { background: var(--bg3); }
+.adm-row-ticket { cursor: pointer; }
+.adm-row-ticket:active td { background: var(--bg2); }
 
 /* Badges */
 .adm-badge {
