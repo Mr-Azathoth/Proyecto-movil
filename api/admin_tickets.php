@@ -6,6 +6,14 @@ sadmin_csrf_check();
 
 $db = getDB();
 
+// Migración: agregar columna visto si aún no existe (compatible MySQL 5.7+)
+try {
+    $col = $db->query("SHOW COLUMNS FROM tickets LIKE 'visto'");
+    if ($col->rowCount() === 0) {
+        $db->exec("ALTER TABLE tickets ADD COLUMN visto TINYINT NOT NULL DEFAULT 0");
+    }
+} catch (PDOException $e) {}
+
 // GET — listar todos los tickets (opcionalmente filtrar por empresa o estado)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $where = ['1=1'];
