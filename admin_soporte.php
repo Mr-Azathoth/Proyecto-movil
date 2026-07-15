@@ -203,8 +203,8 @@ $kpis = $db->query(
 
 <div id="toast"></div>
 
-<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
-<script src="<?= BASE ?>/assets/js/ticket_img.js"></script>
-<script src="<?= BASE ?>/assets/js/admin_soporte.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js?v=2"></script>
+<script src="<?= BASE ?>/assets/js/ticket_img.js?v=2"></script>
+<script src="<?= BASE ?>/assets/js/admin_soporte.js?v=2"></script>
 </body>
 </html>
