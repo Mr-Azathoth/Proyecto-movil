@@ -184,7 +184,7 @@ $pageTitle = 'Centrotec Admin — Suscripciones';
     <?php endif; ?>
   </div>
 </main>
-<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js?v=<?= filemtime(__DIR__.'/assets/js/admin_common.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/admin_suscripciones.js"></script>
 </body>
 </html>

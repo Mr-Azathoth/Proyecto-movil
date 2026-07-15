@@ -24,12 +24,12 @@ if ($sin_codigo) {
     }
 }
 
-// Rate limit: max 10 búsquedas por minuto por IP
-$ip     = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
-$rl_key = 'seg_rl_' . md5($ip);
-if (!isset($_SESSION[$rl_key])) $_SESSION[$rl_key] = ['cnt' => 0, 'ts' => time()];
-if (time() - $_SESSION[$rl_key]['ts'] > 60) $_SESSION[$rl_key] = ['cnt' => 0, 'ts' => time()];
-$rate_ok = $_SESSION[$rl_key]['cnt'] < 10;
+// Rate limit: max 10 búsquedas por minuto por IP (server-side, no depende de cookies)
+$ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$rl_file = sys_get_temp_dir() . '/ct_seg_rl_' . md5($ip) . '.json';
+$rl_data = file_exists($rl_file) ? @json_decode(file_get_contents($rl_file), true) : null;
+if (!$rl_data || time() - ($rl_data['ts'] ?? 0) > 60) $rl_data = ['cnt' => 0, 'ts' => time()];
+$rate_ok = $rl_data['cnt'] < 10;
 
 // Búsqueda
 $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
@@ -51,12 +51,14 @@ if ($codigo !== '') {
     } elseif (!preg_match('/^[A-Z3-9]{6}$/', $codigo)) {
         $error = 'Código inválido. Debe tener 6 caracteres (letras y números).';
     } else {
-        $_SESSION[$rl_key]['cnt']++;
+        $rl_data['cnt']++;
+        @file_put_contents($rl_file, json_encode($rl_data));
         $st = $db->prepare(
-            "SELECT id_ingreso, nombre_cliente, tipo_ingreso, marca_ingreso, modelo_ingreso,
-                    dano_ingreso, status, fecha_ingreso, obs, ingresado_por, valor_ingreso
-               FROM reparaciones
-              WHERE codigo_seguimiento = ? LIMIT 1"
+            "SELECT r.id_ingreso, r.nombre_cliente, r.tipo_ingreso, r.marca_ingreso, r.modelo_ingreso,
+                    r.dano_ingreso, r.status, r.fecha_ingreso, r.obs, r.ingresado_por, r.valor_ingreso,
+                    r.id_empresa
+               FROM reparaciones r
+              WHERE r.codigo_seguimiento = ? LIMIT 1"
         );
         $st->execute([$codigo]);
         $orden = $st->fetch();

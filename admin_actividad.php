@@ -122,6 +122,6 @@ $empresas_list = $db->query("SELECT id_empresa, nombre FROM empresas ORDER BY no
   <?php endif; ?>
 
 </main>
-<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js?v=<?= filemtime(__DIR__.'/assets/js/admin_common.js') ?>"></script>
 </body>
 </html>

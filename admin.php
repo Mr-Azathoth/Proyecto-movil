@@ -139,6 +139,6 @@ $actividad = $db->query("
 
   </div>
 </main>
-<script src="<?= BASE ?>/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js?v=<?= filemtime(__DIR__.'/assets/js/admin_common.js') ?>"></script>
 </body>
 </html>
