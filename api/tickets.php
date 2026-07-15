@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/sanitize_ticket.php';
 guard();
 
 $db     = getDB();
@@ -66,10 +67,10 @@ if ($method === 'POST') {
 
     // Crear nuevo ticket
     $asunto  = trim($_POST['asunto']  ?? '');
-    $mensaje = trim($_POST['mensaje'] ?? '');
+    $mensaje = sanitize_ticket_html($_POST['mensaje'] ?? '');
 
     if (strlen($asunto) < 3 || strlen($asunto) > 200) json_err('Asunto inválido.');
-    if (strlen($mensaje) < 10)                          json_err('Mensaje demasiado corto.');
+    if (mb_strlen(strip_tags($mensaje)) < 10)          json_err('Mensaje demasiado corto.');
 
     $st = $db->prepare(
         "INSERT INTO tickets (id_empresa, id_usuario, usuario_nombre, asunto, mensaje)

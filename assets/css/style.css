@@ -1110,8 +1110,16 @@ input.hidden           { display:none !important; }
 .sop-dot { width:7px; height:7px; border-radius:50%; background:#f97316; flex-shrink:0; display:inline-block; }
 .sop-dot-placeholder { width:7px; height:7px; flex-shrink:0; display:inline-block; }
 .sop-hint { font-size:11px; color:var(--txt3); margin-top:12px; }
-.msd-msg { background:var(--bg3); border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; font-size:13px; color:var(--txt2); line-height:1.6; margin-bottom:14px; white-space:pre-wrap; }
-.msd-resp { background:rgba(63,185,80,0.05); border:1px solid rgba(63,185,80,0.2); border-radius:var(--r); padding:11px 13px; font-size:13px; color:var(--txt2); line-height:1.6; white-space:pre-wrap; }
+.msd-msg { background:var(--bg3); border:1px solid var(--border); border-radius:var(--r); padding:11px 13px; font-size:13px; color:var(--txt2); line-height:1.6; margin-bottom:14px; white-space:pre-wrap; word-break:break-word; }
+.msd-resp { background:rgba(63,185,80,0.05); border:1px solid rgba(63,185,80,0.2); border-radius:var(--r); padding:11px 13px; font-size:13px; color:var(--txt2); line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.msd-msg img, .msd-resp img { max-width:100%; border-radius:4px; display:block; margin:6px 0; }
+.ce-field { min-height:80px; background:var(--bg); border:1px solid var(--border); border-radius:var(--r); padding:10px 12px; font-size:13px; color:var(--txt); line-height:1.6; outline:none; cursor:text; word-break:break-word; overflow-y:auto; }
+.ce-field:focus { border-color:var(--accent,#7c3aed); }
+.ce-field[data-ph]:empty::before { content:attr(data-ph); color:var(--txt3); pointer-events:none; display:block; }
+.ce-field img { max-width:100%; border-radius:4px; display:block; margin:4px 0; }
+.ce-field-admin { min-height:200px; resize:vertical; }
+.ce-uploading { display:inline-block; font-size:12px; color:var(--txt3); font-style:italic; padding:2px 8px; background:var(--bg2); border-radius:4px; }
+#mtk-mensaje img { max-width:100%; border-radius:4px; display:block; margin:6px 0; }
 .msd-sublabel { font-size:11px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
 .msd-resp-label { font-size:11px; font-weight:700; color:#3fb950; text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:4px; }
 .msd-no-resp { font-size:13px; color:var(--txt3); font-style:italic; }

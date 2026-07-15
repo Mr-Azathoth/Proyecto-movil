@@ -173,7 +173,7 @@ $kpis = $db->query(
 
 <!-- Modal: ver y responder ticket -->
 <div class="modal-bg" id="modal-ticket">
-  <div class="modal-box" style="max-width:600px;">
+  <div class="modal-box" style="max-width:760px;">
     <div class="modal-hd">
       <h3 id="mtk-titulo">Ticket #</h3>
       <button class="modal-close" id="btn-modal-ticket-close">
@@ -188,8 +188,7 @@ $kpis = $db->query(
 
       <div style="border-top:1px solid var(--border);padding-top:16px;">
         <label style="font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:8px;">Respuesta</label>
-        <textarea id="mtk-respuesta" rows="4"
-          style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:13px;color:var(--txt);resize:vertical;font-family:inherit;"></textarea>
+        <div id="mtk-respuesta" class="ce-field ce-field-admin" contenteditable="true" data-ph="Escribe la respuesta al cliente… Puedes pegar imágenes con Ctrl+V"></div>
       </div>
 
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -210,6 +209,7 @@ $kpis = $db->query(
 <div id="toast"></div>
 
 <script src="<?= BASE ?>/assets/js/admin_common.js"></script>
+<script src="<?= BASE ?>/assets/js/ticket_img.js"></script>
 <script src="<?= BASE ?>/assets/js/admin_soporte.js"></script>
 </body>
 </html>

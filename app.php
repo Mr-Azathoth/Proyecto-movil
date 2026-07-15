@@ -607,7 +607,7 @@ try {
           </div>
           <div class="fg">
             <label>Mensaje</label>
-            <textarea id="sop-mensaje" rows="5" placeholder="Detalla tu consulta o el problema que estás experimentando..."></textarea>
+            <div id="sop-mensaje" class="ce-field" contenteditable="true" data-ph="Detalla tu consulta o el problema que estás experimentando... Puedes pegar imágenes con Ctrl+V"></div>
           </div>
           <p id="sop-error" style="color:#f87171;font-size:13px;min-height:18px;"></p>
         </div>
@@ -622,7 +622,7 @@ try {
 
     <!-- Modal: detalle ticket de soporte -->
     <div class="modal-bg" id="modal-sop-detalle">
-      <div class="modal-box modal-box-sm">
+      <div class="modal-box modal-box-lg">
         <div class="modal-hd">
           <h3 id="msd-titulo"></h3>
           <button class="modal-close" id="btn-msd-close"><span class="material-icons-round">close</span></button>
@@ -1142,6 +1142,7 @@ try {
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/ticket_img.js?v=<?= filemtime(__DIR__.'/assets/js/ticket_img.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/soporte.js?v=<?= filemtime(__DIR__.'/assets/js/soporte.js') ?>"></script>
 </body>
 </html>

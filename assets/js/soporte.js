@@ -101,7 +101,7 @@
       + '<span class="pill ' + (ESTADO_BADGE[t.estado] || '') + '">'
       + esc(ESTADO_LABEL[t.estado] || t.estado) + '</span>';
 
-    document.getElementById('msd-msg').textContent = t.mensaje || '';
+    document.getElementById('msd-msg').innerHTML = t.mensaje || '';
 
     const respWrap = document.getElementById('msd-resp-wrap');
     const respTxt  = document.getElementById('msd-resp-txt');
@@ -110,7 +110,7 @@
     if (t.respuesta) {
       respWrap.classList.remove('sop-hidden');
       noResp.classList.add('sop-hidden');
-      respTxt.textContent = t.respuesta;
+      respTxt.innerHTML = t.respuesta;
     } else {
       respWrap.classList.add('sop-hidden');
       noResp.classList.remove('sop-hidden');
@@ -158,8 +158,8 @@
   const sopError   = document.getElementById('sop-error');
 
   if (btnNuevo) btnNuevo.addEventListener('click', () => {
-    inpAsunto.value  = '';
-    inpMensaje.value = '';
+    inpAsunto.value    = '';
+    inpMensaje.innerHTML = '';
     sopError.textContent = '';
     modalSop.classList.add('active');
     inpAsunto.focus();
@@ -173,10 +173,11 @@
 
   if (btnEnviar) btnEnviar.addEventListener('click', async () => {
     const asunto  = inpAsunto.value.trim();
-    const mensaje = inpMensaje.value.trim();
+    const mensaje = inpMensaje.innerHTML;
+    const mensajeText = inpMensaje.innerText.trim();
     sopError.textContent = '';
-    if (asunto.length < 3)   { sopError.textContent = 'El asunto es demasiado corto.'; return; }
-    if (mensaje.length < 10) { sopError.textContent = 'El mensaje es demasiado corto.'; return; }
+    if (asunto.length < 3)      { sopError.textContent = 'El asunto es demasiado corto.'; return; }
+    if (mensajeText.length < 10) { sopError.textContent = 'El mensaje es demasiado corto.'; return; }
 
     btnEnviar.disabled = true;
     const fd = new FormData();
@@ -197,6 +198,12 @@
     }
     btnEnviar.disabled = false;
   });
+
+  if (inpMensaje && typeof setupImagePaste === 'function') {
+    setupImagePaste(inpMensaje, function (fd) {
+      return apiFetch('/reparo/api/upload_ticket_img.php', { method: 'POST', body: fd });
+    });
+  }
 
   // ── Activar cuando se muestre la vista ────────────────────
   document.addEventListener('viewchange', e => {

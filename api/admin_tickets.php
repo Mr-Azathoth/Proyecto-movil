@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/admin_config.php';
+require_once __DIR__ . '/../includes/sanitize_ticket.php';
 sadmin_guard();
 sadmin_csrf_check();
 
@@ -45,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id       = (int)($_POST['id_ticket']  ?? 0);
     $estado   = trim($_POST['estado']      ?? '');
-    $respuesta = trim($_POST['respuesta']  ?? '');
+    $respuesta = sanitize_ticket_html($_POST['respuesta'] ?? '');
 
     $estados_validos = ['Abierto', 'En revision', 'Resuelto'];
     if (!$id || !in_array($estado, $estados_validos, true)) {

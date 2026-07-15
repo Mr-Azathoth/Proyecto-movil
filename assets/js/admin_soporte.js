@@ -18,9 +18,9 @@
     document.getElementById('mtk-titulo').textContent   = 'Ticket #' + ticketActual + ' — ' + btn.dataset.asunto;
     document.getElementById('mtk-empresa').textContent  = btn.dataset.empresa;
     document.getElementById('mtk-usuario').textContent  = btn.dataset.usuario;
-    document.getElementById('mtk-mensaje').textContent  = btn.dataset.mensaje;
-    document.getElementById('mtk-respuesta').value      = btn.dataset.respuesta;
-    document.getElementById('mtk-estado').value         = btn.dataset.estado;
+    document.getElementById('mtk-mensaje').innerHTML   = btn.dataset.mensaje;
+    document.getElementById('mtk-respuesta').innerHTML = btn.dataset.respuesta;
+    document.getElementById('mtk-estado').value        = btn.dataset.estado;
     modal.classList.add('active');
   }
 
@@ -33,6 +33,13 @@
     btn.addEventListener('click', () => openModal(btn));
   });
 
+  const respEl = document.getElementById('mtk-respuesta');
+  if (respEl && typeof setupImagePaste === 'function') {
+    setupImagePaste(respEl, function (fd) {
+      return sadminFetch('/reparo/api/admin_upload_ticket_img.php', fd);
+    });
+  }
+
   btnClose.addEventListener('click', closeModal);
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
@@ -44,7 +51,7 @@
     const fd = new FormData();
     fd.append('id_ticket',  ticketActual);
     fd.append('estado',     document.getElementById('mtk-estado').value);
-    fd.append('respuesta',  document.getElementById('mtk-respuesta').value.trim());
+    fd.append('respuesta',  document.getElementById('mtk-respuesta').innerHTML);
 
     try {
       const r = await sadminFetch('/reparo/api/admin_tickets.php', fd);
