@@ -165,6 +165,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="auth-back">
         <a href="<?= BASE ?>/recuperar.php">¿Olvidaste tu contraseña?</a>
       </div>
+      <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px;text-align:center;">
+        <span style="font-size:13px;color:var(--txt2);">¿Aún no tienes cuenta?</span>
+        <a href="<?= BASE ?>/registro.php" class="btn-login" style="display:inline-flex;width:auto;margin-top:10px;padding:11px 28px;background:transparent;border:1px solid var(--accent);color:var(--accent);font-weight:600;">
+          Crear cuenta <span class="material-icons-round" style="font-size:18px;">person_add</span>
+        </a>
+      </div>
     </form>
   </div>
 </div>
