@@ -51,12 +51,8 @@ $precio_mensual = 4990;
   <div class="hero-glow hero-glow-2"></div>
   <div class="container hero-inner">
     <div class="hero-text">
-      <div class="hero-tag anim">
-        <span class="material-icons-round">devices</span>
-        Software para servicios técnicos
-      </div>
-      <h1 class="hero-title anim anim-delay-1">Tu servicio técnico<br><span class="hero-accent">sin papeles</span></h1>
-      <p class="hero-sub anim anim-delay-2">Gestiona órdenes de trabajo, clientes y repuestos desde un solo lugar. Sin papel, sin Excel, sin caos.</p>
+      <h1 class="hero-title anim anim-delay-1">Tu Servicio Técnico<br><span class="hero-accent">100% Digital</span></h1>
+      <p class="hero-sub anim anim-delay-2">Digitaliza tu taller de servicio técnico electrónico. Tus órdenes de trabajo, clientes e inventario en un solo lugar — sin papeles, sin Excel, sin caos.</p>
       <div class="hero-btns anim anim-delay-3">
         <a href="#precios" class="btn-primary">
           <span class="material-icons-round">rocket_launch</span>
