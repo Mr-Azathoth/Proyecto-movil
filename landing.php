@@ -258,7 +258,7 @@ $precio_mensual = 4990;
       <a href="#caracteristicas">Características</a>
       <a href="#precios">Precios</a>
       <a href="<?= BASE ?>/seguimiento">Seguir mi reparación</a>
-      <a href="mailto:contacto@Centrotec">contacto@Centrotec</a>
+      <a href="mailto:centrotec@gmail.com">Contacto</a>
       <a href="<?= BASE ?>/">Ingresar al sistema</a>
     </nav>
     <div class="footer-legal">© <?= date('Y') ?> Centrotec — Todos los derechos reservados</div>
