@@ -29,9 +29,12 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 } catch (PDOException $e) {}
 
-// Agregar columna visto si la tabla ya existía sin ella
+// Agregar columna visto si la tabla ya existía sin ella (compatible MySQL 5.7+)
 try {
-    $db->exec("ALTER TABLE tickets ADD COLUMN IF NOT EXISTS visto TINYINT NOT NULL DEFAULT 0");
+    $col = $db->query("SHOW COLUMNS FROM tickets LIKE 'visto'");
+    if ($col->rowCount() === 0) {
+        $db->exec("ALTER TABLE tickets ADD COLUMN visto TINYINT NOT NULL DEFAULT 0");
+    }
 } catch (PDOException $e) {}
 
 // GET — listar tickets de la empresa
