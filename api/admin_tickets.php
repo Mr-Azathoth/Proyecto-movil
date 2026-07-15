@@ -65,24 +65,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Notificar al cliente si el ticket fue resuelto
     if ($estado === 'Resuelto' && $respuesta && SMTP_USER) {
-        $row = $db->prepare(
-            "SELECT t.asunto, t.id_empresa, e.email_contacto, t.usuario_nombre
-               FROM tickets t JOIN empresas e ON e.id_empresa = t.id_empresa
-              WHERE t.id_ticket = ? LIMIT 1"
-        );
-        $row->execute([$id]);
-        $t = $row->fetch();
-        if ($t && $t['email_contacto']) {
-            require_once __DIR__ . '/../includes/mailer.php';
-            send_email(
-                $t['email_contacto'], $t['usuario_nombre'],
-                "[Ticket #{$id} Resuelto] " . $t['asunto'],
-                "<p>Hola <b>" . htmlspecialchars($t['usuario_nombre']) . "</b>,</p>
-                 <p>Tu solicitud de soporte <b>\"" . htmlspecialchars($t['asunto']) . "\"</b> ha sido resuelta.</p>
-                 <p><b>Respuesta:</b><br>" . nl2br(htmlspecialchars($respuesta)) . "</p>
-                 <p>Saludos,<br>Equipo Centrotec</p>"
+        try {
+            $row = $db->prepare(
+                "SELECT t.asunto, t.id_empresa, e.correo, t.usuario_nombre
+                   FROM tickets t JOIN empresas e ON e.id_empresa = t.id_empresa
+                  WHERE t.id_ticket = ? LIMIT 1"
             );
-        }
+            $row->execute([$id]);
+            $t = $row->fetch();
+            if ($t && $t['correo']) {
+                require_once __DIR__ . '/../includes/mailer.php';
+                send_email(
+                    $t['correo'], $t['usuario_nombre'],
+                    "[Ticket #{$id} Resuelto] " . $t['asunto'],
+                    "<p>Hola <b>" . htmlspecialchars($t['usuario_nombre']) . "</b>,</p>
+                     <p>Tu solicitud de soporte <b>\"" . htmlspecialchars($t['asunto']) . "\"</b> ha sido resuelta.</p>
+                     <p><b>Respuesta:</b><br>" . nl2br(htmlspecialchars($respuesta)) . "</p>
+                     <p>Saludos,<br>Equipo Centrotec</p>"
+                );
+            }
+        } catch (Exception $e) {}
     }
 
     header('Content-Type: application/json');
