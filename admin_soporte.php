@@ -172,7 +172,7 @@ $kpis = $db->query(
 </main>
 
 <!-- Modal: ver y responder ticket -->
-<div class="modal-bg pap-hidden" id="modal-ticket">
+<div class="modal-bg" id="modal-ticket">
   <div class="modal-box" style="max-width:600px;">
     <div class="modal-hd">
       <h3 id="mtk-titulo">Ticket #</h3>

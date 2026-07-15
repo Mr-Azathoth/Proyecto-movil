@@ -21,11 +21,11 @@
     document.getElementById('mtk-mensaje').textContent  = btn.dataset.mensaje;
     document.getElementById('mtk-respuesta').value      = btn.dataset.respuesta;
     document.getElementById('mtk-estado').value         = btn.dataset.estado;
-    modal.classList.remove('pap-hidden');
+    modal.classList.add('active');
   }
 
   function closeModal() {
-    modal.classList.add('pap-hidden');
+    modal.classList.remove('active');
     ticketActual = null;
   }
 
