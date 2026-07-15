@@ -17,7 +17,8 @@ if (!hash_equals(csrf_token(), $_POST['csrf_token'] ?? '')) {
 
 // Recoger inputs
 $nombre_local      = trim($_POST['nombre_local'] ?? '');
-$subdominio        = strtolower(trim($_POST['subdominio'] ?? ''));
+// Subdominio: generado automáticamente desde el nombre del local
+$subdominio        = strtolower(trim(preg_replace('/[^a-z0-9]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', trim($_POST['nombre_local'] ?? ''))), '-'));
 $rut               = trim($_POST['rut'] ?? '');
 $nombre_admin      = trim($_POST['nombre_admin'] ?? '');
 $pass              = $_POST['pass'] ?? '';
@@ -36,19 +37,15 @@ $telefono_local    = trim($_POST['telefono_local']    ?? '');
 $telefono          = $telefono_local ?: $telefono_personal;
 
 // Validaciones básicas
-if (!$nombre_local)  json_err('El nombre del local es obligatorio.');
-if (!$subdominio)    json_err('El subdominio es obligatorio.');
-if (!$rut)           json_err('El RUT del local es obligatorio.');
-if (!$nombre_admin)  json_err('Tu nombre es obligatorio.');
+if (!$nombre_local)   json_err('El nombre del local es obligatorio.');
+if (!$rut)            json_err('El RUT del local es obligatorio.');
+if (!$nombre_admin)   json_err('Tu nombre es obligatorio.');
 if (!$email_personal) json_err('El email es obligatorio.');
-if (!$pass)          json_err('La contraseña es obligatoria.');
+if (!$pass)           json_err('La contraseña es obligatoria.');
 
 if (!filter_var($email_personal, FILTER_VALIDATE_EMAIL)) json_err('El email personal no es válido.');
 if ($email_local && !filter_var($email_local, FILTER_VALIDATE_EMAIL)) json_err('El email del local no es válido.');
 if (strlen($pass) < 8) json_err('La contraseña debe tener al menos 8 caracteres.');
-if (!preg_match('/^[a-z0-9][a-z0-9\-]{1,58}[a-z0-9]$/', $subdominio)) {
-    json_err('Subdominio inválido. Usa solo letras minúsculas, números y guiones (mín. 3 caracteres).');
-}
 
 // Validar RUT chileno (formato + dígito verificador)
 function validar_rut(string $rut): bool {
@@ -93,10 +90,16 @@ try {
     $db->exec("ALTER TABLE empresas ADD UNIQUE KEY uq_empresa_subdominio (subdominio)");
 } catch (PDOException $ignored) {}
 
-// Unicidad subdominio
-$st = $db->prepare("SELECT id_empresa FROM empresas WHERE subdominio = ? LIMIT 1");
-$st->execute([$subdominio]);
-if ($st->fetchColumn()) json_err('Ese subdominio ya está en uso. Elige otro.');
+// Unicidad subdominio: si hay colisión agrega sufijo numérico automáticamente
+$base_sub = substr($subdominio, 0, 55) ?: 'empresa';
+$subdominio = $base_sub;
+$sufijo = 2;
+while (true) {
+    $st = $db->prepare("SELECT id_empresa FROM empresas WHERE subdominio = ? LIMIT 1");
+    $st->execute([$subdominio]);
+    if (!$st->fetchColumn()) break;
+    $subdominio = $base_sub . '-' . $sufijo++;
+}
 
 // Unicidad email (usamos el email final que se guardará en empresas.correo)
 $st2 = $db->prepare("SELECT id_empresa FROM empresas WHERE correo = ? LIMIT 1");

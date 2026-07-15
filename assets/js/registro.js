@@ -131,40 +131,12 @@
     }
     if (step === 2) {
       var local = (document.getElementById('nombre_local').value || '').trim();
-      var slug  = (document.getElementById('subdominio').value || '').trim();
       var rut   = (document.getElementById('rut').value || '').trim();
       if (!local) { showError('Ingresa el nombre de tu local.'); return false; }
-      if (!slug || !/^[a-z0-9][a-z0-9\-]{1,58}[a-z0-9]$/.test(slug)) {
-        showError('El subdominio debe tener al menos 3 caracteres (letras minúsculas, números y guiones).'); return false;
-      }
       if (!rut) { showError('Ingresa el RUT del local.'); return false; }
       buildPhone('tel_local_num', 'telefono_local');
     }
     return true;
-  }
-
-  /* ── Slug automático desde nombre del local ─────────────────── */
-  function toSlug(str) {
-    return str
-      .toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9\s]/g, '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .slice(0, 60);
-  }
-
-  var nombreInput = document.getElementById('nombre_local');
-  var slugInput   = document.getElementById('subdominio');
-  var slugManual  = false;
-
-  if (nombreInput && slugInput) {
-    slugInput.addEventListener('input', function () { slugManual = true; });
-    slugInput.addEventListener('blur',  function () { if (!this.value) slugManual = false; });
-    nombreInput.addEventListener('input', function () {
-      if (!slugManual) slugInput.value = toSlug(this.value);
-    });
   }
 
   /* ── Formato RUT chileno ────────────────────────────────────── */

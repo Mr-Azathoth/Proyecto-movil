@@ -130,22 +130,10 @@ $precio_mensual = 4990;
                    placeholder="Ej: Servicio Técnico López" autocomplete="organization">
           </div>
 
-          <div class="rg-row">
-            <div class="rg">
-              <label for="subdominio">Subdominio</label>
-              <div class="rg-slug">
-                <input type="text" name="subdominio" id="subdominio"
-                       placeholder="milocal"
-                       pattern="[a-z0-9][a-z0-9\-]{1,58}[a-z0-9]"
-                       minlength="3" maxlength="60" autocomplete="off">
-                <span class="rg-slug-suffix">.Centrotec</span>
-              </div>
-            </div>
-            <div class="rg">
-              <label for="rut">RUT del local</label>
-              <input type="text" name="rut" id="rut"
-                     placeholder="12.345.678-9" maxlength="12" autocomplete="off">
-            </div>
+          <div class="rg">
+            <label for="rut">RUT del local</label>
+            <input type="text" name="rut" id="rut"
+                   placeholder="12.345.678-9" maxlength="12" autocomplete="off">
           </div>
 
           <div class="rg-row">
