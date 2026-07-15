@@ -176,7 +176,7 @@ $precio_mensual = 4990;
       <div class="feature-card anim anim-delay-1">
         <div class="feature-icon-wrap feature-purple"><span class="material-icons-round">bar_chart</span></div>
         <h3>Reportes</h3>
-        <p>Visualiza cuántas órdenes cierras al mes, qué servicios son más frecuentes y cómo rinde tu equipo.</p>
+        <p>Visualiza cuántas órdenes cierras al mes y qué servicios son más frecuentes.</p>
       </div>
       <div class="feature-card anim anim-delay-2">
         <div class="feature-icon-wrap feature-yellow"><span class="material-icons-round">group</span></div>
