@@ -167,7 +167,7 @@ try {
           </div>
           <?php endif; ?>
           <button class="btn-primary" id="btn-abrir-nuevo">
-            <span class="material-icons-round">add</span> Ingresar equipo
+            <span class="material-icons-round">add</span> Ingresar servicio técnico
           </button>
         </div>
       </header>
