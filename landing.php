@@ -118,36 +118,35 @@ $precio_mensual = 4990;
     <div class="section-label text-center anim">Características</div>
     <h2 class="section-title text-center anim anim-delay-1">Todo lo que necesita tu servicio técnico</h2>
     <p class="section-sub text-center mx-auto anim anim-delay-2">Diseñado para servicios técnicos de electrónica. Simple de usar desde el primer día.</p>
-    <div class="features-grid">
-      <div class="feature-card anim anim-delay-1">
-        <div class="feature-icon-wrap feature-blue"><span class="material-icons-round">assignment</span></div>
-        <h3>Órdenes de trabajo digitales</h3>
-        <p>Crea, asigna y cierra órdenes en segundos. Con estado, técnico asignado y descripción del problema.</p>
-      </div>
-      <div class="feature-card anim anim-delay-2">
-        <div class="feature-icon-wrap feature-green"><span class="material-icons-round">people</span></div>
-        <h3>Historial de clientes</h3>
-        <p>Todo el historial de reparaciones de cada cliente y equipo en un clic. Nunca más "¿qué le hicimos?"</p>
-      </div>
-      <div class="feature-card anim anim-delay-3">
-        <div class="feature-icon-wrap feature-orange"><span class="material-icons-round">inventory_2</span></div>
-        <h3>Control de repuestos</h3>
-        <p>Inventario que se actualiza solo con cada servicio. Siempre sabes qué tienes y qué te falta.</p>
-      </div>
-      <div class="feature-card anim anim-delay-1">
-        <div class="feature-icon-wrap feature-purple"><span class="material-icons-round">bar_chart</span></div>
-        <h3>Reportes</h3>
-        <p>Visualiza cuántas órdenes cierras al mes y qué servicios son más frecuentes.</p>
-      </div>
-      <div class="feature-card anim anim-delay-2">
-        <div class="feature-icon-wrap feature-yellow"><span class="material-icons-round">group</span></div>
-        <h3>Multi-usuario</h3>
-        <p>Cada técnico con su propio acceso. Sin compartir contraseñas, con control de permisos por cargo.</p>
-      </div>
-      <div class="feature-card anim anim-delay-3">
-        <div class="feature-icon-wrap feature-blue"><span class="material-icons-round">manage_search</span></div>
-        <h3>Seguimiento para el cliente</h3>
-        <p>Tu cliente puede ver en tiempo real el estado de su reparación con un link o código de seguimiento.</p>
+    <div class="feat-split anim anim-delay-2">
+      <nav class="feat-nav">
+        <button class="feat-nav-btn active" data-feat="servicios">
+          <span class="material-icons-round">build</span> Servicios
+        </button>
+        <button class="feat-nav-btn" data-feat="inventario">
+          <span class="material-icons-round">inventory_2</span> Inventario
+        </button>
+        <button class="feat-nav-btn" data-feat="estadisticas">
+          <span class="material-icons-round">bar_chart</span> Estadísticas
+        </button>
+        <button class="feat-nav-btn" data-feat="configuracion">
+          <span class="material-icons-round">settings</span> Configuración
+        </button>
+        <button class="feat-nav-btn" data-feat="soporte">
+          <span class="material-icons-round">headset_mic</span> Soporte
+        </button>
+      </nav>
+      <div class="feat-content" id="feat-content">
+        <h3 class="feat-title" id="feat-title">Servicios</h3>
+        <p class="feat-desc" id="feat-desc">Crea y gestiona órdenes de trabajo digitales. Registra el equipo, la falla, el técnico asignado y el estado de cada reparación en tiempo real.</p>
+        <div class="feat-pills" id="feat-pills">
+          <span class="feat-pill">Órdenes de trabajo</span>
+          <span class="feat-pill">Estados en tiempo real</span>
+          <span class="feat-pill">Código de seguimiento</span>
+          <span class="feat-pill">Historial por cliente</span>
+          <span class="feat-pill">Creación de informes</span>
+          <span class="feat-pill">Historial de trabajo</span>
+        </div>
       </div>
     </div>
   </div>

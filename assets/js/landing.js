@@ -69,6 +69,53 @@
     animEls.forEach(function (el) { el.classList.add('visible'); });
   }
 
+  // ── Características — panel interactivo ───────────────────
+  var featData = {
+    servicios: {
+      title: 'Servicios',
+      desc:  'Crea y gestiona órdenes de trabajo digitales. Registra el equipo, la falla, el técnico asignado y el estado de cada reparación en tiempo real.',
+      pills: ['Órdenes de trabajo','Estados en tiempo real','Código de seguimiento','Historial por cliente','Creación de informes','Historial de trabajo']
+    },
+    inventario: {
+      title: 'Inventario',
+      desc:  'Controla tus repuestos y materiales. Importa tu inventario existente en masa, escanea piezas con QR y mantén el stock siempre actualizado.',
+      pills: ['Stock de repuestos','Importar inventario masivamente','Escanear con QR','Creación de informes']
+    },
+    estadisticas: {
+      title: 'Estadísticas',
+      desc:  'Visualiza cuántas órdenes cierras por mes, los servicios más frecuentes y conoce cuáles son tus repuestos y marcas más vendidas.',
+      pills: ['Órdenes por período','Servicios frecuentes','Repuestos más vendidos','Marcas más vendidas','Resumen del mes']
+    },
+    configuracion: {
+      title: 'Configuración',
+      desc:  'Personaliza los datos de tu empresa, gestiona tu plan de suscripción y administra el equipo de técnicos con roles y permisos.',
+      pills: ['Datos de empresa','Gestionar plan','Crear y gestionar técnicos','Permisos por cargo']
+    },
+    soporte: {
+      title: 'Soporte',
+      desc:  'Contacta directamente al equipo de Centrotec ante cualquier duda o problema.',
+      pills: ['Contacto directo']
+    }
+  };
+
+  function renderFeat(key) {
+    var d = featData[key];
+    if (!d) return;
+    document.getElementById('feat-title').textContent = d.title;
+    document.getElementById('feat-desc').textContent  = d.desc;
+    document.getElementById('feat-pills').innerHTML   = d.pills
+      .map(function (p) { return '<span class="feat-pill">' + p + '</span>'; })
+      .join('');
+  }
+
+  document.querySelectorAll('.feat-nav-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.feat-nav-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      renderFeat(btn.dataset.feat);
+    });
+  });
+
   // ── FAQ accordion ──────────────────────────────────────────
   document.querySelectorAll('.faq-q').forEach(function (btn) {
     btn.addEventListener('click', function () {
