@@ -74,50 +74,11 @@ $precio_mensual = 4990;
           <span class="mockup-dot"></span>
           <span class="mockup-dot"></span>
           <span class="mockup-dot"></span>
-          <span class="mockup-url">Centrotec/app</span>
+          <span class="mockup-url">centrotec.cl/app</span>
         </div>
-        <div class="mockup-body">
-          <div class="mockup-kpis">
-            <div class="mockup-kpi">
-              <div class="mockup-kpi-val">18</div>
-              <div class="mockup-kpi-lbl">Órdenes activas</div>
-            </div>
-            <div class="mockup-kpi">
-              <div class="mockup-kpi-val">96</div>
-              <div class="mockup-kpi-lbl">Clientes</div>
-            </div>
-            <div class="mockup-kpi">
-              <div class="mockup-kpi-val">5</div>
-              <div class="mockup-kpi-lbl">Listos hoy</div>
-            </div>
-          </div>
-          <div class="mockup-rows">
-            <div class="mockup-row">
-              <div class="mockup-avatar">JG</div>
-              <div class="mockup-info">
-                <div class="mockup-name">Juan González</div>
-                <div class="mockup-car">iPhone 14 Pro — Pantalla rota</div>
-              </div>
-              <div class="mockup-badge mockup-badge-ok">En proceso</div>
-            </div>
-            <div class="mockup-row">
-              <div class="mockup-avatar mockup-avatar-purple">MR</div>
-              <div class="mockup-info">
-                <div class="mockup-name">María Rodríguez</div>
-                <div class="mockup-car">Samsung S22 — No enciende</div>
-              </div>
-              <div class="mockup-badge mockup-badge-warn">Esperando repuesto</div>
-            </div>
-            <div class="mockup-row">
-              <div class="mockup-avatar mockup-avatar-green">CP</div>
-              <div class="mockup-info">
-                <div class="mockup-name">Carlos Pérez</div>
-                <div class="mockup-car">MacBook Pro — Teclado dañado</div>
-              </div>
-              <div class="mockup-badge mockup-badge-done">Listo para entrega</div>
-            </div>
-          </div>
-        </div>
+        <img src="<?= BASE ?>/assets/img/banner 1.jpg?v=<?= filemtime(__DIR__.'/assets/img/banner 1.jpg') ?>"
+             alt="Vista del panel de reparaciones de Centrotec"
+             style="width:100%;display:block;border-radius:0 0 10px 10px;">
       </div>
     </div>
   </div>
