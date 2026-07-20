@@ -548,20 +548,6 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
 .faq-item.open .faq-a { max-height: 200px; padding: 0 22px 20px; }
 
 /* ── CTA FINAL ───────────────────────────────────────────────── */
-.screenshot-section { padding: 80px 0; }
-.screenshot-window {
-  margin-top: 40px;
-  border: 1px solid var(--border2);
-  border-radius: var(--r3);
-  overflow: hidden;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
-}
-.screenshot-bar {
-  background: var(--bg3);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 14px;
-  display: flex; align-items: center; gap: 6px;
-}
 .cta-final { padding: 80px 0; }
 .cta-inner {
   position: relative;

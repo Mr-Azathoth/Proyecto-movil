@@ -153,25 +153,6 @@ $precio_mensual = 4990;
   </div>
 </section>
 
-<!-- SCREENSHOT DEL SISTEMA -->
-<section class="screenshot-section">
-  <div class="container">
-    <div class="section-label text-center anim">El sistema</div>
-    <h2 class="section-title text-center anim anim-delay-1">Así se ve en la práctica</h2>
-    <div class="screenshot-window anim anim-delay-2">
-      <div class="screenshot-bar">
-        <span class="mockup-dot"></span>
-        <span class="mockup-dot"></span>
-        <span class="mockup-dot"></span>
-        <span class="mockup-url">centrotec.cl/app</span>
-      </div>
-      <img src="<?= BASE ?>/assets/img/banner 1.jpg?v=<?= filemtime(__DIR__.'/assets/img/banner 1.jpg') ?>"
-           alt="Panel de reparaciones de Centrotec"
-           style="width:100%;display:block;">
-    </div>
-  </div>
-</section>
-
 <!-- CTA ANTES DE PRECIOS -->
 <section class="cta-final" id="cta">
   <div class="container cta-inner anim">
