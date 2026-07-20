@@ -251,7 +251,7 @@ $precio_mensual = 4990;
       <div class="nav-logo-icon footer-logo-icon">C</div>
       <div>
         <div class="footer-name">Centrotec</div>
-        <div class="footer-sub">Gestión para servicios técnicos</div>
+        <div class="footer-sub">Software para servicios técnicos electrónicos</div>
       </div>
     </div>
     <nav class="footer-links">
