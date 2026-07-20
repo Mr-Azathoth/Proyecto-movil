@@ -152,25 +152,6 @@ $precio_mensual = 4990;
   </div>
 </section>
 
-<!-- CTA ANTES DE PRECIOS -->
-<section class="cta-final" id="cta">
-  <div class="container cta-inner anim">
-    <div class="cta-glow"></div>
-    <h2>¿Listo para digitalizar tu servicio técnico?</h2>
-    <p>Únete a los servicios técnicos que ya gestionan su negocio con Centrotec</p>
-    <div class="cta-btns">
-      <a href="#precios" class="btn-primary btn-lg">
-        <span class="material-icons-round">rocket_launch</span>
-        Ver planes y precios
-      </a>
-      <a href="<?= BASE ?>/seguimiento" class="btn-seguimiento-cta">
-        <span class="material-icons-round">search</span>
-        Seguir mi reparación
-      </a>
-    </div>
-  </div>
-</section>
-
 <!-- PRECIOS -->
 <section class="precios" id="precios">
   <div class="container">
