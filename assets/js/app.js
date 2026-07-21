@@ -2426,7 +2426,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
 
     var fileToSend;
     if (_sourceIsXlsx) {
-      var csvContent = '﻿' + _parsedRows.map(function(row) {
+      var csvContent = _parsedRows.map(function(row) {
         return row.map(function(cell) {
           var s = String(cell == null ? '' : cell);
           if (s.includes(';') || s.includes('"') || s.includes('\n')) s = '"' + s.replace(/"/g, '""') + '"';
