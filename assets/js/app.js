@@ -731,7 +731,7 @@ function _buildInventarioRow(rep) {
     <td>${esc(rep.marca_compatible||'—')}</td>
     <td>${esc(rep.modelo_compatible||'—')}</td>
     <td>$${fmt(rep.precio_venta)}</td>
-    <td><strong style="${stockColor}">${rep.cantidad} un.</strong></td>
+    <td><strong style="${stockColor};font-size:16px">${rep.cantidad}</strong></td>
     ${actions}
   </tr>`;
 }
@@ -831,7 +831,7 @@ async function alterStock(id, qty) {
     if (!row) { loadInventario(); return; }
 
     const cell  = row.querySelector('td:nth-child(5) strong');
-    cell.textContent = `${qty} un.`;
+    cell.textContent = `${qty}`;
     cell.style.color = qty > 5 ? '#4ade80' : qty > 0 ? '#fb923c' : '#f87171';
 
     const [btnPlus, btnMinus] = row.querySelectorAll('.btn-stock');
