@@ -29,8 +29,12 @@ $logoSrc   = ($emp['logo_path'] && file_exists(__DIR__.'/'.$emp['logo_path']))
 $ubicacion = trim(implode(', ', array_filter([
     $emp['direccion'] ?? '', $emp['comuna'] ?? '',
 ])));
-$fechaFmt  = $rep['fecha_ingreso']
-           ? date('d/m/Y H:i', strtotime($rep['fecha_ingreso'])) : '';
+$fechaFmt  = '';
+if ($rep['fecha_ingreso']) {
+    $dt = new DateTime($rep['fecha_ingreso'], new DateTimeZone('UTC'));
+    $dt->setTimezone(new DateTimeZone('America/Santiago'));
+    $fechaFmt = $dt->format('d/m/Y H:i');
+}
 $numFmt    = str_pad($rep['id_ingreso'], 3, '0', STR_PAD_LEFT);
 $valorFmt  = $rep['valor_ingreso'] > 0
            ? '$ '.number_format((int)$rep['valor_ingreso'], 0, ',', '.') : '—';
