@@ -284,6 +284,16 @@ try {
           <span class="material-icons-round search-ic">search</span>
           <input id="search-inv" type="text" class="search-input" placeholder="Buscar por nombre, marca o modelo...">
         </div>
+        <div class="inv-per-page-wrap">
+          <label for="inv-per-page">Mostrar</label>
+          <select id="inv-per-page" class="inv-per-page-sel">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="0">Todos</option>
+          </select>
+        </div>
       </div>
 
       <div class="panel">
@@ -304,6 +314,7 @@ try {
             </tbody>
           </table>
         </div>
+        <div id="inv-pagination" class="inv-pagination"></div>
       </div>
     </div><!-- /view-inventario -->
 

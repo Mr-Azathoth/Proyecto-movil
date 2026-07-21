@@ -725,12 +725,43 @@ function _applySortInventario() {
       return 0;
     });
   }
-  tbody.innerHTML = reps.map(_buildInventarioRow).join('');
+  const total      = reps.length;
+  const pageSize   = _invPageSize === 0 ? total : _invPageSize;
+  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
+  _invPage = Math.min(_invPage, Math.max(1, totalPages));
+  const start = (_invPage - 1) * pageSize;
+  const slice = _invPageSize === 0 ? reps : reps.slice(start, start + pageSize);
+  tbody.innerHTML = slice.map(_buildInventarioRow).join('');
   document.querySelectorAll('.th-sortable[data-sort-inv]').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
     if (th.dataset.sortInv === _invSortCol)
       th.classList.add(_invSortDir === 'asc' ? 'sort-asc' : 'sort-desc');
   });
+  _renderInvPagination(total, pageSize, totalPages);
+}
+
+function _renderInvPagination(total, pageSize, totalPages) {
+  const footer = document.getElementById('inv-pagination');
+  if (!footer) return;
+  if (_invPageSize === 0 || totalPages <= 1) {
+    footer.innerHTML = `<span class="pag-info">${total} repuesto${total !== 1 ? 's' : ''}</span>`;
+    return;
+  }
+  const from = (_invPage - 1) * pageSize + 1;
+  const to   = Math.min(_invPage * pageSize, total);
+  footer.innerHTML = `
+    <span class="pag-info">${from}–${to} de ${total}</span>
+    <div class="pag-btns">
+      <button class="pag-btn" id="pag-prev"${_invPage <= 1 ? ' disabled' : ''}>
+        <span class="material-icons-round">chevron_left</span>
+      </button>
+      <span class="pag-pages">${_invPage} / ${totalPages}</span>
+      <button class="pag-btn" id="pag-next"${_invPage >= totalPages ? ' disabled' : ''}>
+        <span class="material-icons-round">chevron_right</span>
+      </button>
+    </div>`;
+  footer.querySelector('#pag-prev').addEventListener('click', () => { _invPage--; _applySortInventario(); });
+  footer.querySelector('#pag-next').addEventListener('click', () => { _invPage++; _applySortInventario(); });
 }
 
 async function loadInventario() {
@@ -937,6 +968,8 @@ let   _sortCol          = null;      // columna activa servicios: 'id' | 'client
 let   _sortDir          = 'asc';    // 'asc' | 'desc'
 let   _invSortCol       = null;      // columna activa inventario
 let   _invSortDir       = 'asc';
+let   _invPageSize      = 25;        // 0 = todos
+let   _invPage          = 1;
 let _selMarcaNuevo      = null;
 let _selModeloNuevo     = null;
 let _selRepNuevo        = null; // select repuesto en modal-nuevo
@@ -1452,6 +1485,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const col = th.dataset.sortInv;
       if (_invSortCol === col) _invSortDir = _invSortDir === 'asc' ? 'desc' : 'asc';
       else { _invSortCol = col; _invSortDir = 'asc'; }
+      _invPage = 1;
       _applySortInventario();
     });
 
@@ -1569,7 +1603,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('search-bar').addEventListener('input', debounce(loadServicios, 300));
-  document.getElementById('search-inv').addEventListener('input', debounce(loadInventario, 300));
+  document.getElementById('search-inv').addEventListener('input', debounce(() => { _invPage = 1; loadInventario(); }, 300));
+  document.getElementById('inv-per-page')?.addEventListener('change', function() {
+    _invPageSize = parseInt(this.value);
+    _invPage = 1;
+    _applySortInventario();
+  });
 
   // Click en headers ordenables (# y Cliente)
   document.querySelector('#tbl-servicios').closest('table').querySelector('thead')

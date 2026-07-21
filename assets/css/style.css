@@ -203,6 +203,26 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 .search-input { background:none; border:none; color:var(--txt); font-family:inherit; font-size:14px;
   padding:10px 0; outline:none; width:100%; }
 .search-input::placeholder { color:var(--txt3); }
+.inv-per-page-wrap { display:flex; align-items:center; gap:8px; white-space:nowrap; }
+.inv-per-page-wrap label { font-size:13px; color:var(--txt2); }
+.inv-per-page-sel { background:var(--bg2); border:1px solid var(--border); color:var(--txt);
+  font-family:inherit; font-size:13px; border-radius:var(--r); padding:6px 10px;
+  cursor:pointer; transition:var(--tr); }
+.inv-per-page-sel:focus { outline:none; border-color:var(--accent); }
+
+/* ── PAGINACIÓN INVENTARIO ─────────────────────────────────── */
+.inv-pagination { display:flex; align-items:center; justify-content:space-between;
+  padding:10px 16px; border-top:1px solid var(--border); min-height:42px; }
+.inv-pagination:empty { display:none; }
+.pag-info { font-size:13px; color:var(--txt2); }
+.pag-btns { display:flex; align-items:center; gap:6px; }
+.pag-pages { font-size:13px; color:var(--txt2); padding:0 4px; }
+.pag-btn { display:flex; align-items:center; justify-content:center; width:32px; height:32px;
+  background:var(--bg3); border:1px solid var(--border); border-radius:var(--r);
+  color:var(--txt2); cursor:pointer; transition:var(--tr); }
+.pag-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.pag-btn:disabled { opacity:.35; cursor:default; }
+.pag-btn .material-icons-round { font-size:18px; }
 
 /* ── PANEL / TABLE ─────────────────────────────────────────── */
 .panel      { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r2); overflow:hidden; }
