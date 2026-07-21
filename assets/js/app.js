@@ -710,7 +710,7 @@ async function submitActualizar(e) {
 // ═══════════════════════════════════════════════════════════
 function _buildInventarioRow(rep) {
   const isAdmin    = CURRENT_USER.role === 'Admin';
-  const stockColor = rep.cantidad > 5 ? 'color:#4ade80' : rep.cantidad > 0 ? 'color:#fb923c' : 'color:#f87171';
+  const stockColor = rep.cantidad > 0 ? 'color:#e6edf3' : 'color:#f87171';
   const actions = `<td class="action-col">
     <div class="row-actions">
       <button type="button" class="btn-qr-row btn-inv-qr" data-id="${rep.id_repuesto}" title="Ver QR">
@@ -832,7 +832,7 @@ async function alterStock(id, qty) {
 
     const cell  = row.querySelector('td:nth-child(5) strong');
     cell.textContent = `${qty}`;
-    cell.style.color = qty > 5 ? '#4ade80' : qty > 0 ? '#fb923c' : '#f87171';
+    cell.style.color = qty > 0 ? '#e6edf3' : '#f87171';
 
     const [btnPlus, btnMinus] = row.querySelectorAll('.btn-stock');
     btnPlus.dataset.qty  = qty + 1;
