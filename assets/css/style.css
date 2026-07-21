@@ -253,11 +253,11 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 /* ── STATUS PILLS ──────────────────────────────────────────── */
 .pill       { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px;
   font-size:11.5px; font-weight:600; white-space:nowrap; }
-.pill-blue   { background:var(--blue-bg);   color:var(--blue); }
-.pill-orange { background:var(--orange-bg); color:var(--orange); }
-.pill-green  { background:var(--green-bg);  color:var(--green); }
-.pill-gray   { background:var(--gray-bg);   color:var(--gray); }
-.pill-purple { background:var(--purple-bg); color:var(--purple); }
+.pill-blue   { background:transparent; color:var(--blue); }
+.pill-orange { background:transparent; color:var(--orange); }
+.pill-green  { background:transparent; color:var(--green); }
+.pill-gray   { background:transparent; color:var(--gray); }
+.pill-purple { background:transparent; color:var(--purple); }
 
 /* ── BOTONES DE FILA ────────────────────────────────────────── */
 .action-col { white-space:nowrap; }
@@ -635,7 +635,7 @@ input.hidden           { display:none !important; }
 .row-actions { display:flex; gap:6px; flex-wrap:wrap; }
 
 /* ── SUSCRIPCIÓN ─────────────────────────────────────────────── */
-.pill-red { background:rgba(248,81,73,0.15); color:#f85149; }
+.pill-red { background:transparent; color:#f85149; }
 
 .subs-card {
   display:flex; align-items:center; justify-content:space-between; gap:16px;
