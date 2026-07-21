@@ -306,11 +306,11 @@ html, body {
 .btn-sec .material-icons-round { font-size: 16px; }
 
 /* ══ PRINT ════════════════════════════════ */
-@page { size: A4 portrait; margin: 1cm; }
+@page { size: A4 portrait; margin: 0; }
 @media print {
-  html, body { height: auto !important; }
-  body { background: #fff; color: #111; }
-  .page { padding: 0; background: #fff; min-height: 0 !important; }
+  html, body { height: auto !important; margin: 0 !important; }
+  body { background: #fff; color: #111; padding: 0.8cm; }
+  .page { padding: 0; background: #fff; min-height: 0 !important; height: auto !important; overflow: hidden; }
   .modal-box {
     background: #fff; color: #111;
     border: 2px solid #222;
