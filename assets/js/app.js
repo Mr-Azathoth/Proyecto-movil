@@ -374,12 +374,43 @@ function _applySortServicios() {
       return 0;
     });
   }
-  tbody.innerHTML = reps.map(_buildServicioRow).join('');
+  const total      = reps.length;
+  const pageSize   = _repPageSize === 0 ? total : _repPageSize;
+  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
+  _repPage = Math.min(_repPage, Math.max(1, totalPages));
+  const start = (_repPage - 1) * pageSize;
+  const slice = _repPageSize === 0 ? reps : reps.slice(start, start + pageSize);
+  tbody.innerHTML = slice.map(_buildServicioRow).join('');
   document.querySelectorAll('.th-sortable').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
     if (th.dataset.sort === _sortCol)
       th.classList.add(_sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
   });
+  _renderRepPagination(total, pageSize, totalPages);
+}
+
+function _renderRepPagination(total, pageSize, totalPages) {
+  const footer = document.getElementById('rep-pagination');
+  if (!footer) return;
+  if (_repPageSize === 0 || totalPages <= 1) {
+    footer.innerHTML = `<span class="pag-info">${total} servicio${total !== 1 ? 's' : ''}</span>`;
+    return;
+  }
+  const from = (_repPage - 1) * pageSize + 1;
+  const to   = Math.min(_repPage * pageSize, total);
+  footer.innerHTML = `
+    <span class="pag-info">${from}–${to} de ${total}</span>
+    <div class="pag-btns">
+      <button class="pag-btn" id="rep-pag-prev"${_repPage <= 1 ? ' disabled' : ''}>
+        <span class="material-icons-round">chevron_left</span>
+      </button>
+      <span class="pag-pages">${_repPage} / ${totalPages}</span>
+      <button class="pag-btn" id="rep-pag-next"${_repPage >= totalPages ? ' disabled' : ''}>
+        <span class="material-icons-round">chevron_right</span>
+      </button>
+    </div>`;
+  footer.querySelector('#rep-pag-prev').addEventListener('click', () => { _repPage--; _applySortServicios(); });
+  footer.querySelector('#rep-pag-next').addEventListener('click', () => { _repPage++; _applySortServicios(); });
 }
 
 async function loadServicios() {
@@ -963,6 +994,8 @@ async function submitRepuesto(e) {
 let _marcasCache        = null;
 let _repuestosCache     = null; // cache de items inventario para selects de repuesto
 const _repMap           = new Map(); // id_ingreso → objeto rep completo
+let   _repPageSize      = 25;        // 0 = todos
+let   _repPage          = 1;
 const _invMap           = new Map(); // id_repuesto → objeto repuesto completo
 let   _sortCol          = null;      // columna activa servicios: 'id' | 'cliente' | null
 let   _sortDir          = 'asc';    // 'asc' | 'desc'
@@ -1598,11 +1631,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('search-bar').value    = '';
       document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active-stat'));
       if (card.dataset.filter) card.classList.add('active-stat');
+      _repPage = 1;
       loadServicios();
     });
   });
 
-  document.getElementById('search-bar').addEventListener('input', debounce(loadServicios, 300));
+  document.getElementById('search-bar').addEventListener('input', debounce(() => { _repPage = 1; loadServicios(); }, 300));
+  document.getElementById('rep-per-page')?.addEventListener('change', function() {
+    _repPageSize = parseInt(this.value);
+    _repPage = 1;
+    _applySortServicios();
+  });
   document.getElementById('search-inv').addEventListener('input', debounce(() => { _invPage = 1; loadInventario(); }, 300));
   document.getElementById('inv-per-page')?.addEventListener('change', function() {
     _invPageSize = parseInt(this.value);
@@ -1618,6 +1657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const col = th.dataset.sort;
       if (_sortCol === col) _sortDir = _sortDir === 'asc' ? 'desc' : 'asc';
       else { _sortCol = col; _sortDir = 'asc'; }
+      _repPage = 1;
       _applySortServicios();
     });
 
@@ -1626,6 +1666,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.target.dataset.action === 'clear-filters') {
       document.getElementById('search-bar').value    = '';
       document.getElementById('filter-status').value = '';
+      _repPage = 1;
       loadServicios();
       return;
     }

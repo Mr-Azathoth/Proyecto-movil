@@ -207,6 +207,16 @@ try {
           <input id="search-bar" type="text" class="search-input" placeholder="Buscar por cliente, modelo, # orden...">
         </div>
         <input type="hidden" id="filter-status" value="">
+        <div class="inv-per-page-wrap">
+          <label for="rep-per-page">Mostrar</label>
+          <select id="rep-per-page" class="inv-per-page-sel">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="0">Todos</option>
+          </select>
+        </div>
       </div>
 
       <!-- Tabla -->
@@ -226,6 +236,7 @@ try {
             </tbody>
           </table>
         </div>
+        <div id="rep-pagination" class="inv-pagination"></div>
       </div>
     </div><!-- /view-servicios -->
 
