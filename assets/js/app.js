@@ -2304,9 +2304,10 @@ if (!_esMobil) {
 }
 document.getElementById('modal-scanner-close')?.addEventListener('click', _stopScanner);
 
-// ── Importar inventario CSV ───────────────────────────────────────────────
+// ── Importar inventario CSV / XLSX ────────────────────────────────────────
 (function() {
-  var _parsedRows = [];
+  var _parsedRows  = [];
+  var _sourceIsXlsx = false;
 
   function _csvToRows(text) {
     var lines = text.trim().split(/\r?\n/);
@@ -2345,13 +2346,28 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
 
   function _handleFile(file) {
     if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var rows = _csvToRows(e.target.result);
-      _parsedRows = rows;
-      _renderPreview(rows);
-    };
-    reader.readAsText(file, 'UTF-8');
+    var ext = file.name.split('.').pop().toLowerCase();
+    if (ext === 'xlsx' || ext === 'xls') {
+      _sourceIsXlsx = true;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var wb   = XLSX.read(e.target.result, { type: 'array' });
+        var ws   = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        _parsedRows = rows;
+        _renderPreview(rows);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      _sourceIsXlsx = false;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var rows = _csvToRows(e.target.result);
+        _parsedRows = rows;
+        _renderPreview(rows);
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
   }
 
   // Dropzone drag & drop
@@ -2374,6 +2390,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   // Abrir modal
   document.addEventListener('openImportModal', function() {
     _parsedRows = [];
+    _sourceIsXlsx = false;
     document.getElementById('imp-preview-wrap').classList.add('hidden');
     document.getElementById('imp-result').classList.add('hidden');
     document.getElementById('btn-importar-confirm').disabled = true;
@@ -2407,8 +2424,21 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     btn.disabled = true;
     btn.textContent = 'Importando...';
 
+    var fileToSend;
+    if (_sourceIsXlsx) {
+      var csvContent = '﻿' + _parsedRows.map(function(row) {
+        return row.map(function(cell) {
+          var s = String(cell == null ? '' : cell);
+          if (s.includes(';') || s.includes('"') || s.includes('\n')) s = '"' + s.replace(/"/g, '""') + '"';
+          return s;
+        }).join(';');
+      }).join('\n');
+      fileToSend = new File([csvContent], 'inventario.csv', { type: 'text/csv;charset=utf-8;' });
+    } else {
+      fileToSend = fileInput.files[0];
+    }
     var formData = new FormData();
-    formData.append('archivo', fileInput.files[0]);
+    formData.append('archivo', fileToSend);
 
     try {
       var res = await apiFetch('/reparo/api/importar_inventario.php', { method: 'POST', body: formData });

@@ -919,7 +919,7 @@ try {
 
       <div class="imp-template-row">
         <span class="material-icons-round imp-info-icon">info</span>
-        <span class="imp-info-txt">El CSV debe tener las columnas: <strong>nombre</strong>, marca_compatible, modelo_compatible, precio_venta, cantidad.</span>
+        <span class="imp-info-txt">Columnas requeridas: <strong>nombre</strong>, marca_compatible, modelo_compatible, precio_venta, cantidad. Se aceptan archivos <strong>.csv</strong> y <strong>.xlsx</strong> (Excel).</span>
         <a class="imp-template-link" id="btn-descargar-plantilla" href="#">
           <span class="material-icons-round">download</span> Descargar plantilla
         </a>
@@ -927,9 +927,9 @@ try {
 
       <div class="imp-dropzone" id="imp-dropzone">
         <span class="material-icons-round imp-upload-icon">upload_file</span>
-        <p class="imp-drop-txt">Arrastra tu CSV aquí o <label class="imp-file-label" for="imp-file-input">selecciona archivo</label></p>
-        <input type="file" id="imp-file-input" accept=".csv,.txt" class="imp-file-hidden">
-        <p class="imp-drop-hint">Solo archivos .csv — máximo 2 MB</p>
+        <p class="imp-drop-txt">Arrastra tu archivo aquí o <label class="imp-file-label" for="imp-file-input">selecciona archivo</label></p>
+        <input type="file" id="imp-file-input" accept=".csv,.txt,.xlsx,.xls" class="imp-file-hidden">
+        <p class="imp-drop-hint">Archivos .csv o .xlsx (Excel) — máximo 2 MB</p>
       </div>
 
       <div class="imp-preview-wrap hidden" id="imp-preview-wrap">
@@ -1141,6 +1141,7 @@ try {
 <script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
+<script src="<?= BASE ?>/assets/js/xlsx.mini.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/ticket_img.js?v=<?= filemtime(__DIR__.'/assets/js/ticket_img.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/soporte.js?v=<?= filemtime(__DIR__.'/assets/js/soporte.js') ?>"></script>
