@@ -25,37 +25,47 @@ if ($_FILES['archivo']['size'] > 2 * 1024 * 1024) {
     json_err('El archivo no puede superar 2 MB.');
 }
 
-// ── Parsear CSV ───────────────────────────────────────────────────────────────
-$handle = fopen($tmp, 'r');
-if (!$handle) json_err('No se pudo leer el archivo.');
+// ── Leer y normalizar contenido ──────────────────────────────────────────────
+$content = file_get_contents($tmp);
+if ($content === false) json_err('No se pudo leer el archivo.');
 
-// Detectar delimitador (coma o punto y coma)
-$firstLine = fgets($handle);
-rewind($handle);
+// Quitar BOM UTF-8 si existe
+if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
+    $content = substr($content, 3);
+}
+
+// Normalizar saltos de línea (\r\n y \r sólo → \n)
+$content = str_replace(["\r\n", "\r"], "\n", $content);
+
+// ── Detectar delimitador ──────────────────────────────────────────────────────
+$firstLine = strtok($content, "\n");
 $delim = substr_count($firstLine, ';') >= substr_count($firstLine, ',') ? ';' : ',';
 
-// Leer encabezado
-$header = fgetcsv($handle, 0, $delim);
-if (!$header) { fclose($handle); json_err('El archivo está vacío.'); }
+// ── Parsear líneas ────────────────────────────────────────────────────────────
+$lines = array_values(array_filter(
+    explode("\n", $content),
+    fn($l) => trim($l) !== ''
+));
 
-// Normalizar nombres de columna
+if (empty($lines)) json_err('El archivo está vacío.');
+
+$header = str_getcsv(array_shift($lines), $delim);
 $header = array_map(fn($h) => strtolower(trim(str_replace([' ', '-'], '_', $h))), $header);
 
-$colNombre  = array_search('nombre', $header);
-$colMarca   = array_search('marca_compatible', $header);
-$colModelo  = array_search('modelo_compatible', $header);
-$colPrecio  = array_search('precio_venta', $header);
-$colStock   = array_search('cantidad', $header);
+$colNombre = array_search('nombre', $header);
+$colMarca  = array_search('marca_compatible', $header);
+$colModelo = array_search('modelo_compatible', $header);
+$colPrecio = array_search('precio_venta', $header);
+$colStock  = array_search('cantidad', $header);
 
 // Aceptar alias comunes
-if ($colMarca   === false) $colMarca  = array_search('marca', $header);
-if ($colModelo  === false) $colModelo = array_search('modelo', $header);
-if ($colPrecio  === false) $colPrecio = array_search('precio', $header);
-if ($colStock   === false) $colStock  = array_search('stock', $header);
+if ($colMarca  === false) $colMarca  = array_search('marca', $header);
+if ($colModelo === false) $colModelo = array_search('modelo', $header);
+if ($colPrecio === false) $colPrecio = array_search('precio', $header);
+if ($colStock  === false) $colStock  = array_search('stock', $header);
 
 if ($colNombre === false) {
-    fclose($handle);
-    json_err('El CSV debe tener una columna "nombre".');
+    json_err('El archivo debe tener una columna "nombre".');
 }
 
 // ── Procesar filas ────────────────────────────────────────────────────────────
@@ -70,14 +80,13 @@ $stmt = $db->prepare("INSERT INTO inventario
 
 $db->beginTransaction();
 try {
-    while (($row = fgetcsv($handle, 0, $delim)) !== false) {
+    foreach ($lines as $line) {
         $rowNum++;
+        $row = str_getcsv($line, $delim);
 
         $nombre = trim($row[$colNombre] ?? '');
-        if ($nombre === '') {
-            $skipped++;
-            continue;
-        }
+        if ($nombre === '') { $skipped++; continue; }
+
         if (strlen($nombre) > 100) {
             $errors[] = "Fila $rowNum: nombre demasiado largo (máx. 100 caracteres).";
             $skipped++;
@@ -89,7 +98,6 @@ try {
         $precio = $colPrecio !== false ? max(0, (int) preg_replace('/[^0-9]/', '', $row[$colPrecio] ?? '0')) : 0;
         $stock  = $colStock  !== false ? max(0, (int) preg_replace('/[^0-9]/', '', $row[$colStock]  ?? '0')) : 0;
 
-        // Código único
         $slug   = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $nombre));
         $prefix = substr($slug, 0, 6) ?: 'REP';
         $codigo = $prefix . '-' . substr(uniqid(), -5);
@@ -105,11 +113,8 @@ try {
     $db->commit();
 } catch (\Throwable $e) {
     $db->rollBack();
-    fclose($handle);
     json_err('Error al procesar el archivo. Intente nuevamente.');
 }
-
-fclose($handle);
 
 if ($inserted > 0) {
     log_accion($db, 'importacion_inv_csv', null);
