@@ -2389,10 +2389,11 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   // Descargar plantilla
   document.getElementById('btn-descargar-plantilla')?.addEventListener('click', function(e) {
     e.preventDefault();
-    var csv = 'nombre,marca_compatible,modelo_compatible,precio_venta,cantidad\n' +
-              'Batería iPhone 14,Apple,iPhone 14,28000,5\n' +
-              'Pantalla Samsung A54,Samsung,Galaxy A54,35000,3\n';
-    var blob = new Blob([csv], { type: 'text/csv' });
+    var csv = '﻿' +
+              'nombre;marca_compatible;modelo_compatible;precio_venta;cantidad\n' +
+              'Batería iPhone 14;Apple;iPhone 14;28000;5\n' +
+              'Pantalla Samsung A54;Samsung;Galaxy A54;35000;3\n';
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'plantilla_inventario.csv';
