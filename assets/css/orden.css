@@ -306,9 +306,11 @@ html, body {
 .btn-sec .material-icons-round { font-size: 16px; }
 
 /* ══ PRINT ════════════════════════════════ */
+@page { size: A4 portrait; margin: 1cm; }
 @media print {
+  html, body { height: auto !important; }
   body { background: #fff; color: #111; }
-  .page { padding: 0; background: #fff; }
+  .page { padding: 0; background: #fff; min-height: 0 !important; }
   .modal-box {
     background: #fff; color: #111;
     border: 2px solid #222;

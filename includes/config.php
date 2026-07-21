@@ -25,6 +25,8 @@ if (!preg_match('#^https?://#', $_aurl)) $_aurl = 'https://' . $_aurl;
 define('BASE', rtrim(parse_url($_aurl, PHP_URL_PATH) ?: '', '/'));
 unset($_aurl);
 
+date_default_timezone_set('America/Santiago');
+
 define('VALID_STATUS', ['Ingresado', 'En Reparacion', 'Reparado', 'Entregado', 'Garantia']);
 
 // Google Maps API key para autocompletado de dirección en registro.php
