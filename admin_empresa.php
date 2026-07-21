@@ -318,6 +318,7 @@ $iniciales = sadmin_iniciales($emp['nombre']);
   <span id="toast-msg"></span>
 </div>
 
-<script src="<?= BASE ?>/assets/js/admin_empresa.js"></script>
+<script src="<?= BASE ?>/assets/js/admin_common.js?v=<?= filemtime(__DIR__.'/assets/js/admin_common.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/admin_empresa.js?v=<?= filemtime(__DIR__.'/assets/js/admin_empresa.js') ?>"></script>
 </body>
 </html>
