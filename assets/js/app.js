@@ -2310,7 +2310,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   var _sourceIsXlsx = false;
 
   function _csvToRows(text) {
-    var lines = text.trim().split(/\r?\n/);
+    var lines = text.trim().split(/\r\n|\r|\n/);
     if (!lines.length) return [];
     var delim = (lines[0].split(';').length >= lines[0].split(',').length) ? ';' : ',';
     return lines.map(function(line) {
