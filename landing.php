@@ -38,7 +38,7 @@ $precio_mensual = 4990;
         <circle cx="53" cy="95" r="2.5" fill="#3ec96e"/>
         <line x1="56" y1="109" x2="70" y2="109" stroke="#3ec96e" stroke-width="1.5"/>
         <circle cx="53" cy="109" r="2.5" fill="#3ec96e"/>
-        <g transform="translate(71,26) scale(0.62)">
+        <g transform="translate(79,86) scale(0.62)">
           <ellipse cx="11" cy="3" rx="13" ry="5" fill="#facc15"/>
           <rect x="0" y="6" width="22" height="3" rx="1" fill="#ca8a04"/>
           <rect x="3" y="9" width="16" height="13" rx="3" fill="#fcd9a0"/>
