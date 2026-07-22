@@ -14,7 +14,8 @@ if (!$chk->fetch()) json_err('No encontrado.', 404);
 $obs = $db->prepare("SELECT 'obs' AS tipo, obs AS texto, user, fecha FROM observaciones WHERE id_registro=? AND id_empresa=? ORDER BY fecha DESC");
 $obs->execute([$id,$eid]);
 
-$hist = $db->prepare("SELECT 'hist' AS tipo, CONCAT('Estado: ',status_anterior,' → ',status_cambio) AS texto, user, fecha_cambio AS fecha FROM historial WHERE id_reparacion=? AND id_empresa=? ORDER BY fecha_cambio DESC");
+try { $db->exec("ALTER TABLE historial ADD COLUMN detalle TEXT NULL DEFAULT NULL"); } catch(PDOException $e) {}
+$hist = $db->prepare("SELECT 'hist' AS tipo, CONCAT('Estado: ',status_anterior,' → ',status_cambio, IF(detalle IS NOT NULL AND detalle<>'', CONCAT('\n',detalle),'')) AS texto, user, fecha_cambio AS fecha FROM historial WHERE id_reparacion=? AND id_empresa=? ORDER BY fecha_cambio DESC");
 $hist->execute([$id,$eid]);
 
 $items = array_merge($obs->fetchAll(), $hist->fetchAll());

@@ -13,6 +13,7 @@ try { $db->exec("ALTER TABLE reparaciones ADD COLUMN stock_descontado TINYINT(1)
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN codigo_seguimiento VARCHAR(6) NULL"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (codigo_seguimiento)"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE historial ADD COLUMN detalle TEXT NULL DEFAULT NULL"); } catch(PDOException $e) {}
 
 function generar_codigo_seguimiento(PDO $db): string {
     $chars = 'ABCDEFGHJKMNPQRSTUVWXY3456789';
@@ -200,19 +201,30 @@ if ($method === 'PUT') {
             }
         }
 
-        if ($nuevo_status !== $row['status']) {
-            $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user)
-                          VALUES (?, ?, ?, ?, ?)")
-               ->execute([$eid, $id, $row['status'], $nuevo_status, uname()]);
-            log_accion($db, 'cambio_status', $id);
-        }
+        // Preparar texto de cambio de valor (si aplica)
+        $val_txt = '';
         if (isAdmin() && isset($in['valor']) && $nuevo_valor !== (int)$row['valor_ingreso']) {
             $v_ant   = '$' . number_format((int)$row['valor_ingreso'], 0, ',', '.');
             $v_new   = '$' . number_format($nuevo_valor, 0, ',', '.');
             $val_txt = "Valor modificado: {$v_ant} → {$v_new}";
-            // Combinar con nota del usuario para que quede una sola entrada en la línea de tiempo
-            $obs_txt = $obs_txt ? "{$val_txt}\n{$obs_txt}" : $val_txt;
             log_accion($db, 'cambio_valor', $id);
+        }
+
+        if ($nuevo_status !== $row['status']) {
+            // Consolidar valor y nota en el mismo registro de historial
+            $partes  = array_filter([$val_txt, $obs_txt]);
+            $detalle = $partes ? implode("\n", $partes) : null;
+            $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user, detalle)
+                          VALUES (?, ?, ?, ?, ?, ?)")
+               ->execute([$eid, $id, $row['status'], $nuevo_status, uname(), $detalle]);
+            log_accion($db, 'cambio_status', $id);
+            $val_txt = '';
+            $obs_txt = '';
+        }
+
+        // Sin cambio de estado: valor y nota van juntos a observaciones
+        if ($val_txt) {
+            $obs_txt = $obs_txt ? "{$val_txt}\n{$obs_txt}" : $val_txt;
         }
 
         if ($obs_txt) {
