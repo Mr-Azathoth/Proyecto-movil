@@ -207,10 +207,11 @@ if ($method === 'PUT') {
             log_accion($db, 'cambio_status', $id);
         }
         if (isAdmin() && isset($in['valor']) && $nuevo_valor !== (int)$row['valor_ingreso']) {
-            $v_ant = '$' . number_format((int)$row['valor_ingreso'], 0, ',', '.');
-            $v_new = '$' . number_format($nuevo_valor, 0, ',', '.');
-            $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
-               ->execute([$eid, $id, "Valor modificado: {$v_ant} → {$v_new}", uname()]);
+            $v_ant   = '$' . number_format((int)$row['valor_ingreso'], 0, ',', '.');
+            $v_new   = '$' . number_format($nuevo_valor, 0, ',', '.');
+            $val_txt = "Valor modificado: {$v_ant} → {$v_new}";
+            // Combinar con nota del usuario para que quede una sola entrada en la línea de tiempo
+            $obs_txt = $obs_txt ? "{$val_txt}\n{$obs_txt}" : $val_txt;
             log_accion($db, 'cambio_valor', $id);
         }
 
