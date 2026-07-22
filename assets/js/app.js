@@ -819,16 +819,21 @@ async function loadInventario() {
 }
 
 async function alterStock(id, qty) {
+  // Actualización optimista: _invMap refleja el nuevo valor antes del fetch
+  const cached = _invMap.get(id);
+  const prevQty = cached ? cached.cantidad : null;
+  if (cached) cached.cantidad = qty;
+
   try {
     const r = await apiFetch('/reparo/api/inventario.php', {
       method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, cantidad: qty})
     });
     const j = await r.json();
-    if (!j.ok) { toast(j.msg, 'err'); return; }
-
-    // Actualiza _invMap para que modal de edición vea el valor correcto
-    const cached = _invMap.get(id);
-    if (cached) cached.cantidad = qty;
+    if (!j.ok) {
+      // Revertir en caso de error
+      if (cached && prevQty !== null) cached.cantidad = prevQty;
+      toast(j.msg, 'err'); return;
+    }
 
     // Actualiza solo la fila afectada — sin recargar la tabla completa
     const row = document.querySelector(`#tbl-inventario tr[data-inv-id="${id}"]`);
