@@ -826,6 +826,10 @@ async function alterStock(id, qty) {
     const j = await r.json();
     if (!j.ok) { toast(j.msg, 'err'); return; }
 
+    // Actualiza _invMap para que modal de edición vea el valor correcto
+    const cached = _invMap.get(id);
+    if (cached) cached.cantidad = qty;
+
     // Actualiza solo la fila afectada — sin recargar la tabla completa
     const row = document.querySelector(`#tbl-inventario tr[data-inv-id="${id}"]`);
     if (!row) { loadInventario(); return; }
@@ -910,6 +914,17 @@ async function submitEditRepuesto(e) {
     });
     const j = await r.json();
     if (j.ok) {
+      // Actualizar _invMap de inmediato para que modal muestre valores correctos si se abre antes del reload
+      const cached = _invMap.get(id);
+      if (cached) {
+        cached.cantidad = payload.cantidad;
+        if (isAdmin) {
+          cached.nombre             = payload.nombre;
+          cached.marca_compatible   = payload.marca_compatible;
+          cached.modelo_compatible  = payload.modelo_compatible;
+          cached.precio_venta       = payload.precio_venta;
+        }
+      }
       toast('✔ Repuesto actualizado.', 'ok');
       closeModal('modal-edit-repuesto');
       loadInventario();
