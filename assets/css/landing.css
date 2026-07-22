@@ -294,7 +294,7 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
   border-radius: var(--r3);
   box-shadow: 0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
   overflow: hidden;
-  width: 100%; max-width: 420px;
+  width: 100%; max-width: 700px;
   animation: float 6s ease-in-out infinite;
 }
 @keyframes float {
