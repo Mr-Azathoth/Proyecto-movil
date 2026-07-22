@@ -3,6 +3,47 @@ require_once __DIR__.'/includes/config.php';
 requireLogin();
 $_SESSION['last_activity'] = time();
 
+// ── MIGRACIÓN TEMPORAL UTC→Santiago (eliminar después de usar) ──
+if (isset($_GET['migrate_tz']) && isAdmin()) {
+    $db = getDB();
+    if ($_GET['migrate_tz'] === 'backup') {
+        $sql = "-- Backup " . date('Y-m-d H:i:s') . "\n\n-- historial\n";
+        foreach ($db->query("SELECT * FROM historial")->fetchAll() as $r) {
+            $vals = implode(', ', array_map(fn($v) => $v === null ? 'NULL' : $db->quote((string)$v), array_values($r)));
+            $sql .= "INSERT INTO historial VALUES ($vals);\n";
+        }
+        $sql .= "\n-- observaciones\n";
+        foreach ($db->query("SELECT * FROM observaciones")->fetchAll() as $r) {
+            $vals = implode(', ', array_map(fn($v) => $v === null ? 'NULL' : $db->quote((string)$v), array_values($r)));
+            $sql .= "INSERT INTO observaciones VALUES ($vals);\n";
+        }
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="backup_tz_' . date('Ymd_His') . '.sql"');
+        echo $sql; exit;
+    }
+    if ($_GET['migrate_tz'] === 'run') {
+        $test = $db->query("SELECT CONVERT_TZ('2026-01-01 12:00:00','+00:00','America/Santiago')")->fetchColumn();
+        if (!$test) die('ERROR: CONVERT_TZ retorna NULL — tablas de timezone no pobladas. Abortado.');
+        $cutoff = '2026-07-22 23:59:59';
+        $stH = $db->prepare("SELECT COUNT(*) FROM historial WHERE fecha_cambio < ?"); $stH->execute([$cutoff]); $nH = $stH->fetchColumn();
+        $stO = $db->prepare("SELECT COUNT(*) FROM observaciones WHERE fecha < ?");    $stO->execute([$cutoff]); $nO = $stO->fetchColumn();
+        $db->beginTransaction();
+        try {
+            $db->prepare("UPDATE historial SET fecha_cambio = CONVERT_TZ(fecha_cambio,'+00:00','America/Santiago') WHERE fecha_cambio < ?")->execute([$cutoff]);
+            $db->prepare("UPDATE observaciones SET fecha = CONVERT_TZ(fecha,'+00:00','America/Santiago') WHERE fecha < ?")->execute([$cutoff]);
+            $db->commit();
+        } catch (Throwable $e) { $db->rollBack(); die('ERROR (rollback): ' . htmlspecialchars($e->getMessage())); }
+        echo "<pre>✔ Migración OK\nhistorial: $nH filas\nobservaciones: $nO filas\nTest CONVERT_TZ: $test</pre>"; exit;
+    }
+    // Pantalla
+    echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Migración TZ</title></head><body style="font-family:sans-serif;max-width:500px;margin:60px auto">
+    <h2>Migración UTC → Santiago</h2>
+    <p><a href="?migrate_tz=backup" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">⬇ Descargar backup</a></p>
+    <p><a href="?migrate_tz=run" onclick="return confirm(\'¿Confirmas? Descarga el backup primero.\')" style="background:#16a34a;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">▶ Ejecutar migración</a></p>
+    </body></html>'; exit;
+}
+// ── FIN MIGRACIÓN TEMPORAL ──────────────────────────────────────
+
 // Cargar datos de la empresa + migración silenciosa de columnas
 $empresa = ['nombre'=>'Centrotec','logo_path'=>null,'direccion'=>'','telefono'=>'','correo'=>'','comuna'=>'','region'=>''];
 try {
