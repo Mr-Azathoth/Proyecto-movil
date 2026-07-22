@@ -91,7 +91,7 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
   width: auto;
 }
 .footer-logo-svg {
-  height: 40px;
+  height: 80px;
   width: auto;
 }
 .nav-links { display: flex; align-items: center; gap: 4px; }
