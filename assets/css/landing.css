@@ -87,7 +87,7 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
   flex-shrink: 0;
 }
 .nav-logo-svg {
-  height: 46px;
+  height: 62px;
   width: auto;
 }
 .footer-logo-svg {
