@@ -84,17 +84,21 @@ if ($method === 'POST') {
 
     // Snapshot del repuesto
     $ri = $db->prepare(
-        "SELECT nombre, precio_venta FROM inventario WHERE id_repuesto = ? AND id_empresa = ?"
+        "SELECT nombre, marca_compatible, modelo_compatible, precio_venta FROM inventario WHERE id_repuesto = ? AND id_empresa = ?"
     );
     $ri->execute([$id_repuesto, $eid]);
     $rep = $ri->fetch();
     if (!$rep) json_err('Repuesto no encontrado.', 404);
 
+    $nombre_snap = $rep['nombre'];
+    if ($rep['marca_compatible'])  $nombre_snap .= ' · ' . $rep['marca_compatible'];
+    if ($rep['modelo_compatible']) $nombre_snap .= ' · ' . $rep['modelo_compatible'];
+
     $db->prepare(
         "INSERT INTO reparacion_repuestos
              (id_empresa, id_reparacion, id_repuesto, nombre_snap, precio_snap, cantidad)
          VALUES (?,?,?,?,?,?)"
-    )->execute([$eid, $id_reparacion, $id_repuesto, $rep['nombre'], $rep['precio_venta'], $cantidad]);
+    )->execute([$eid, $id_reparacion, $id_repuesto, $nombre_snap, $rep['precio_venta'], $cantidad]);
     $newId = (int) $db->lastInsertId();
 
     // Sumar precio al valor del servicio
@@ -112,7 +116,7 @@ if ($method === 'POST') {
 
     json_ok([
         'id'          => $newId,
-        'nombre_snap' => $rep['nombre'],
+        'nombre_snap' => $nombre_snap,
         'precio_snap' => (int) $rep['precio_venta'],
         'cantidad'    => $cantidad,
         'nuevo_valor' => $nuevo_valor,
