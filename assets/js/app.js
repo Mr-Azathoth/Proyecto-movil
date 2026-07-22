@@ -509,7 +509,7 @@ async function _loadRepuestosEditor(idServicio) {
       _repuestosCache = (ji.data || []).map(i => ({
         id:    i.id_repuesto,
         value: String(i.id_repuesto),
-        label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''} (stock: ${i.cantidad})`,
+        label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
       }));
     }
     if (_selRepAdicional) _selRepAdicional.populate(_repuestosCache);
@@ -1771,7 +1771,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     _repuestosCache = (j.data || []).map(i => ({
       id:    i.id_repuesto,
       value: String(i.id_repuesto),
-      label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''} (stock: ${i.cantidad})`,
+      label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
     }));
     _selRepNuevo?.populate(_repuestosCache);
   }).catch(() => {});
@@ -2542,7 +2542,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
           _repuestosCache = (ji.data || []).map(i => ({
             id:    i.id_repuesto,
             value: String(i.id_repuesto),
-            label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''} (stock: ${i.cantidad})`,
+            label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
           }));
           _selRepNuevo?.populate(_repuestosCache);
         }).catch(() => {});
