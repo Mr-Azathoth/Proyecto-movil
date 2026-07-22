@@ -1432,6 +1432,12 @@ async function loadUsuarios() {
 
 document.addEventListener('DOMContentLoaded', async () => {
 
+  // Revelar buscador después del escaneo de gestores de contraseñas
+  setTimeout(() => {
+    const sb = document.getElementById('search-bar');
+    if (sb) sb.type = 'search';
+  }, 0);
+
   document.querySelectorAll('.nav-link[data-view]').forEach(link => {
     link.addEventListener('click', () => switchView(link.dataset.view, link));
   });
