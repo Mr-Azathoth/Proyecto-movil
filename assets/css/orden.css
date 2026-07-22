@@ -306,36 +306,41 @@ html, body {
 .btn-sec .material-icons-round { font-size: 16px; }
 
 /* ══ PRINT ════════════════════════════════ */
-@page { size: A4 portrait; margin: 0; }
+@page { size: letter portrait; margin: 0.6cm 1cm; }
 @media print {
-  html, body { height: auto !important; margin: 0 !important; }
-  body { background: #fff; color: #111; padding: 0.8cm; }
-  .page { padding: 0; background: #fff; min-height: 0 !important; height: auto !important; overflow: hidden; }
-  .modal-box {
-    background: #fff; color: #111;
-    border: 2px solid #222;
-    border-radius: 0;
-    max-width: 100%;
-  }
-  .modal-hd  { border-color: #ccc; }
-  .modal-hd h3, .hd-fecha { color: #111; }
-  .btn-print-hd, .btn-close-hd { display: none !important; }
+  html, body { height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; background: #fff !important; color: #111; }
+  .page { display: contents; }
+  .modal-box { background: #fff; color: #111; border: 1.5px solid #bbb; border-radius: 0; max-width: 100%; width: 100%; }
+  .btn-close-hd, .btn-print-hd, .modal-ft { display: none !important; }
+
+  .modal-hd { padding: 8px 14px; border-color: #ccc; }
+  .modal-hd h3 { color: #111; font-size: 15px; }
+  .hd-fecha { color: #555; }
   .hd-num { background: #e8f0fe; color: #1a56db; }
-  .emp-strip { background: #f5f5f5; border-color: #ccc; }
+
+  .emp-strip { padding: 8px 14px; background: #f5f5f5; border-color: #ccc; }
   .emp-nombre { color: #111; }
   .emp-sub, .ct { color: #555; }
-  .section-lbl, .info-field .lbl, .eq-cell .eq-lbl,
-  .valor-box .lbl, .firma-card .fc-lbl { color: #555; }
-  .info-field .val { background: #f9f9f9; border-color: #ccc; color: #111; }
+
+  .modal-body { padding: 10px 14px; gap: 8px; }
+  .section-lbl { color: #777; margin-bottom: 4px; }
+
+  .info-field .lbl { color: #777; }
+  .info-field .val { background: #f9f9f9; border-color: #ccc; color: #111; padding: 5px 8px; min-height: 28px; font-size: 12px; }
   .info-field .val.accent { color: #1a56db; }
+
   .equipo-row { border-color: #ccc; }
   .eq-cell { border-color: #ddd; }
-  .eq-cell .eq-lbl { background: #f5f5f5; border-color: #ddd; color: #555; }
-  .eq-cell .eq-val { color: #111; }
-  .obs-box { background: #f9f9f9; border-color: #ccc; color: #444; }
-  .valor-box .val { color: #1a7a35; }
-  .legal-box { background: #f9f9f9; border-color: #ccc; color: #555; }
+  .eq-cell .eq-lbl { background: #f5f5f5; border-color: #ddd; color: #777; padding: 4px 8px 3px; }
+  .eq-cell .eq-val { color: #111; padding: 5px 8px; min-height: 28px; font-size: 12px; }
+
+  .obs-box { background: #f9f9f9; border-color: #ccc; color: #444; padding: 5px 8px; min-height: 36px; font-size: 12px; }
+  .valor-box .lbl { color: #777; }
+  .valor-box .val { color: #1a7a35; font-size: 18px; }
+
+  .legal-box { background: #f9f9f9; border-color: #ccc; color: #666; padding: 6px 10px; font-size: 10px; }
+
   .firma-card { background: #f9f9f9; border-color: #ccc; }
-  .firma-card .fc-lbl { color: #555; border-color: #ccc; }
-  .modal-ft { display: none !important; }
+  .firma-card .fc-space { height: 44px; }
+  .firma-card .fc-lbl { color: #666; border-color: #ccc; padding: 4px; }
 }
