@@ -2537,6 +2537,15 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
           (j.data.omitidos ? ' <span style="color:var(--txt2)">(' + j.data.omitidos + ' filas omitidas)</span>' : '') +
           (j.data.errores?.length ? '<br><small>' + j.data.errores.join('<br>') + '</small>' : '');
         loadInventario();
+        // Refrescar cache de repuestos para el modal de nuevo servicio
+        apiFetch('/reparo/api/inventario.php').then(r => r.json()).then(ji => {
+          _repuestosCache = (ji.data || []).map(i => ({
+            id:    i.id_repuesto,
+            value: String(i.id_repuesto),
+            label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''} (stock: ${i.cantidad})`,
+          }));
+          _selRepNuevo?.populate(_repuestosCache);
+        }).catch(() => {});
       } else {
         el.classList.add('err');
         el.textContent = j.msg || 'Error al importar.';
