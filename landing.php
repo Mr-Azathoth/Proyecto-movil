@@ -25,8 +25,61 @@ $precio_mensual = 4990;
 <nav class="nav" id="nav">
   <div class="nav-inner">
     <a href="#hero" class="nav-logo">
-      <div class="nav-logo-icon">C</div>
-      <span>Centrotec</span>
+      <svg class="nav-logo-svg" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+        <defs><style>.nlt{font-family:Impact,'Arial Black',sans-serif;font-size:86px;fill:#fff;}</style></defs>
+        <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#3ec96e" stroke-width="20" fill="none" stroke-linecap="round"/>
+        <line x1="120" y1="75" x2="136" y2="75" stroke="#3ec96e" stroke-width="2.5"/>
+        <circle cx="139" cy="75" r="3.5" fill="#3ec96e"/>
+        <line x1="139" y1="75" x2="139" y2="61" stroke="#3ec96e" stroke-width="2"/>
+        <line x1="120" y1="127" x2="136" y2="127" stroke="#3ec96e" stroke-width="2.5"/>
+        <circle cx="139" cy="127" r="3.5" fill="#3ec96e"/>
+        <line x1="139" y1="127" x2="139" y2="141" stroke="#3ec96e" stroke-width="2"/>
+        <line x1="56" y1="95" x2="70" y2="95" stroke="#3ec96e" stroke-width="1.5"/>
+        <circle cx="53" cy="95" r="2.5" fill="#3ec96e"/>
+        <line x1="56" y1="109" x2="70" y2="109" stroke="#3ec96e" stroke-width="1.5"/>
+        <circle cx="53" cy="109" r="2.5" fill="#3ec96e"/>
+        <g transform="translate(71,26) scale(0.62)">
+          <ellipse cx="11" cy="3" rx="13" ry="5" fill="#facc15"/>
+          <rect x="0" y="6" width="22" height="3" rx="1" fill="#ca8a04"/>
+          <rect x="3" y="9" width="16" height="13" rx="3" fill="#fcd9a0"/>
+          <rect x="1" y="22" width="20" height="17" rx="2" fill="#f97316"/>
+          <rect x="2" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+          <rect x="12" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+          <rect x="-8" y="24" width="9" height="5" rx="2" fill="#fcd9a0"/>
+          <rect x="21" y="23" width="9" height="5" rx="2" fill="#fcd9a0"/>
+        </g>
+        <text x="145" y="137" class="nlt">ENTR</text>
+        <rect x="334" y="54" width="64" height="94" rx="12" fill="none" stroke="#d97706" stroke-width="4"/>
+        <rect x="340" y="61" width="52" height="70" rx="5" fill="#111e2e"/>
+        <circle cx="366" cy="81" r="10" fill="#7a9cb5"/>
+        <rect x="352" y="93" width="28" height="20" rx="5" fill="#7a9cb5"/>
+        <circle cx="354" cy="130" r="8" fill="#22c55e"/>
+        <circle cx="378" cy="130" r="8" fill="#ef4444"/>
+        <rect x="351" y="57" width="30" height="5" rx="2.5" fill="#d97706"/>
+        <polygon points="348,134 337,154 359,154" fill="#f97316"/>
+        <rect x="335" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
+        <polygon points="384,134 373,154 395,154" fill="#f97316"/>
+        <rect x="371" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
+        <text x="408" y="137" class="nlt">TEC</text>
+        <line x1="564" y1="164" x2="544" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
+        <line x1="577" y1="164" x2="557" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
+        <line x1="546" y1="63" x2="559" y2="63" stroke="#92400e" stroke-width="3"/>
+        <line x1="548" y1="80" x2="561" y2="80" stroke="#92400e" stroke-width="3"/>
+        <line x1="550" y1="97" x2="563" y2="97" stroke="#92400e" stroke-width="3"/>
+        <line x1="552" y1="114" x2="565" y2="114" stroke="#92400e" stroke-width="3"/>
+        <line x1="554" y1="131" x2="567" y2="131" stroke="#92400e" stroke-width="3"/>
+        <line x1="557" y1="149" x2="570" y2="149" stroke="#92400e" stroke-width="3"/>
+        <g transform="translate(539,68) scale(0.62)">
+          <ellipse cx="11" cy="3" rx="13" ry="5" fill="#facc15"/>
+          <rect x="0" y="6" width="22" height="3" rx="1" fill="#ca8a04"/>
+          <rect x="3" y="9" width="16" height="13" rx="3" fill="#fcd9a0"/>
+          <rect x="1" y="22" width="20" height="17" rx="2" fill="#f97316"/>
+          <rect x="2" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+          <rect x="12" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+          <rect x="-9" y="23" width="10" height="5" rx="2" fill="#fcd9a0"/>
+          <rect x="21" y="23" width="10" height="5" rx="2" fill="#fcd9a0"/>
+        </g>
+      </svg>
     </a>
     <div class="nav-links" id="nav-links">
       <a href="#caracteristicas" class="nav-link">Características</a>
@@ -189,9 +242,54 @@ $precio_mensual = 4990;
 <footer class="footer" id="contacto">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <div class="nav-logo-icon footer-logo-icon">C</div>
+      <svg class="footer-logo-svg" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
+        <defs><style>.flt{font-family:Impact,'Arial Black',sans-serif;font-size:86px;fill:#fff;}</style></defs>
+        <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#3ec96e" stroke-width="20" fill="none" stroke-linecap="round"/>
+        <line x1="120" y1="75" x2="136" y2="75" stroke="#3ec96e" stroke-width="2.5"/>
+        <circle cx="139" cy="75" r="3.5" fill="#3ec96e"/>
+        <line x1="139" y1="75" x2="139" y2="61" stroke="#3ec96e" stroke-width="2"/>
+        <line x1="120" y1="127" x2="136" y2="127" stroke="#3ec96e" stroke-width="2.5"/>
+        <circle cx="139" cy="127" r="3.5" fill="#3ec96e"/>
+        <line x1="139" y1="127" x2="139" y2="141" stroke="#3ec96e" stroke-width="2"/>
+        <line x1="56" y1="95" x2="70" y2="95" stroke="#3ec96e" stroke-width="1.5"/>
+        <circle cx="53" cy="95" r="2.5" fill="#3ec96e"/>
+        <line x1="56" y1="109" x2="70" y2="109" stroke="#3ec96e" stroke-width="1.5"/>
+        <circle cx="53" cy="109" r="2.5" fill="#3ec96e"/>
+        <g transform="translate(71,26) scale(0.62)">
+          <ellipse cx="11" cy="3" rx="13" ry="5" fill="#facc15"/>
+          <rect x="3" y="9" width="16" height="13" rx="3" fill="#fcd9a0"/>
+          <rect x="1" y="22" width="20" height="17" rx="2" fill="#f97316"/>
+          <rect x="2" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+          <rect x="12" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+        </g>
+        <text x="145" y="137" class="flt">ENTR</text>
+        <rect x="334" y="54" width="64" height="94" rx="12" fill="none" stroke="#d97706" stroke-width="4"/>
+        <rect x="340" y="61" width="52" height="70" rx="5" fill="#111e2e"/>
+        <circle cx="366" cy="81" r="10" fill="#7a9cb5"/>
+        <rect x="352" y="93" width="28" height="20" rx="5" fill="#7a9cb5"/>
+        <circle cx="354" cy="130" r="8" fill="#22c55e"/>
+        <circle cx="378" cy="130" r="8" fill="#ef4444"/>
+        <rect x="351" y="57" width="30" height="5" rx="2.5" fill="#d97706"/>
+        <polygon points="348,134 337,154 359,154" fill="#f97316"/>
+        <rect x="335" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
+        <polygon points="384,134 373,154 395,154" fill="#f97316"/>
+        <rect x="371" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
+        <text x="408" y="137" class="flt">TEC</text>
+        <line x1="564" y1="164" x2="544" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
+        <line x1="577" y1="164" x2="557" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
+        <line x1="546" y1="63" x2="559" y2="63" stroke="#92400e" stroke-width="3"/>
+        <line x1="548" y1="80" x2="561" y2="80" stroke="#92400e" stroke-width="3"/>
+        <line x1="550" y1="97" x2="563" y2="97" stroke="#92400e" stroke-width="3"/>
+        <line x1="554" y1="131" x2="567" y2="131" stroke="#92400e" stroke-width="3"/>
+        <g transform="translate(539,68) scale(0.62)">
+          <ellipse cx="11" cy="3" rx="13" ry="5" fill="#facc15"/>
+          <rect x="3" y="9" width="16" height="13" rx="3" fill="#fcd9a0"/>
+          <rect x="1" y="22" width="20" height="17" rx="2" fill="#f97316"/>
+          <rect x="2" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+          <rect x="12" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
+        </g>
+      </svg>
       <div>
-        <div class="footer-name">Centrotec</div>
         <div class="footer-sub">Software para servicios técnicos electrónicos</div>
       </div>
     </div>

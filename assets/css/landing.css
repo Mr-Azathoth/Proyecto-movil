@@ -83,24 +83,16 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
 .nav-logo {
   display: flex;
   align-items: center;
-  gap: 10px;
   text-decoration: none;
-  color: var(--txt);
-  font-family: 'Outfit', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
   flex-shrink: 0;
 }
-.nav-logo-icon {
-  width: 34px; height: 34px;
-  border-radius: var(--r);
-  background: linear-gradient(135deg, var(--accent), #a5b4fc);
-  color: #fff;
-  font-family: 'Outfit', sans-serif;
-  font-size: 17px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 16px rgba(47,129,247,0.35);
-  flex-shrink: 0;
+.nav-logo-svg {
+  height: 46px;
+  width: auto;
+}
+.footer-logo-svg {
+  height: 40px;
+  width: auto;
 }
 .nav-links { display: flex; align-items: center; gap: 4px; }
 .nav-link {
