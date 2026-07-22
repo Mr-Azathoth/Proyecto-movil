@@ -212,7 +212,7 @@ if ($method === 'PUT') {
 
         if ($nuevo_status !== $row['status']) {
             // Consolidar valor y nota en el mismo registro de historial
-            $partes  = array_filter([$val_txt, $obs_txt]);
+            $partes  = array_filter([$val_txt, $obs_txt ? "Nota: {$obs_txt}" : '']);
             $detalle = $partes ? implode("\n", $partes) : null;
             $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user, detalle)
                           VALUES (?, ?, ?, ?, ?, ?)")
