@@ -44,6 +44,14 @@ try {
       data-uid="<?= uid() ?>"
       data-base="<?= BASE ?>">
 
+<!-- Honeypot para gestores de contraseñas (Bitwarden/LastPass) -->
+<div style="position:absolute;left:-9999px;overflow:hidden;width:0;height:0" aria-hidden="true">
+  <form autocomplete="on">
+    <input type="text" name="username" autocomplete="username" tabindex="-1">
+    <input type="password" name="password" autocomplete="current-password" tabindex="-1">
+  </form>
+</div>
+
 <div class="app">
 
   <!-- Barra superior móvil (hamburguesa + nombre app) -->
