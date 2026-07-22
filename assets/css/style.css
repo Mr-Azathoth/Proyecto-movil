@@ -357,15 +357,19 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 .info-val   { color:var(--txt); }
 /* Falla ocupa las 2 columnas */
 .info-block p.info-full { grid-column:1/-1; }
-.timeline-wrap { }
-.timeline-list { display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding-right:4px; }
-.tl-item    { display:flex; gap:10px; }
-.tl-icon    { font-size:16px; flex-shrink:0; margin-top:2px; }
-.tl-obs  .tl-icon  { color:var(--accent); }
-.tl-hist .tl-icon  { color:var(--txt3); }
-.tl-body    { flex:1; }
-.tl-meta    { font-size:12px; color:var(--txt2); margin-bottom:3px; }
-.tl-txt     { font-size:13px; color:var(--txt); line-height:1.5; }
+.timeline-list { display:flex; flex-direction:column; max-height:280px; overflow-y:auto; padding-right:4px; }
+.tl-item    { display:flex; gap:12px; position:relative; padding-bottom:16px; }
+.tl-item:last-child { padding-bottom:0; }
+.tl-item::before { content:''; position:absolute; left:9px; top:22px; bottom:0; width:2px; background:var(--border2); }
+.tl-item:last-child::before { display:none; }
+.tl-dot  { width:20px; height:20px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; position:relative; z-index:1; }
+.tl-dot .material-icons-round { font-size:12px; }
+.tl-hist .tl-dot { background:var(--green-bg); border:1.5px solid var(--green); color:var(--green); }
+.tl-obs  .tl-dot { background:var(--bg3); border:1.5px solid var(--border2); color:var(--txt3); }
+.tl-body    { flex:1; min-width:0; }
+.tl-meta    { font-size:12px; color:var(--txt2); margin-bottom:5px; line-height:1.4; }
+.tl-card    { background:var(--bg3); border:1px solid var(--border2); border-radius:var(--r); padding:9px 12px; }
+.tl-txt     { font-size:13px; color:var(--txt); line-height:1.6; margin:0; }
 .tl-loading,.tl-empty { font-size:13px; color:var(--txt3); font-style:italic; }
 
 /* ── TOAST ─────────────────────────────────────────────────── */

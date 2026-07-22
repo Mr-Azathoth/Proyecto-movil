@@ -577,10 +577,10 @@ async function loadTimeline(id) {
       const icon = item.tipo==='hist' ? 'swap_horiz' : 'notes';
       const cls  = item.tipo==='hist' ? 'tl-hist' : 'tl-obs';
       return `<div class="tl-item ${cls}">
-        <span class="material-icons-round tl-icon">${icon}</span>
+        <div class="tl-dot"><span class="material-icons-round">${icon}</span></div>
         <div class="tl-body">
           <div class="tl-meta"><strong>${esc(item.user)}</strong> · ${fmtDateTime(item.fecha)}</div>
-          <div class="tl-txt">${esc(item.texto)}</div>
+          <div class="tl-card"><p class="tl-txt">${item.texto.split('\n').map(l => esc(l)).join('<br>')}</p></div>
         </div>
       </div>`;
     }).join('');
