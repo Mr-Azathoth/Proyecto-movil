@@ -212,7 +212,7 @@ try {
       <div class="controls">
         <div class="search-wrap">
           <span class="material-icons-round search-ic">search</span>
-          <input id="search-bar" type="hidden" class="search-input" placeholder="Buscar por cliente, modelo, # orden..." autocomplete="off" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="other">
+          <input id="search-bar" type="search" style="display:none" class="search-input" placeholder="Buscar por cliente, modelo, # orden..." autocomplete="off" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="other">
         </div>
         <input type="hidden" id="filter-status" value="">
         <div class="inv-per-page-wrap">
