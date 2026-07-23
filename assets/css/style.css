@@ -351,13 +351,13 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 .det-right { border-left:1px solid var(--border); padding-left:18px;
              display:flex; flex-direction:column; gap:8px;
              position:sticky; top:0; align-self:start; }
-/* Info en cuadrícula 2 columnas */
-.info-block { display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; }
-.info-block p { display:flex; flex-direction:column; gap:1px; font-size:12.5px; line-height:1.35; margin:0; }
+/* Info en cuadrícula 4 columnas (los campos normales ocupan 2 cols cada uno) */
+.info-block { display:grid; grid-template-columns:repeat(4,1fr); gap:4px 12px; }
+.info-block p { display:flex; flex-direction:column; gap:1px; font-size:12.5px; line-height:1.35; margin:0; grid-column:span 2; }
 .info-lbl   { font-size:10.5px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:.03em; }
 .info-val   { color:var(--txt); }
-/* Falla ocupa las 2 columnas */
 .info-block p.info-full { grid-column:1/-1; }
+.info-block p.info-sm   { grid-column:span 1; }
 .timeline-list { display:flex; flex-direction:column; overflow-y:auto; padding-right:4px; }
 .tl-item    { display:flex; gap:12px; position:relative; padding-bottom:16px; }
 .tl-item:last-child { padding-bottom:0; }
