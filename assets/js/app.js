@@ -291,7 +291,29 @@ async function apiFetch(url, options = {}) {
       throw new Error('account_suspended');
     }
   }
+  // Si PHP retornó HTML en vez de JSON (error fatal, página de error), convertirlo
+  // en una respuesta JSON estructurada para que los callers no fallen con SyntaxError.
+  const ct = response.headers.get('content-type') || '';
+  if (!ct.includes('json')) {
+    const body = await response.text();
+    console.error(`[apiFetch ${method} ${url}] Respuesta no-JSON (${response.status}):`, body.slice(0, 400));
+    return new Response(
+      JSON.stringify({ ok: false, msg: `Error del servidor (${response.status}). Revisa la consola.` }),
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+  }
   return response;
+}
+
+// Helper: loggea el error real en consola y muestra mensaje adecuado al usuario.
+// Distingue errores de red genuinos de bugs de JS (TypeError, etc.)
+function _handleErr(ctx, e) {
+  if (e?.message === 'session_expired' || e?.message === 'account_suspended') return;
+  console.error(`[${ctx}]`, e);
+  const msg = (e instanceof TypeError)
+    ? `Error interno (${ctx}): ${e.message}`
+    : 'Error de red.';
+  toast(msg, 'err');
 }
 
 function mostrarPantallaSuspendida(isPending) {
@@ -437,8 +459,9 @@ async function loadServicios() {
     rows.forEach(rep => _repMap.set(rep.id_ingreso, rep));
     _applySortServicios();
   } catch(e) {
-    if (e.message !== 'session_expired')
-      tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error de red. ¿Está XAMPP activo?</td></tr>`;
+    _handleErr('loadServicios', e);
+    if (e?.message !== 'session_expired')
+      tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error de red.</td></tr>`;
   }
 }
 
@@ -734,7 +757,7 @@ async function submitNuevo(e) {
       }
     } else { toast(j.msg, 'err'); }
   } catch(err) {
-    if (err.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', err);
   } finally {
     btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">save</span> Registrar ingreso';
   }
@@ -790,7 +813,7 @@ async function submitActualizar(e) {
       loadServicios();
     } else toast(j.msg, 'err');
   } catch(err) {
-    if (err.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', err);
   }
 }
 
@@ -904,7 +927,8 @@ async function loadInventario() {
     j.data.forEach(rep => _invMap.set(rep.id_repuesto, rep));
     _applySortInventario();
   } catch(e) {
-    if (e.message !== 'session_expired')
+    _handleErr('loadInventario', e);
+    if (e?.message !== 'session_expired')
       tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">Error de red.</td></tr>`;
   }
 }
@@ -938,7 +962,7 @@ async function alterStock(id, qty) {
     btnPlus.dataset.qty  = qty + 1;
     btnMinus.dataset.qty = Math.max(0, qty - 1);
   } catch(e) {
-    if (e.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('alterStock', e);
   }
 }
 
@@ -968,7 +992,7 @@ async function deleteServicio(id) {
       toast(j.msg, 'err');
     }
   } catch(e) {
-    if (e.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', e);
   }
 }
 
@@ -1028,7 +1052,7 @@ async function submitEditRepuesto(e) {
       toast(j.msg, 'err');
     }
   } catch(err) {
-    if (err.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', err);
   }
 }
 
@@ -1060,7 +1084,7 @@ async function addRepuestoAdicional() {
     document.getElementById('inp-rep-cant').value = '1';
     toast('✔ Repuesto agregado.', 'ok');
   } catch(e) {
-    if (e.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', e);
   }
 }
 
@@ -1084,7 +1108,7 @@ async function removeRepuestoAdicional(id) {
     _repuestosCache = null;
     await _loadRepuestosEditor(idServ);
   } catch(e) {
-    if (e.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', e);
   }
 }
 
@@ -1103,7 +1127,7 @@ async function submitRepuesto(e) {
       loadInventario();
     } else toast(j.msg, 'err');
   } catch(err) {
-    if (err.message !== 'session_expired') toast('Error de red.', 'err');
+    _handleErr('apicall', err);
   }
 }
 
@@ -1546,7 +1570,7 @@ async function loadUsuarios() {
         <td><div class="row-actions">${btnCargo}${btnPass}</div></td>
       </tr>`;
     }).join('');
-  } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+  } catch(e) { _handleErr('apicall', e); }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1877,7 +1901,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const j = await r.json();
           if (j.ok) { toast('Repuesto eliminado.', 'ok'); _invMap.delete(id); _applySortInventario(); }
           else toast(j.msg || 'Error al eliminar.', 'err');
-        } catch(err) { if (err.message !== 'session_expired') toast('Error de red.', 'err'); }
+        } catch(err) { _handleErr('apicall', err); }
       });
       return;
     }
@@ -1966,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('logo-display').classList.remove('hidden');
       document.getElementById('logo-edit-panel').classList.add('hidden');
       toast('✔ Datos actualizados.', 'ok');
-    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+    } catch(e) { _handleErr('apicall', e); }
   });
 
   // ── Guardar datos de contacto empresa ───────────────────────
@@ -1984,7 +2008,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       const j = await r.json();
       j.ok ? toast('✔ Datos guardados.', 'ok') : toast(j.msg, 'err');
-    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+    } catch(e) { _handleErr('apicall', e); }
   });
 
   // ── Cambiar propia contraseña ────────────────────────────────
@@ -2007,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('cfg-pass-nueva').value   = '';
         document.getElementById('cfg-pass-confirm').value = '';
       } else { toast(j.msg, 'err'); }
-    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+    } catch(e) { _handleErr('apicall', e); }
   });
 
   // ── Event delegation tabla Usuarios ─────────────────────────
@@ -2025,7 +2049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         const j = await r.json();
         j.ok ? (toast(`✔ ${j.data.msg}`, 'ok'), loadUsuarios()) : toast(j.msg, 'err');
-      } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+      } catch(e) { _handleErr('apicall', e); }
     }
 
     if (btn.dataset.action === 'reset-pass') {
@@ -2112,7 +2136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('reset-pass-nueva').value   = '';
         document.getElementById('reset-pass-confirm').value = '';
       } else { toast(j.msg, 'err'); }
-    } catch(e) { if (e.message !== 'session_expired') toast('Error de red.', 'err'); }
+    } catch(e) { _handleErr('apicall', e); }
   });
 });
 

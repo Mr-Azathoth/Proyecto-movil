@@ -54,6 +54,34 @@ if (defined('APP_ENV') && APP_ENV === 'production') {
 
 session_start();
 
+// ── Handlers globales: errores PHP siempre retornan JSON (nunca HTML) ──────
+// Esto previene que un error de PHP cause que el JS no pueda parsear la respuesta
+// y muestre "Error de red" en lugar del error real.
+set_exception_handler(function (Throwable $e): void {
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    $msg = (APP_ENV === 'production')
+        ? 'Error interno del servidor.'
+        : $e->getMessage() . ' — ' . basename($e->getFile()) . ':' . $e->getLine();
+    echo json_encode(['ok' => false, 'msg' => $msg]);
+    exit;
+});
+
+register_shutdown_function(function (): void {
+    $err = error_get_last();
+    if (!$err || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) return;
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    $msg = (APP_ENV === 'production')
+        ? 'Error interno del servidor.'
+        : $err['message'] . ' — ' . basename($err['file']) . ':' . $err['line'];
+    echo json_encode(['ok' => false, 'msg' => $msg]);
+});
+
 // Headers de seguridad HTTP
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
