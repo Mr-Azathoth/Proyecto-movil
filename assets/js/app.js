@@ -2557,9 +2557,17 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
         var partes = [];
         if (j.data.insertados) partes.push('<strong>' + j.data.insertados + '</strong> nuevo' + (j.data.insertados !== 1 ? 's' : ''));
         if (j.data.actualizados) partes.push('<strong>' + j.data.actualizados + '</strong> actualizado' + (j.data.actualizados !== 1 ? 's' : ''));
-        el.innerHTML = (partes.length ? partes.join(', ') + ' correctamente.' : 'Sin cambios.') +
-          (j.data.omitidos ? ' <span style="color:var(--txt2)">(' + j.data.omitidos + ' filas omitidas)</span>' : '') +
-          (j.data.errores?.length ? '<br><small>' + j.data.errores.map(e => esc(e)).join('<br>') + '</small>' : '');
+        var html = (partes.length ? partes.join(', ') + ' correctamente.' : 'Sin cambios.');
+        if (j.data.omitidos) html += ' <span style="color:var(--txt2)">(' + j.data.omitidos + ' filas omitidas)</span>';
+        if (j.data.cambios?.length) {
+          html += '<details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">Ver campos modificados (' + j.data.cambios.length + ' producto' + (j.data.cambios.length !== 1 ? 's' : '') + ')</summary><ul style="margin:6px 0 0 16px;font-size:0.85em">';
+          j.data.cambios.forEach(function(c) {
+            html += '<li style="margin-bottom:4px"><strong>' + esc(c.nombre) + '</strong> (ID ' + c.id + ')<ul style="margin:2px 0 0 14px">' + c.diffs.map(function(d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul></li>';
+          });
+          html += '</ul></details>';
+        }
+        if (j.data.errores?.length) html += '<br><small>' + j.data.errores.map(e => esc(e)).join('<br>') + '</small>';
+        el.innerHTML = html;
         loadInventario();
         // Refrescar cache de repuestos para el modal de nuevo servicio
         apiFetch('/reparo/api/inventario.php').then(r => r.json()).then(ji => {

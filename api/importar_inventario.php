@@ -74,6 +74,7 @@ $inserted    = 0;
 $updated     = 0;
 $skipped     = 0;
 $errors      = [];
+$cambios     = [];
 $rowNum      = 1;
 
 $stmtInsert = $db->prepare(
@@ -85,8 +86,9 @@ $stmtUpdate = $db->prepare(
         SET nombre = ?, marca_compatible = ?, modelo_compatible = ?, precio_venta = ?, cantidad = ?, deleted_at = NULL
       WHERE id_repuesto = ? AND id_empresa = ?"
 );
-$stmtExists = $db->prepare(
-    "SELECT id_repuesto FROM inventario WHERE id_repuesto = ? AND id_empresa = ? LIMIT 1"
+$stmtFetch = $db->prepare(
+    "SELECT nombre, marca_compatible, modelo_compatible, precio_venta, cantidad
+       FROM inventario WHERE id_repuesto = ? AND id_empresa = ? LIMIT 1"
 );
 
 $db->beginTransaction();
@@ -112,12 +114,23 @@ try {
 
         try {
             if ($id > 0) {
-                $stmtExists->execute([$id, $eid]);
-                $existe = $stmtExists->fetchColumn();
+                $stmtFetch->execute([$id, $eid]);
+                $actual = $stmtFetch->fetch();
 
-                if ($existe) {
+                if ($actual) {
+                    $labels  = ['nombre' => 'Nombre', 'marca_compatible' => 'Marca', 'modelo_compatible' => 'Modelo', 'precio_venta' => 'Precio', 'cantidad' => 'Stock'];
+                    $nuevos  = ['nombre' => $nombre, 'marca_compatible' => $marca, 'modelo_compatible' => $modelo, 'precio_venta' => $precio, 'cantidad' => $stock];
+                    $diffs   = [];
+                    foreach ($labels as $field => $label) {
+                        if ((string)($actual[$field] ?? '') !== (string)$nuevos[$field]) {
+                            $diffs[] = "$label: «{$actual[$field]}» → «{$nuevos[$field]}»";
+                        }
+                    }
                     $stmtUpdate->execute([$nombre, $marca, $modelo, $precio, $stock, $id, $eid]);
                     $updated++;
+                    if ($diffs) {
+                        $cambios[] = ['id' => $id, 'nombre' => $nombre, 'diffs' => $diffs];
+                    }
                     continue;
                 }
             }
@@ -148,4 +161,5 @@ json_ok([
     'actualizados' => $updated,
     'omitidos'     => $skipped,
     'errores'      => $errors,
+    'cambios'      => $cambios,
 ]);
