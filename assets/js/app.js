@@ -1356,11 +1356,11 @@ function doExportInv(formato) {
   if (_invSortCol) { params.set('sort_col', _invSortCol); params.set('sort_dir', _invSortDir); }
   const url = `${BASE_PATH}/api/exportar_inventario.php?${params.toString()}`;
   closeModal('modal-exportar-inv');
-  if (formato === 'csv') {
-    window.open(url, '_blank');
-  } else {
+  if (formato === 'pdf') {
     const w = window.open(url, 'inv_export', 'width=900,height=700,scrollbars=yes,resizable=yes');
     if (w) { w.focus(); setTimeout(() => w.print(), 800); }
+  } else {
+    window.open(url, '_blank');
   }
 }
 
@@ -1649,7 +1649,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if      (action === 'exp-serv-csv')          doExportView('csv');
     else if (action === 'exp-serv-pdf')          doExportView('pdf');
     else if (action === 'exp-serv-personalizar') openExportModal();
-    else if (action === 'exp-inv-csv')           doExportInv('csv');
+    else if (action === 'exp-inv-csv')           doExportInv('xlsx');
     else if (action === 'exp-inv-pdf')           doExportInv('pdf');
     else if (action === 'exp-inv-personalizar')  openExportInvModal();
     else if (action === 'imp-inv-csv')           document.dispatchEvent(new Event('openImportModal'));
@@ -2648,15 +2648,15 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   // Descargar plantilla
   document.getElementById('btn-descargar-plantilla')?.addEventListener('click', function(e) {
     e.preventDefault();
-    var csv = '﻿' +
-              'nombre;marca_compatible;modelo_compatible;precio_venta;cantidad\n' +
-              'Batería iPhone 14;Apple;iPhone 14;28000;5\n' +
-              'Pantalla Samsung A54;Samsung;Galaxy A54;35000;3\n';
-    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'plantilla_inventario.csv';
-    a.click();
+    var wb = XLSX.utils.book_new();
+    var ws = XLSX.utils.aoa_to_sheet([
+      ['nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad'],
+      ['Batería iPhone 14', 'Apple', 'iPhone 14', 28000, 5],
+      ['Pantalla Samsung A54', 'Samsung', 'Galaxy A54', 35000, 3],
+    ]);
+    ws['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+    XLSX.writeFile(wb, 'plantilla_inventario.xlsx');
   });
 
   // Confirmar importación

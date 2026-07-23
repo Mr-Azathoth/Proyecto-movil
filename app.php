@@ -290,7 +290,7 @@ try {
             </button>
             <div class="split-dropdown" id="split-agregar-inv-menu">
               <button data-split-action="imp-inv-csv" class="split-item-import">
-                <span class="material-icons-round">upload_file</span> Importar CSV
+                <span class="material-icons-round">upload_file</span> Importar Excel
               </button>
             </div>
           </div>
@@ -938,7 +938,7 @@ try {
 </div>
 
 <!-- ══════════════════════════════════════════════════
-     MODAL: Importar inventario CSV
+     MODAL: Importar inventario Excel
 ══════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-importar-inv">
   <div class="modal-box modal-importar-box">
@@ -951,7 +951,7 @@ try {
 
       <div class="imp-template-row">
         <span class="material-icons-round imp-info-icon">info</span>
-        <span class="imp-info-txt">Columnas requeridas: <strong>nombre</strong>, marca_compatible, modelo_compatible, precio_venta, cantidad. Se aceptan archivos <strong>.csv</strong> y <strong>.xlsx</strong> (Excel).</span>
+        <span class="imp-info-txt">Columnas requeridas: <strong>nombre</strong>, marca_compatible, modelo_compatible, precio_venta, cantidad. Se aceptan archivos <strong>.xlsx</strong> (Excel) y .csv.</span>
         <a class="imp-template-link" id="btn-descargar-plantilla" href="#">
           <span class="material-icons-round">download</span> Descargar plantilla
         </a>
@@ -961,7 +961,7 @@ try {
         <span class="material-icons-round imp-upload-icon">upload_file</span>
         <p class="imp-drop-txt">Arrastra tu archivo aquí o <label class="imp-file-label" for="imp-file-input">selecciona archivo</label></p>
         <input type="file" id="imp-file-input" accept=".csv,.txt,.xlsx,.xls" class="imp-file-hidden">
-        <p class="imp-drop-hint">Archivos .csv o .xlsx (Excel) — máximo 2 MB</p>
+        <p class="imp-drop-hint">Archivos .xlsx (Excel) o .csv — máximo 5 MB</p>
       </div>
 
       <div class="imp-preview-wrap hidden" id="imp-preview-wrap">

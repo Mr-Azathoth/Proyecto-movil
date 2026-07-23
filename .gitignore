@@ -15,6 +15,10 @@ desktop.ini
 # ── Claude Code (sesiones internas) ──────────────────────────
 .claude/
 
-# ── Dependencias (por si se agregan) ─────────────────────────
+# ── Dependencias ─────────────────────────────────────────────
 vendor/
 node_modules/
+
+# ── Composer binario (no va al repo) ─────────────────────────
+composer.phar
+composer-setup.php

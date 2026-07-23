@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 header('Content-Type: application/json; charset=utf-8');
 guard();
 if (!isAdmin()) { http_response_code(403); json_err('Acceso denegado.'); }
@@ -17,41 +21,47 @@ $tmp  = $_FILES['archivo']['tmp_name'];
 $name = $_FILES['archivo']['name'];
 $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 
-if (!in_array($ext, ['csv', 'txt'], true)) {
-    json_err('Solo se aceptan archivos CSV (.csv).');
+if (!in_array($ext, ['csv', 'txt', 'xlsx'], true)) {
+    json_err('Solo se aceptan archivos .xlsx o .csv.');
 }
 
-if ($_FILES['archivo']['size'] > 2 * 1024 * 1024) {
-    json_err('El archivo no puede superar 2 MB.');
+if ($_FILES['archivo']['size'] > 5 * 1024 * 1024) {
+    json_err('El archivo no puede superar 5 MB.');
 }
 
-// ── Leer y normalizar contenido ──────────────────────────────────────────────
-$content = file_get_contents($tmp);
-if ($content === false) json_err('No se pudo leer el archivo.');
+// ── Parsear según tipo ────────────────────────────────────────────────────────
+$dataRows = []; // array de arrays; primer elemento = fila de encabezados
 
-// Quitar BOM UTF-8 si existe
-if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
-    $content = substr($content, 3);
+if ($ext === 'xlsx') {
+    $spreadsheet = IOFactory::load($tmp);
+    $sheet       = $spreadsheet->getActiveSheet();
+    $raw         = $sheet->toArray(null, true, true, false);
+    // Filtrar filas completamente vacías
+    $dataRows = array_values(array_filter($raw, fn($r) =>
+        count(array_filter($r, fn($c) => trim((string)$c) !== '')) > 0
+    ));
+} else {
+    $content = file_get_contents($tmp);
+    if ($content === false) json_err('No se pudo leer el archivo.');
+
+    if (substr($content, 0, 3) === "\xEF\xBB\xBF") $content = substr($content, 3);
+    $content = str_replace(["\r\n", "\r"], "\n", $content);
+
+    $firstLine = strtok($content, "\n");
+    $delim     = substr_count($firstLine, ';') >= substr_count($firstLine, ',') ? ';' : ',';
+
+    foreach (array_filter(explode("\n", $content), fn($l) => trim($l) !== '') as $line) {
+        $dataRows[] = str_getcsv($line, $delim);
+    }
 }
 
-// Normalizar saltos de línea (\r\n y \r sólo → \n)
-$content = str_replace(["\r\n", "\r"], "\n", $content);
+if (empty($dataRows)) json_err('El archivo está vacío.');
 
-// ── Detectar delimitador ──────────────────────────────────────────────────────
-$firstLine = strtok($content, "\n");
-$delim = substr_count($firstLine, ';') >= substr_count($firstLine, ',') ? ';' : ',';
-
-// ── Parsear líneas ────────────────────────────────────────────────────────────
-$lines = array_values(array_filter(
-    explode("\n", $content),
-    fn($l) => trim($l) !== ''
-));
-
-if (empty($lines)) json_err('El archivo está vacío.');
-
-$header = str_getcsv(array_shift($lines), $delim);
-$header = array_map(fn($h) => strtolower(trim(str_replace([' ', '-'], '_', $h))), $header);
-// Limpiar BOM del primer encabezado (puede venir de archivos exportados por Excel)
+// ── Mapear columnas ───────────────────────────────────────────────────────────
+$header = array_map(
+    fn($h) => strtolower(trim(str_replace([' ', '-'], '_', (string)$h))),
+    $dataRows[0]
+);
 if (isset($header[0])) $header[0] = ltrim($header[0], "\xEF\xBB\xBF\xFF\xFE");
 
 $colId     = array_search('id', $header);
@@ -61,7 +71,6 @@ $colModelo = array_search('modelo_compatible', $header);
 $colPrecio = array_search('precio_venta', $header);
 $colStock  = array_search('cantidad', $header);
 
-// Aceptar alias comunes
 if ($colMarca  === false) $colMarca  = array_search('marca', $header);
 if ($colModelo === false) $colModelo = array_search('modelo', $header);
 if ($colPrecio === false) $colPrecio = array_search('precio', $header);
@@ -72,12 +81,12 @@ if ($colNombre === false) {
 }
 
 // ── Procesar filas ────────────────────────────────────────────────────────────
-$inserted    = 0;
-$updated     = 0;
-$skipped     = 0;
-$errors      = [];
-$cambios     = [];
-$rowNum      = 1;
+$inserted = 0;
+$updated  = 0;
+$skipped  = 0;
+$errors   = [];
+$cambios  = [];
+$rowNum   = 1;
 
 $stmtInsert = $db->prepare(
     "INSERT INTO inventario (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad)
@@ -95,11 +104,9 @@ $stmtFetch = $db->prepare(
 
 $db->beginTransaction();
 try {
-    foreach ($lines as $line) {
+    foreach (array_slice($dataRows, 1) as $row) {
         $rowNum++;
-        $row = str_getcsv($line, $delim);
-
-        $nombre = trim($row[$colNombre] ?? '');
+        $nombre = trim((string)($row[$colNombre] ?? ''));
         if ($nombre === '') { $skipped++; continue; }
 
         if (strlen($nombre) > 100) {
@@ -109,10 +116,10 @@ try {
         }
 
         $id     = $colId !== false ? (int)($row[$colId] ?? 0) : 0;
-        $marca  = $colMarca  !== false ? trim($row[$colMarca]  ?? '') : '';
-        $modelo = $colModelo !== false ? trim($row[$colModelo] ?? '') : '';
-        $precio = $colPrecio !== false ? max(0, (int) preg_replace('/[^0-9]/', '', $row[$colPrecio] ?? '0')) : 0;
-        $stock  = $colStock  !== false ? max(0, (int) preg_replace('/[^0-9]/', '', $row[$colStock]  ?? '0')) : 0;
+        $marca  = $colMarca  !== false ? trim((string)($row[$colMarca]  ?? '')) : '';
+        $modelo = $colModelo !== false ? trim((string)($row[$colModelo] ?? '')) : '';
+        $precio = $colPrecio !== false ? max(0, (int) preg_replace('/[^0-9]/', '', (string)($row[$colPrecio] ?? '0'))) : 0;
+        $stock  = $colStock  !== false ? max(0, (int) preg_replace('/[^0-9]/', '', (string)($row[$colStock]  ?? '0'))) : 0;
 
         try {
             if ($id > 0) {
@@ -120,9 +127,9 @@ try {
                 $actual = $stmtFetch->fetch();
 
                 if ($actual) {
-                    $labels  = ['nombre' => 'Nombre', 'marca_compatible' => 'Marca', 'modelo_compatible' => 'Modelo', 'precio_venta' => 'Precio', 'cantidad' => 'Stock'];
-                    $nuevos  = ['nombre' => $nombre, 'marca_compatible' => $marca, 'modelo_compatible' => $modelo, 'precio_venta' => $precio, 'cantidad' => $stock];
-                    $diffs   = [];
+                    $labels = ['nombre' => 'Nombre', 'marca_compatible' => 'Marca', 'modelo_compatible' => 'Modelo', 'precio_venta' => 'Precio', 'cantidad' => 'Stock'];
+                    $nuevos = ['nombre' => $nombre, 'marca_compatible' => $marca, 'modelo_compatible' => $modelo, 'precio_venta' => $precio, 'cantidad' => $stock];
+                    $diffs  = [];
                     foreach ($labels as $field => $label) {
                         if ((string)($actual[$field] ?? '') !== (string)$nuevos[$field]) {
                             $diffs[] = "$label: «{$actual[$field]}» → «{$nuevos[$field]}»";
@@ -130,14 +137,11 @@ try {
                     }
                     $stmtUpdate->execute([$nombre, $marca, $modelo, $precio, $stock, $id, $eid]);
                     $updated++;
-                    if ($diffs) {
-                        $cambios[] = ['id' => $id, 'nombre' => $nombre, 'diffs' => $diffs];
-                    }
+                    if ($diffs) $cambios[] = ['id' => $id, 'nombre' => $nombre, 'diffs' => $diffs];
                     continue;
                 }
             }
 
-            // Sin id o id no encontrado → insertar como nuevo
             $slug   = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $nombre));
             $prefix = substr($slug, 0, 6) ?: 'REP';
             $codigo = $prefix . '-' . substr(uniqid(), -5);
@@ -155,7 +159,7 @@ try {
 }
 
 if ($inserted > 0 || $updated > 0) {
-    log_accion($db, 'importacion_inv_csv', null);
+    log_accion($db, 'importacion_inv_xlsx', null);
 }
 
 json_ok([

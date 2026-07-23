@@ -1,5 +1,12 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx as XlsxWriter;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+
 guard();
 if (!isAdmin()) { http_response_code(403); exit('Sin permisos.'); }
 
@@ -33,6 +40,54 @@ $rows = $s->fetchAll();
 
 function hesc(string $s): string { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 function fmtNum(int $n): string  { return '$' . number_format($n, 0, ',', '.'); }
+
+// ─── XLSX ─────────────────────────────────────────────────────────────────────
+if ($formato === 'xlsx') {
+    log_accion($db, 'exportacion_inv_xlsx', null);
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Inventario');
+
+    // Encabezados
+    $cols = ['A' => 'id', 'B' => 'nombre', 'C' => 'marca_compatible', 'D' => 'modelo_compatible', 'E' => 'precio_venta', 'F' => 'cantidad'];
+    foreach ($cols as $col => $label) {
+        $sheet->setCellValue("{$col}1", $label);
+    }
+
+    // Estilo encabezado
+    $sheet->getStyle('A1:F1')->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E293B']],
+        'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
+    ]);
+
+    // Datos
+    $i = 2;
+    foreach ($rows as $r) {
+        $sheet->setCellValue("A$i", (int)$r['id_repuesto']);
+        $sheet->setCellValue("B$i", $r['nombre']);
+        $sheet->setCellValue("C$i", $r['marca_compatible'] ?: '');
+        $sheet->setCellValue("D$i", $r['modelo_compatible'] ?: '');
+        $sheet->setCellValue("E$i", (int)$r['precio_venta']);
+        $sheet->setCellValue("F$i", (int)$r['cantidad']);
+        $i++;
+    }
+
+    // Ancho automático
+    foreach (array_keys($cols) as $col) {
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+    $sheet->freezePane('A2');
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment; filename="inventario_' . date('Y-m-d') . '.xlsx"');
+    header('Cache-Control: no-cache');
+
+    $writer = new XlsxWriter($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
 
 // ─── CSV ──────────────────────────────────────────────────────────────────────
 if ($formato === 'csv') {
