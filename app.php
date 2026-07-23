@@ -321,6 +321,7 @@ try {
           <table class="tbl">
             <thead>
               <tr>
+                <th style="width:52px;color:var(--txt2);font-size:0.8em">ID</th>
                 <th class="th-sortable" data-sort-inv="nombre">Repuesto <span class="sort-icon"></span></th>
                 <th class="th-sortable" data-sort-inv="marca">Marca compatible <span class="sort-icon"></span></th>
                 <th class="th-sortable" data-sort-inv="modelo">Modelo compatible <span class="sort-icon"></span></th>

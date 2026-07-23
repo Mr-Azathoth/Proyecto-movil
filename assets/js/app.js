@@ -728,6 +728,7 @@ function _buildInventarioRow(rep) {
     </div>
   </td>`;
   return `<tr data-inv-id="${rep.id_repuesto}">
+    <td style="color:var(--txt2);font-size:0.8em">${rep.id_repuesto}</td>
     <td><strong>${esc(rep.nombre)}</strong></td>
     <td>${esc(rep.marca_compatible||'—')}</td>
     <td>${esc(rep.modelo_compatible||'—')}</td>
