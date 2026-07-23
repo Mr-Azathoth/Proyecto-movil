@@ -38,6 +38,7 @@ foreach ([
 }
 
 chk('Sesión activa', fn() => logueado() ? null : throw new \Exception('Sin sesión'), $checks, $allOk);
+chk('PHP version', fn() => PHP_VERSION, $checks, $allOk);
 
 // Si el cliente pide JSON (ej. curl), retornar JSON
 if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
