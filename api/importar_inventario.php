@@ -52,6 +52,7 @@ if (empty($lines)) json_err('El archivo está vacío.');
 $header = str_getcsv(array_shift($lines), $delim);
 $header = array_map(fn($h) => strtolower(trim(str_replace([' ', '-'], '_', $h))), $header);
 
+$colId     = array_search('id', $header);
 $colNombre = array_search('nombre', $header);
 $colMarca  = array_search('marca_compatible', $header);
 $colModelo = array_search('modelo_compatible', $header);
@@ -69,14 +70,24 @@ if ($colNombre === false) {
 }
 
 // ── Procesar filas ────────────────────────────────────────────────────────────
-$inserted = 0;
-$skipped  = 0;
-$errors   = [];
-$rowNum   = 1;
+$inserted    = 0;
+$updated     = 0;
+$skipped     = 0;
+$errors      = [];
+$rowNum      = 1;
 
-$stmt = $db->prepare("INSERT INTO inventario
-    (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad)
-    VALUES (?, ?, ?, ?, ?, ?, ?)");
+$stmtInsert = $db->prepare(
+    "INSERT INTO inventario (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad)
+     VALUES (?, ?, ?, ?, ?, ?, ?)"
+);
+$stmtUpdate = $db->prepare(
+    "UPDATE inventario
+        SET nombre = ?, marca_compatible = ?, modelo_compatible = ?, precio_venta = ?, cantidad = ?, deleted_at = NULL
+      WHERE id_repuesto = ? AND id_empresa = ?"
+);
+$stmtExists = $db->prepare(
+    "SELECT id_repuesto FROM inventario WHERE id_repuesto = ? AND id_empresa = ? LIMIT 1"
+);
 
 $db->beginTransaction();
 try {
@@ -93,20 +104,32 @@ try {
             continue;
         }
 
+        $id     = $colId !== false ? (int)($row[$colId] ?? 0) : 0;
         $marca  = $colMarca  !== false ? trim($row[$colMarca]  ?? '') : '';
         $modelo = $colModelo !== false ? trim($row[$colModelo] ?? '') : '';
         $precio = $colPrecio !== false ? max(0, (int) preg_replace('/[^0-9]/', '', $row[$colPrecio] ?? '0')) : 0;
         $stock  = $colStock  !== false ? max(0, (int) preg_replace('/[^0-9]/', '', $row[$colStock]  ?? '0')) : 0;
 
-        $slug   = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $nombre));
-        $prefix = substr($slug, 0, 6) ?: 'REP';
-        $codigo = $prefix . '-' . substr(uniqid(), -5);
-
         try {
-            $stmt->execute([$eid, $codigo, $nombre, $marca, $modelo, $precio, $stock]);
+            if ($id > 0) {
+                $stmtExists->execute([$id, $eid]);
+                $existe = $stmtExists->fetchColumn();
+
+                if ($existe) {
+                    $stmtUpdate->execute([$nombre, $marca, $modelo, $precio, $stock, $id, $eid]);
+                    $updated++;
+                    continue;
+                }
+            }
+
+            // Sin id o id no encontrado → insertar como nuevo
+            $slug   = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $nombre));
+            $prefix = substr($slug, 0, 6) ?: 'REP';
+            $codigo = $prefix . '-' . substr(uniqid(), -5);
+            $stmtInsert->execute([$eid, $codigo, $nombre, $marca, $modelo, $precio, $stock]);
             $inserted++;
         } catch (\PDOException $e) {
-            $errors[] = "Fila $rowNum: error al guardar «$nombre».";
+            $errors[] = "Fila $rowNum: error al guardar el repuesto.";
             $skipped++;
         }
     }
@@ -116,12 +139,13 @@ try {
     json_err('Error al procesar el archivo. Intente nuevamente.');
 }
 
-if ($inserted > 0) {
+if ($inserted > 0 || $updated > 0) {
     log_accion($db, 'importacion_inv_csv', null);
 }
 
 json_ok([
-    'insertados' => $inserted,
-    'omitidos'   => $skipped,
-    'errores'    => $errors,
+    'insertados'   => $inserted,
+    'actualizados' => $updated,
+    'omitidos'     => $skipped,
+    'errores'      => $errors,
 ]);

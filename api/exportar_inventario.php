@@ -17,7 +17,7 @@ $sort_col = $valid_sort[$_GET['sort_col'] ?? ''] ?? 'nombre';
 $sort_dir = ($_GET['sort_dir'] ?? '') === 'desc' ? 'DESC' : 'ASC';
 
 $sql    = "SELECT id_repuesto, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad
-             FROM inventario WHERE id_empresa = ?";
+             FROM inventario WHERE id_empresa = ? AND deleted_at IS NULL";
 $params = [$eid];
 
 if ($q) {
@@ -41,14 +41,17 @@ if ($formato === 'csv') {
     header('Content-Disposition: attachment; filename="inventario_' . date('Y-m-d') . '.csv"');
     header('Cache-Control: no-cache');
 
+    $csvSafe = fn(string $v): string => preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
+
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['Repuesto', 'Marca compatible', 'Modelo compatible', 'Precio venta', 'Stock'], ';');
+    fputcsv($out, ['id', 'nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad'], ';');
     foreach ($rows as $r) {
         fputcsv($out, [
-            $r['nombre'],
-            $r['marca_compatible'] ?: '—',
-            $r['modelo_compatible'] ?: '—',
+            $r['id_repuesto'],
+            $csvSafe($r['nombre']),
+            $csvSafe($r['marca_compatible'] ?: ''),
+            $csvSafe($r['modelo_compatible'] ?: ''),
             $r['precio_venta'],
             $r['cantidad'],
         ], ';');

@@ -2554,9 +2554,12 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
       el.classList.remove('hidden', 'ok', 'err');
       if (j.ok) {
         el.classList.add('ok');
-        el.innerHTML = '<strong>' + j.data.insertados + '</strong> repuesto' + (j.data.insertados !== 1 ? 's' : '') + ' importado' + (j.data.insertados !== 1 ? 's' : '') + ' correctamente.' +
+        var partes = [];
+        if (j.data.insertados) partes.push('<strong>' + j.data.insertados + '</strong> nuevo' + (j.data.insertados !== 1 ? 's' : ''));
+        if (j.data.actualizados) partes.push('<strong>' + j.data.actualizados + '</strong> actualizado' + (j.data.actualizados !== 1 ? 's' : ''));
+        el.innerHTML = (partes.length ? partes.join(', ') + ' correctamente.' : 'Sin cambios.') +
           (j.data.omitidos ? ' <span style="color:var(--txt2)">(' + j.data.omitidos + ' filas omitidas)</span>' : '') +
-          (j.data.errores?.length ? '<br><small>' + j.data.errores.join('<br>') + '</small>' : '');
+          (j.data.errores?.length ? '<br><small>' + j.data.errores.map(e => esc(e)).join('<br>') + '</small>' : '');
         loadInventario();
         // Refrescar cache de repuestos para el modal de nuevo servicio
         apiFetch('/reparo/api/inventario.php').then(r => r.json()).then(ji => {
