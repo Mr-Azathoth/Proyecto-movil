@@ -80,9 +80,11 @@ if ($formato === 'xlsx') {
     }
     $sheet->freezePane('A2');
 
+    while (ob_get_level()) ob_end_clean();
+
     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     header('Content-Disposition: attachment; filename="inventario_' . date('Y-m-d') . '.xlsx"');
-    header('Cache-Control: no-cache');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
 
     $writer = new XlsxWriter($spreadsheet);
     $writer->save('php://output');
