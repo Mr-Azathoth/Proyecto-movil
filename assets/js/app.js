@@ -472,6 +472,7 @@ function openDetalle(rep) {
   document.getElementById('det-imei').textContent    = `IMEI: ${rep.imei||'—'} · Clave: ${rep.pass_ingreso||'—'}`;
   document.getElementById('det-daño').textContent    = rep.dano_ingreso;
   document.getElementById('det-tecnico').textContent = rep.ingresado_por;
+  document.getElementById('det-codigo').textContent  = rep.codigo_seguimiento || '—';
   document.getElementById('det-hidden-id').value     = rep.id_ingreso;
   document.getElementById('det-status').value        = rep.status;
   document.getElementById('det-obs').value           = '';
