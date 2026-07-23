@@ -213,7 +213,7 @@ try {
       <div class="controls">
         <div class="search-wrap">
           <span class="material-icons-round search-ic">search</span>
-          <input id="search-bar" type="search" style="display:none" class="search-input" placeholder="Buscar por cliente, modelo, # orden..." autocomplete="off" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="other">
+          <input id="search-bar" type="search" name="buscar-rep" style="display:none" class="search-input" placeholder="Buscar por cliente, modelo, # orden..." autocomplete="nope" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="search">
         </div>
         <input type="hidden" id="filter-status" value="">
         <div class="inv-per-page-wrap">
@@ -301,7 +301,7 @@ try {
       <div class="controls">
         <div class="search-wrap">
           <span class="material-icons-round search-ic">search</span>
-          <input id="search-inv" type="search" class="search-input" placeholder="Buscar por nombre, marca o modelo..." autocomplete="off" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="other">
+          <input id="search-inv" type="search" name="buscar-inv" class="search-input" placeholder="Buscar por nombre, marca o modelo..." autocomplete="nope" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="search">
         </div>
         <div class="inv-per-page-wrap">
           <label for="inv-per-page">Mostrar</label>

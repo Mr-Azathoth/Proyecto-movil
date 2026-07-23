@@ -803,7 +803,7 @@ function _buildInventarioRow(rep) {
   const actions = `<td class="action-col">
     <div class="row-actions">
       <button type="button" class="btn-qr-row btn-inv-qr" data-id="${rep.id_repuesto}" title="Ver QR">
-        <span class="material-icons-round">qr_code</span> QR
+        <span class="material-icons-round">qr_code</span>
       </button>
       ${isAdmin ? `<button type="button" class="btn-row-action btn-inv-edit" title="Editar repuesto">
         <span class="material-icons-round">edit</span>
@@ -930,7 +930,7 @@ async function alterStock(id, qty) {
     const row = document.querySelector(`#tbl-inventario tr[data-inv-id="${id}"]`);
     if (!row) { loadInventario(); return; }
 
-    const cell  = row.querySelector('td:nth-child(5) strong');
+    const cell  = row.querySelector('td:nth-child(6) strong');
     cell.textContent = `${qty}`;
     cell.style.color = qty > 0 ? '#e6edf3' : '#f87171';
 
