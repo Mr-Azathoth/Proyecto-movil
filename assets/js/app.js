@@ -578,41 +578,49 @@ function _tlChip(icon, label, content) {
   </div>`;
 }
 
+function _tlParseLine(p, rows) {
+  const valM = p.match(/^Valor modificado:\s*(.+?)\s*→\s*(.+)$/);
+  if (valM) {
+    rows.push(_tlChip('payments', 'Valor',
+      `<span class="tl-mono">${esc(valM[1].trim())} <span class="tl-arrow">→</span> ${esc(valM[2].trim())}</span>`));
+    return;
+  }
+  const repM = p.match(/^(Repuesto (?:agregado|removido|asignado|cambiado|descontado[^:]*))\s*:\s*(.+)$/);
+  if (repM) {
+    rows.push(_tlChip('inventory_2', 'Repuesto', esc(repM[2].trim())));
+    return;
+  }
+  const notaM = p.match(/^Nota:\s*(.+)$/);
+  if (notaM) {
+    rows.push(_tlChip('notes', 'Nota', esc(notaM[1].trim())));
+    return;
+  }
+  rows.push(_tlChip('notes', 'Nota', esc(p)));
+}
+
 function _tlParseTexto(texto) {
   const rows = [];
-  // Separar por \n; las entradas viejas pueden tener " · " en la primera línea
   const lines = texto.split('\n');
   for (const rawLine of lines) {
-    // Dentro de cada línea puede haber " · " en entradas antiguas (pre-chip format)
-    const parts = rawLine.split(' · ');
-    for (const part of parts) {
-      const p = part.trim();
-      if (!p) continue;
-      const estadoM = p.match(/^Estado:\s*(.+?)\s*→\s*(.+)$/);
-      if (estadoM) {
+    const p = rawLine.trim();
+    if (!p) continue;
+    // Estado: maneja formato nuevo y antiguo (viejo tenía " · resto" tras el cambio)
+    if (p.startsWith('Estado:')) {
+      const afterTag = p.replace(/^Estado:\s*/, '');
+      const arrowIdx = afterTag.indexOf(' → ');
+      if (arrowIdx >= 0) {
+        const antes = afterTag.substring(0, arrowIdx).trim();
+        const afterArrow = afterTag.substring(arrowIdx + 3);
+        const dotIdx = afterArrow.indexOf(' · ');
+        const despues = (dotIdx >= 0 ? afterArrow.substring(0, dotIdx) : afterArrow).trim();
+        const remainder = dotIdx >= 0 ? afterArrow.substring(dotIdx + 3).trim() : '';
         rows.push(_tlChip('swap_horiz', 'Estado',
-          `${esc(estadoM[1].trim())} <span class="tl-arrow">→</span> ${esc(estadoM[2].trim())}`));
+          `${esc(antes)} <span class="tl-arrow">→</span> ${esc(despues)}`));
+        if (remainder) _tlParseLine(remainder, rows);
         continue;
       }
-      const valM = p.match(/^Valor modificado:\s*(.+?)\s*→\s*(.+)$/);
-      if (valM) {
-        rows.push(_tlChip('payments', 'Valor',
-          `<span class="tl-mono">${esc(valM[1].trim())} <span class="tl-arrow">→</span> ${esc(valM[2].trim())}</span>`));
-        continue;
-      }
-      const repM = p.match(/^(Repuesto (?:agregado|removido|asignado|cambiado|descontado[^:]*))\s*:\s*(.+)$/);
-      if (repM) {
-        rows.push(_tlChip('inventory_2', 'Repuesto', esc(repM[2].trim())));
-        continue;
-      }
-      const notaM = p.match(/^Nota:\s*(.+)$/);
-      if (notaM) {
-        rows.push(_tlChip('notes', 'Nota', esc(notaM[1].trim())));
-        continue;
-      }
-      // Texto libre (observaciones manuales o auto-generadas antiguas)
-      rows.push(_tlChip('notes', 'Nota', esc(p)));
     }
+    _tlParseLine(p, rows);
   }
   return rows.length ? rows.join('') : `<p class="tl-txt">${esc(texto)}</p>`;
 }
