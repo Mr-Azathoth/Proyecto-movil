@@ -655,14 +655,15 @@ async function submitNuevo(e) {
       // Construir enlace WhatsApp
       const waBtn = document.getElementById('ps-wa-btn');
       if (waBtn && codigo) {
-        const tel   = (document.querySelector('[name="telefono_cliente"]')?.value || '').replace(/\D/g, '');
+        const rawTel = (document.querySelector('[name="telefono_cliente"]')?.value || '').replace(/\D/g, '');
+        const tel    = /^56/.test(rawTel) ? rawTel : /^9\d{8}$/.test(rawTel) ? '56' + rawTel : rawTel;
         const nombre = document.querySelector('[name="nombre_cliente"]')?.value?.trim() || 'cliente';
-        const local = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
-        const url   = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
-        const msg   = `Hola ${nombre}! Tu equipo ingresó a *${local}*.\n` +
-                      `Código de seguimiento: *${codigo}*\n` +
-                      `Consulta el estado en: ${url}`;
-        const wa    = tel.length >= 11
+        const local  = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+        const url    = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
+        const msg    = `Hola ${nombre}! Tu equipo ingresó a *${local}*.\n` +
+                       `Código de seguimiento: *${codigo}*\n` +
+                       `Consulta el estado en: ${url}`;
+        const wa     = tel.length >= 11
           ? `https://wa.me/${tel}?text=${encodeURIComponent(msg)}`
           : `https://wa.me/?text=${encodeURIComponent(msg)}`;
         waBtn.href = wa;

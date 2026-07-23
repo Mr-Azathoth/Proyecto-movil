@@ -58,7 +58,7 @@ if ($codigo !== '') {
                     r.dano_ingreso, r.status, r.fecha_ingreso, r.obs, r.ingresado_por, r.valor_ingreso,
                     r.id_empresa
                FROM reparaciones r
-              WHERE r.codigo_seguimiento = ? LIMIT 1"
+              WHERE r.codigo_seguimiento = ? AND r.deleted_at IS NULL LIMIT 1"
         );
         $st->execute([$codigo]);
         $orden = $st->fetch();
