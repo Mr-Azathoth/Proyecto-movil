@@ -16,6 +16,7 @@ $eid = eid();
 $formato  = $_GET['formato'] ?? 'csv';
 $q        = trim($_GET['q']  ?? '');
 $valid_sort = [
+    'id'     => 'id_repuesto',
     'nombre' => 'nombre', 'marca' => 'marca_compatible',
     'modelo' => 'modelo_compatible', 'precio' => 'precio_venta',
     'stock'  => 'cantidad',
