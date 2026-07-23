@@ -127,11 +127,14 @@ try {
                 $actual = $stmtFetch->fetch();
 
                 if ($actual) {
+                    $numFields = ['precio_venta', 'cantidad'];
                     $labels = ['nombre' => 'Nombre', 'marca_compatible' => 'Marca', 'modelo_compatible' => 'Modelo', 'precio_venta' => 'Precio', 'cantidad' => 'Stock'];
                     $nuevos = ['nombre' => $nombre, 'marca_compatible' => $marca, 'modelo_compatible' => $modelo, 'precio_venta' => $precio, 'cantidad' => $stock];
                     $diffs  = [];
                     foreach ($labels as $field => $label) {
-                        if ((string)($actual[$field] ?? '') !== (string)$nuevos[$field]) {
+                        $vActual = in_array($field, $numFields) ? (int)($actual[$field] ?? 0) : trim((string)($actual[$field] ?? ''));
+                        $vNuevo  = in_array($field, $numFields) ? (int)$nuevos[$field]         : trim((string)$nuevos[$field]);
+                        if ($vActual !== $vNuevo) {
                             $diffs[] = "$label: «{$actual[$field]}» → «{$nuevos[$field]}»";
                         }
                     }

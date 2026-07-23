@@ -2666,19 +2666,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     btn.disabled = true;
     btn.textContent = 'Importando...';
 
-    var fileToSend;
-    if (_sourceIsXlsx) {
-      var csvContent = _parsedRows.map(function(row) {
-        return row.map(function(cell) {
-          var s = String(cell == null ? '' : cell);
-          if (s.includes(';') || s.includes('"') || s.includes('\n')) s = '"' + s.replace(/"/g, '""') + '"';
-          return s;
-        }).join(';');
-      }).join('\n');
-      fileToSend = new File([csvContent], 'inventario.csv', { type: 'text/csv;charset=utf-8;' });
-    } else {
-      fileToSend = fileInput.files[0];
-    }
+    var fileToSend = fileInput.files[0];
     var formData = new FormData();
     formData.append('archivo', fileToSend);
 
