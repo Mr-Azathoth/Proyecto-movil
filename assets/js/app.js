@@ -1142,7 +1142,7 @@ let   _repPage          = 1;
 const _invMap           = new Map(); // id_repuesto → objeto repuesto completo
 let   _sortCol          = null;      // columna activa servicios: 'id' | 'cliente' | null
 let   _sortDir          = 'asc';    // 'asc' | 'desc'
-let   _invSortCol       = null;      // columna activa inventario
+let   _invSortCol       = 'id';      // columna activa inventario
 let   _invSortDir       = 'asc';
 let   _invPageSize      = 25;        // 0 = todos
 let   _invPage          = 1;
