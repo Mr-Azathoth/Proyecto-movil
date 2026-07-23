@@ -2704,6 +2704,9 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
         if (j.data.errores?.length) html += '<br><small>' + j.data.errores.map(e => esc(e)).join('<br>') + '</small>';
         el.innerHTML = html;
         loadInventario();
+        closeModal('modal-importar-inv');
+        var toastMsg = partes.length ? 'Importación completada: ' + partes.map(function(p) { return p.replace(/<[^>]+>/g, ''); }).join(', ') + '.' : 'Sin cambios.';
+        toast(toastMsg, 'ok');
         // Refrescar cache de repuestos para el modal de nuevo servicio
         apiFetch('/reparo/api/inventario.php').then(r => r.json()).then(ji => {
           _repuestosCache = (ji.data || []).map(i => ({
