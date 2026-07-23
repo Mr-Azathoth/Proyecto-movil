@@ -202,12 +202,16 @@ if ($method === 'PUT') {
         }
 
         // Preparar texto de cambio de valor (si aplica)
+        // Usar valor_original (al abrir modal) como base para detectar el cambio total
         $val_txt = '';
-        if (isAdmin() && isset($in['valor']) && $nuevo_valor !== (int)$row['valor_ingreso']) {
-            $v_ant   = '$' . number_format((int)$row['valor_ingreso'], 0, ',', '.');
-            $v_new   = '$' . number_format($nuevo_valor, 0, ',', '.');
-            $val_txt = "Valor modificado: {$v_ant} → {$v_new}";
-            log_accion($db, 'cambio_valor', $id);
+        if (isAdmin() && isset($in['valor'])) {
+            $base_valor = isset($in['valor_original']) ? (int)$in['valor_original'] : (int)$row['valor_ingreso'];
+            if ($nuevo_valor !== $base_valor) {
+                $v_ant   = '$' . number_format($base_valor, 0, ',', '.');
+                $v_new   = '$' . number_format($nuevo_valor, 0, ',', '.');
+                $val_txt = "Valor modificado: {$v_ant} → {$v_new}";
+                log_accion($db, 'cambio_valor', $id);
+            }
         }
 
         // Preparar texto de cambio de repuesto (si aplica)
