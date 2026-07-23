@@ -112,6 +112,10 @@ if ($method === 'POST') {
     $qv->execute([$id_reparacion, $eid]);
     $nuevo_valor = (int) $qv->fetchColumn();
 
+    $obs_rep = "Repuesto agregado: {$nombre_snap}" . ($cantidad > 1 ? " ×{$cantidad}" : '');
+    $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
+       ->execute([$eid, $id_reparacion, $obs_rep, uname()]);
+
     log_accion($db, 'repuesto_agregado', $id_reparacion);
 
     json_ok([
@@ -154,6 +158,10 @@ if ($method === 'DELETE') {
     $qv->execute([(int) $row['id_reparacion'], $eid]);
     $nuevo_valor = $qv->fetchColumn();
     if ($nuevo_valor === false) json_err('Reparación no encontrada.', 404);
+
+    $obs_del = "Repuesto removido: {$row['nombre_snap']}" . ((int)$row['cantidad'] > 1 ? " ×{$row['cantidad']}" : '');
+    $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
+       ->execute([$eid, (int)$row['id_reparacion'], $obs_del, uname()]);
 
     log_accion($db, 'repuesto_eliminado', (int) $row['id_reparacion']);
 
