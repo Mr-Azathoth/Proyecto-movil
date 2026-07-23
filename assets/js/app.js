@@ -2240,19 +2240,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderMarcas(data) {
     chartMarcas = destroyChart(chartMarcas);
     var ctx = document.getElementById('chart-marcas').getContext('2d');
-    var palette = [COLORS.blue, COLORS.green, COLORS.purple, COLORS.orange, COLORS.yellow, COLORS.gray, '#60a5fa', '#34d399'];
+    var blueRamp = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#eff6ff'];
     chartMarcas = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: data.map(function(r){ return r.marca; }),
-        datasets: [{ data: data.map(function(r){ return parseInt(r.total); }), backgroundColor: data.map(function(_, i){ return palette[i % palette.length] + 'cc'; }), borderRadius: 4 }]
+        datasets: [{ data: data.map(function(r){ return parseInt(r.total); }), backgroundColor: data.map(function(_, i){ return blueRamp[Math.min(i, blueRamp.length - 1)]; }), borderRadius: 4 }]
       },
       options: {
         indexAxis: 'y',
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 } }, beginAtZero: true },
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b949e', font: { size: 11 }, stepSize: 1, callback: function(v) { return Number.isInteger(v) ? v : ''; } }, beginAtZero: true },
           y: { grid: { display: false }, ticks: { color: '#e6edf3', font: { size: 12 } } }
         }
       }
@@ -2276,12 +2276,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderModelos(data) {
     chartModelos = destroyChart(chartModelos);
     var ctx = document.getElementById('chart-modelos').getContext('2d');
-    var palette = [COLORS.blue, COLORS.green, COLORS.purple, COLORS.orange, COLORS.yellow, COLORS.gray, '#60a5fa', '#34d399'];
+    var blueRamp = ['#1d4ed8','#2563eb','#3b82f6','#60a5fa','#93c5fd','#bfdbfe','#dbeafe','#eff6ff'];
     chartModelos = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: data.map(function(r){ return r.modelo; }),
-        datasets: [{ data: data.map(function(r){ return parseInt(r.total); }), backgroundColor: data.map(function(_, i){ return palette[i % palette.length] + 'cc'; }), borderRadius: 4 }]
+        datasets: [{ data: data.map(function(r){ return parseInt(r.total); }), backgroundColor: data.map(function(_, i){ return blueRamp[Math.min(i, blueRamp.length - 1)]; }), borderRadius: 4 }]
       },
       options: {
         indexAxis: 'y',
