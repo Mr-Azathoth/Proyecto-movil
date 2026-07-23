@@ -822,8 +822,8 @@ try {
             <p><span class="info-lbl">Cliente</span><span class="info-val" id="det-cliente"></span></p>
             <p><span class="info-lbl">Teléfono</span><span class="info-val" id="det-tel"></span></p>
             <p><span class="info-lbl">Equipo</span><span class="info-val" id="det-equipo"></span></p>
-            <p><span class="info-lbl">Ingresado por</span><span class="info-val" id="det-tecnico"></span></p>
             <p><span class="info-lbl">Código seguimiento</span><span class="info-val" id="det-codigo" style="font-family:monospace;letter-spacing:0.08em"></span></p>
+            <p class="info-full"><span class="info-lbl">Ingresado por</span><span class="info-val" id="det-tecnico"></span></p>
             <p class="info-full"><span class="info-lbl">Falla reportada</span><span class="info-val" id="det-daño"></span></p>
             <p class="info-full"><span class="info-lbl">IMEI / Clave</span><span class="info-val" id="det-imei"></span></p>
           </div>
