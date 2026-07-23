@@ -210,21 +210,61 @@ if ($method === 'PUT') {
             log_accion($db, 'cambio_valor', $id);
         }
 
+        // Preparar texto de cambio de repuesto (si aplica)
+        $rep_txt   = '';
+        $id_rep_ant = $row['id_repuesto_usado'] !== null ? (int)$row['id_repuesto_usado'] : null;
+        if (isset($in['id_repuesto_usado']) && $id_repuesto_nuevo !== $id_rep_ant) {
+            $nombre_ant = '';
+            $nombre_new = '';
+            if ($id_rep_ant) {
+                $st = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto=? AND id_empresa=?");
+                $st->execute([$id_rep_ant, $eid]);
+                $nombre_ant = $st->fetchColumn() ?: "ID {$id_rep_ant}";
+            }
+            if ($id_repuesto_nuevo) {
+                $st = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto=? AND id_empresa=?");
+                $st->execute([$id_repuesto_nuevo, $eid]);
+                $nombre_new = $st->fetchColumn() ?: "ID {$id_repuesto_nuevo}";
+            }
+            if ($id_rep_ant && $id_repuesto_nuevo) {
+                $rep_txt = "Repuesto cambiado: {$nombre_ant} → {$nombre_new}";
+            } elseif ($id_repuesto_nuevo) {
+                $rep_txt = "Repuesto asignado: {$nombre_new}";
+            } else {
+                $rep_txt = "Repuesto removido: {$nombre_ant}";
+            }
+        }
+
+        // Cambios de repuestos adicionales enviados desde el frontend
+        $rep_cambios = is_array($in['rep_cambios'] ?? null) ? $in['rep_cambios'] : [];
+        $rep_add_txt = [];
+        foreach ($rep_cambios as $rc) {
+            $accion  = ($rc['accion'] ?? '') === 'removido' ? 'Repuesto removido' : 'Repuesto agregado';
+            $nombre  = substr(trim($rc['nombre'] ?? ''), 0, 120);
+            $cant    = max(1, (int)($rc['cantidad'] ?? 1));
+            if ($nombre) $rep_add_txt[] = $accion . ': ' . $nombre . ($cant > 1 ? " ×{$cant}" : '');
+        }
+        if ($rep_add_txt) {
+            $rep_txt = $rep_txt ? $rep_txt . "\n" . implode("\n", $rep_add_txt) : implode("\n", $rep_add_txt);
+        }
+
         if ($nuevo_status !== $row['status']) {
-            // Consolidar valor y nota en el mismo registro de historial
-            $partes  = array_filter([$val_txt, $obs_txt ? "Nota: {$obs_txt}" : '']);
+            // Consolidar valor, repuesto y nota en el mismo registro de historial
+            $partes  = array_filter([$val_txt, $rep_txt, $obs_txt ? "Nota: {$obs_txt}" : '']);
             $detalle = $partes ? implode("\n", $partes) : null;
             $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user, detalle)
                           VALUES (?, ?, ?, ?, ?, ?)")
                ->execute([$eid, $id, $row['status'], $nuevo_status, uname(), $detalle]);
             log_accion($db, 'cambio_status', $id);
             $val_txt = '';
+            $rep_txt = '';
             $obs_txt = '';
         }
 
-        // Sin cambio de estado: valor y nota van juntos a observaciones
-        if ($val_txt) {
-            $obs_txt = $obs_txt ? "{$val_txt}\n{$obs_txt}" : $val_txt;
+        // Sin cambio de estado: valor, repuesto y nota van juntos a observaciones
+        if ($val_txt || $rep_txt) {
+            $extra   = implode("\n", array_filter([$val_txt, $rep_txt]));
+            $obs_txt = $obs_txt ? "{$extra}\nNota: {$obs_txt}" : $extra;
         }
 
         if ($obs_txt) {
