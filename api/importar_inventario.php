@@ -51,6 +51,8 @@ if (empty($lines)) json_err('El archivo está vacío.');
 
 $header = str_getcsv(array_shift($lines), $delim);
 $header = array_map(fn($h) => strtolower(trim(str_replace([' ', '-'], '_', $h))), $header);
+// Limpiar BOM del primer encabezado (puede venir de archivos exportados por Excel)
+if (isset($header[0])) $header[0] = ltrim($header[0], "\xEF\xBB\xBF\xFF\xFE");
 
 $colId     = array_search('id', $header);
 $colNombre = array_search('nombre', $header);
