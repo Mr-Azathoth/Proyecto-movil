@@ -20,7 +20,7 @@ window.addEventListener('appinstalled', function() {
   });
 });
 
-window.pwaInstall = function() {
+function pwaInstall() {
   if (!_pwaPrompt) return;
   _pwaPrompt.prompt();
   _pwaPrompt.userChoice.then(function() {
@@ -29,4 +29,8 @@ window.pwaInstall = function() {
       btn.style.display = 'none';
     });
   });
-};
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.closest && e.target.closest('.btn-pwa-install')) pwaInstall();
+});

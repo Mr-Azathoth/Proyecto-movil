@@ -286,42 +286,46 @@ function csrf_check(): void {
     }
 }
 
-// ── Rate limiting de login (basado en sesión + IP) ────────────
-// Almacena intentos en sesión indexados por IP para limitar fuerza bruta.
-// Para producción reemplazar con almacenamiento en DB o Redis.
-function login_check_rate(string $ip): bool {
-    $key     = 'login_' . md5($ip);
-    $datos   = $_SESSION[$key] ?? ['intentos' => 0, 'bloqueado_hasta' => 0];
-    $ahora   = time();
+// ── Rate limiting de login (basado en archivo por IP) ─────────
+// Persiste en sys_get_temp_dir() — sobrevive cambios de cookie/sesión.
+function _lr_file(string $ip): string {
+    return sys_get_temp_dir() . '/ct_lr_' . md5($ip) . '.json';
+}
 
-    if ($datos['bloqueado_hasta'] > $ahora) {
-        return false; // Bloqueado
-    }
-    if ($datos['bloqueado_hasta'] > 0 && $datos['bloqueado_hasta'] <= $ahora) {
-        // El bloqueo expiró, reiniciar contador
-        $datos = ['intentos' => 0, 'bloqueado_hasta' => 0];
-    }
-    $_SESSION[$key] = $datos;
+function _lr_read(string $ip): array {
+    $f = _lr_file($ip);
+    if (!file_exists($f)) return ['intentos' => 0, 'bloqueado_hasta' => 0];
+    $d = @json_decode(file_get_contents($f), true);
+    return is_array($d) ? $d : ['intentos' => 0, 'bloqueado_hasta' => 0];
+}
+
+function _lr_write(string $ip, array $d): void {
+    @file_put_contents(_lr_file($ip), json_encode($d), LOCK_EX);
+}
+
+function login_check_rate(string $ip): bool {
+    $d     = _lr_read($ip);
+    $ahora = time();
+    if ($d['bloqueado_hasta'] > $ahora) return false;
+    if ($d['bloqueado_hasta'] > 0) _lr_write($ip, ['intentos' => 0, 'bloqueado_hasta' => 0]);
     return true;
 }
 
 function login_fallo(string $ip): int {
-    $key   = 'login_' . md5($ip);
-    $datos = $_SESSION[$key] ?? ['intentos' => 0, 'bloqueado_hasta' => 0];
-    $datos['intentos']++;
-    if ($datos['intentos'] >= 5) {
-        $datos['bloqueado_hasta'] = time() + 900; // 15 minutos
-        $datos['intentos']        = 0;
+    $d = _lr_read($ip);
+    $d['intentos']++;
+    if ($d['intentos'] >= 5) {
+        $d['bloqueado_hasta'] = time() + 900;
+        $d['intentos']        = 0;
     }
-    $_SESSION[$key] = $datos;
-    return $datos['intentos'];
+    _lr_write($ip, $d);
+    return $d['intentos'];
 }
 
 function login_ok(string $ip): void {
-    unset($_SESSION['login_' . md5($ip)]);
+    @unlink(_lr_file($ip));
 }
 
 function login_segundos_restantes(string $ip): int {
-    $datos = $_SESSION['login_' . md5($ip)] ?? ['bloqueado_hasta' => 0];
-    return max(0, $datos['bloqueado_hasta'] - time());
+    return max(0, _lr_read($ip)['bloqueado_hasta'] - time());
 }

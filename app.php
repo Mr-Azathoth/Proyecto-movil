@@ -61,7 +61,7 @@ try {
       <span class="material-icons-round">menu</span>
     </button>
     <span class="mobile-app-name">Centrotec</span>
-    <button class="btn-pwa-install" onclick="pwaInstall()" title="Instalar app" style="display:none">
+    <button class="btn-pwa-install" title="Instalar app" style="display:none">
       <span class="material-icons-round">install_mobile</span>
     </button>
   </div>
