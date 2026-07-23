@@ -880,7 +880,7 @@ try {
         <button type="button" class="btn-sec" id="det-boleta-btn" title="Imprimir orden de servicio técnico">
           <span class="material-icons-round">print</span> Orden de servicio
         </button>
-        <button type="button" class="btn-sec" data-modal="modal-detalle">Cancelar</button>
+        <button type="button" class="btn-sec" id="det-cancelar">Cancelar</button>
         <button type="submit" class="btn-primary"><span class="material-icons-round">save</span> Guardar</button>
       </div>
     </form>

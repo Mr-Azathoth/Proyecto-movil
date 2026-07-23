@@ -466,9 +466,11 @@ const WA_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" fill="currentCol
 
 let _repCambios  = [];
 let _valOriginal = 0;
+let _pendingUndo = [];
 
 function openDetalle(rep) {
   _repCambios  = [];
+  _pendingUndo = [];
   document.getElementById('det-id').textContent      = rep.id_ingreso;
   document.getElementById('det-cliente').textContent = rep.nombre_cliente;
   document.getElementById('det-tel').textContent     = rep.telefono_cliente || '—';
@@ -548,7 +550,7 @@ function _renderRepuestosList(inicial, adicionales, status) {
     html += '<div class="rep-list">';
     for (const a of adicionales) {
       const total = fmt(a.precio_snap * a.cantidad);
-      html += `<div class="rep-list-item" data-rep-row="${a.id}">
+      html += `<div class="rep-list-item" data-rep-row="${a.id}" data-id-repuesto="${a.id_repuesto}" data-cantidad="${a.cantidad}">
         <span class="rep-name">${esc(a.nombre_snap)}${a.cantidad > 1 ? ` ×${a.cantidad}` : ''}</span>
         <span class="rep-price">$${total}</span>
         <button type="button" class="btn-rep-del" data-del-rep="${a.id}" title="Quitar repuesto">
@@ -738,6 +740,30 @@ async function submitNuevo(e) {
   }
 }
 
+async function _undoPendingChanges() {
+  if (!_pendingUndo.length) return;
+  const idServ = parseInt(document.getElementById('det-hidden-id').value);
+  for (const u of _pendingUndo.slice().reverse()) {
+    try {
+      if (u.type === 'add') {
+        await apiFetch('/reparo/api/rep_servicio.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id_reparacion: idServ, id_repuesto: u.id_repuesto, cantidad: u.cantidad }),
+        });
+      } else if (u.type === 'del') {
+        await apiFetch('/reparo/api/rep_servicio.php', {
+          method: 'DELETE',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id: u.id_rr }),
+        });
+      }
+    } catch(_) {}
+  }
+  _pendingUndo = [];
+  _repCambios  = [];
+}
+
 async function submitActualizar(e) {
   e.preventDefault();
   const payload = {
@@ -759,6 +785,7 @@ async function submitActualizar(e) {
         : '✔ Guardado.';
       toast(msg, 'ok');
       if (j.data.stock_descontado) _repuestosCache = null;
+      _pendingUndo = [];
       closeModal('modal-detalle');
       loadServicios();
     } else toast(j.msg, 'err');
@@ -1021,6 +1048,7 @@ async function addRepuestoAdicional() {
     if (!j.ok) { toast(j.msg, 'err'); return; }
 
     _repCambios.push({ accion: 'agregado', nombre: j.data.nombre_snap, cantidad });
+    _pendingUndo.push({ type: 'del', id_rr: j.data.id });
     // Actualizar valor en el campo
     document.getElementById('det-valor').value = j.data.nuevo_valor;
     // Recargar lista de repuestos
@@ -1037,9 +1065,11 @@ async function addRepuestoAdicional() {
 }
 
 async function removeRepuestoAdicional(id) {
-  const idServ = parseInt(document.getElementById('det-hidden-id').value);
-  const row    = document.querySelector(`.rep-list-item[data-rep-row="${id}"]`);
-  const nombre = row?.querySelector('.rep-name')?.textContent?.trim() || '';
+  const idServ     = parseInt(document.getElementById('det-hidden-id').value);
+  const row        = document.querySelector(`.rep-list-item[data-rep-row="${id}"]`);
+  const nombre     = row?.querySelector('.rep-name')?.textContent?.trim() || '';
+  const idRepuesto = parseInt(row?.dataset.idRepuesto || 0);
+  const cantidad   = parseInt(row?.dataset.cantidad || 1);
   try {
     const r = await apiFetch('/reparo/api/rep_servicio.php', {
       method: 'DELETE',
@@ -1048,7 +1078,8 @@ async function removeRepuestoAdicional(id) {
     });
     const j = await r.json();
     if (!j.ok) { toast(j.msg, 'err'); return; }
-    if (nombre) _repCambios.push({ accion: 'removido', nombre, cantidad: 1 });
+    if (nombre) _repCambios.push({ accion: 'removido', nombre, cantidad });
+    if (idRepuesto) _pendingUndo.push({ type: 'add', id_repuesto: idRepuesto, cantidad, id_reparacion: idServ });
     document.getElementById('det-valor').value = j.data.nuevo_valor;
     _repuestosCache = null;
     await _loadRepuestosEditor(idServ);
@@ -1621,13 +1652,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Backdrop click removed — accidental clicks outside a modal no longer close it
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') document.querySelectorAll('.modal-bg.active').forEach(m => closeModal(m.id));
+  document.addEventListener('keydown', async e => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.modal-bg.active').forEach(async m => {
+      if (m.id === 'modal-detalle') await _undoPendingChanges();
+      closeModal(m.id);
+    });
   });
 
   document.getElementById('form-nuevo')?.addEventListener('submit', submitNuevo);
   document.getElementById('form-actualizar')?.addEventListener('submit', submitActualizar);
   document.getElementById('form-repuesto')?.addEventListener('submit', submitRepuesto);
+
+  document.getElementById('det-cancelar')?.addEventListener('click', async () => {
+    const hasPending = _pendingUndo.length > 0;
+    await _undoPendingChanges();
+    closeModal('modal-detalle');
+    if (hasPending) loadServicios();
+  });
 
   // ── Solo dígitos en IMEI y Teléfono ────────────────────────────────────────
   const PREFIX = '+56 ';
@@ -1789,10 +1831,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Escape cierra el modal activo más reciente
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', async e => {
     if (e.key !== 'Escape') return;
     const active = document.querySelector('.modal-bg.active');
-    if (active) closeModal(active.id);
+    if (!active) return;
+    if (active.id === 'modal-detalle') await _undoPendingChanges();
+    closeModal(active.id);
   });
 
   // Doble clic en fila → abre modal de edición (servicios)
