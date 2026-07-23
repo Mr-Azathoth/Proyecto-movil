@@ -163,7 +163,7 @@ try {
             </button>
             <div class="split-dropdown" id="split-exportar-menu">
               <button data-split-action="exp-serv-csv">
-                <span class="material-icons-round">table_view</span> Excel / CSV
+                <span class="material-icons-round">table_view</span> Excel
               </button>
               <button data-split-action="exp-serv-pdf">
                 <span class="material-icons-round">picture_as_pdf</span> PDF
@@ -270,7 +270,7 @@ try {
             </button>
             <div class="split-dropdown" id="split-exportar-inv-menu">
               <button data-split-action="exp-inv-csv">
-                <span class="material-icons-round">table_view</span> Excel / CSV
+                <span class="material-icons-round">table_view</span> Excel
               </button>
               <button data-split-action="exp-inv-pdf">
                 <span class="material-icons-round">picture_as_pdf</span> PDF
@@ -1081,7 +1081,7 @@ try {
     <div class="modal-ft gap-10">
       <button type="button" class="btn-sec" data-modal="modal-exportar">Cancelar</button>
       <button type="button" class="btn-sec" id="btn-exp-csv">
-        <span class="material-icons-round">table_view</span> Excel / CSV
+        <span class="material-icons-round">table_view</span> Excel
       </button>
       <button type="button" class="btn-primary" id="btn-exp-pdf">
         <span class="material-icons-round">picture_as_pdf</span> PDF
@@ -1109,7 +1109,7 @@ try {
     <div class="modal-ft gap-10">
       <button type="button" class="btn-sec" data-modal="modal-exportar-inv">Cancelar</button>
       <button type="button" class="btn-sec" id="btn-exp-inv-csv">
-        <span class="material-icons-round">table_view</span> Excel / CSV
+        <span class="material-icons-round">table_view</span> Excel
       </button>
       <button type="button" class="btn-primary" id="btn-exp-inv-pdf">
         <span class="material-icons-round">picture_as_pdf</span> PDF
