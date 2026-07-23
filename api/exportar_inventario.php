@@ -71,7 +71,13 @@ if ($formato === 'xlsx') {
         $sheet->setCellValue("C$i", $r['marca_compatible'] ?: '');
         $sheet->setCellValue("D$i", $r['modelo_compatible'] ?: '');
         $sheet->setCellValue("E$i", (int)$r['precio_venta']);
-        $sheet->setCellValue("F$i", (int)$r['cantidad']);
+        $cantidad = (int)$r['cantidad'];
+        $sheet->setCellValue("F$i", $cantidad);
+        if ($cantidad === 0) {
+            $sheet->getStyle("F$i")->applyFromArray([
+                'font' => ['color' => ['rgb' => 'DC2626'], 'bold' => true],
+            ]);
+        }
         $i++;
     }
 
