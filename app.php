@@ -234,7 +234,6 @@ try {
           <table class="tbl">
             <thead>
               <tr>
-                <th class="th-sortable" data-sort="id"># <span class="sort-icon"></span></th>
                 <th class="th-sortable" data-sort="cliente">Cliente <span class="sort-icon"></span></th>
                 <th>Equipo</th>
                 <th>Falla</th><th>Valor</th><th>Ingresado por</th><th>Fecha Ingreso</th><th>Estado</th><th>Acciones</th>

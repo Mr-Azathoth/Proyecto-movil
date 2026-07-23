@@ -328,7 +328,6 @@ function _buildServicioRow(rep) {
   const v    = rep.valor_ingreso > 0 ? `$${fmt(rep.valor_ingreso)}` : '—';
   return `
     <tr class="tbl-row" data-id="${rep.id_ingreso}">
-      <td class="id-col">#${rep.id_ingreso}</td>
       <td>
         <div class="cell-main">${esc(rep.nombre_cliente)}</div>
         <div class="cell-sub">${esc(rep.telefono_cliente)}</div>
@@ -417,12 +416,12 @@ async function loadServicios() {
   const q     = document.getElementById('search-bar').value;
   const st    = document.getElementById('filter-status').value;
   const tbody = document.getElementById('tbl-servicios');
-  tbody.innerHTML = `<tr><td colspan="9" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="8" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
 
   try {
     const r = await apiFetch(`/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}`);
     const json = await r.json();
-    if (!json.ok) { tbody.innerHTML = `<tr><td colspan="9" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
+    if (!json.ok) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
     const rows = json.data;
 
     if (!q && !st) updateStats(rows);
@@ -430,7 +429,7 @@ async function loadServicios() {
       `${rows.length} resultado${rows.length!==1?'s':''}${q||st?' (filtrado)':''}`;
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="9" class="tbl-empty">Sin resultados. <button class="link-btn" data-action="clear-filters">Limpiar filtros</button></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Sin resultados. <button class="link-btn" data-action="clear-filters">Limpiar filtros</button></td></tr>`;
       return;
     }
 
@@ -439,7 +438,7 @@ async function loadServicios() {
     _applySortServicios();
   } catch(e) {
     if (e.message !== 'session_expired')
-      tbody.innerHTML = `<tr><td colspan="9" class="tbl-empty">Error de red. ¿Está XAMPP activo?</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error de red. ¿Está XAMPP activo?</td></tr>`;
   }
 }
 
