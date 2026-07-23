@@ -77,10 +77,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
             } else {
-                login_fallo($ip);
+                $intentos  = login_fallo($ip);
                 log_accion(getDB(), 'login_fallo');
-                $intentos = ($_SESSION['login_' . md5($ip)]['intentos'] ?? 0);
-                $restantes = max(0, 5 - $intentos);
+                $bloqueado = login_segundos_restantes($ip) > 0;
+                $restantes = $bloqueado ? 0 : max(0, 5 - $intentos);
                 $err = $restantes > 0
                     ? "Usuario o contraseña incorrectos. ($restantes intento(s) restante(s))"
                     : 'Cuenta bloqueada temporalmente por múltiples intentos fallidos.';
