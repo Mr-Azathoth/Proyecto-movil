@@ -746,6 +746,7 @@ function _applySortInventario() {
     reps.sort((a, b) => {
       let va, vb;
       switch (_invSortCol) {
+        case 'id':     va = parseInt(a.id_repuesto)||0; vb = parseInt(b.id_repuesto)||0; break;
         case 'nombre': va = (a.nombre||'').toLowerCase(); vb = (b.nombre||'').toLowerCase(); break;
         case 'marca':  va = (a.marca_compatible||'').toLowerCase(); vb = (b.marca_compatible||'').toLowerCase(); break;
         case 'modelo': va = (a.modelo_compatible||'').toLowerCase(); vb = (b.modelo_compatible||'').toLowerCase(); break;
