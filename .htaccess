@@ -30,6 +30,17 @@ Options -Indexes
     RewriteRule ^assets/uploads/.*\.php$ - [F,L]
 </IfModule>
 
+# ── Service Worker: nunca cachear (CloudFlare y navegador) ───
+<FilesMatch "^sw\.js$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate"
+    Header set Pragma "no-cache"
+</FilesMatch>
+
+# ── Web App Manifest: revalidar en cada request ───────────────
+<FilesMatch "^manifest\.php$">
+    Header set Cache-Control "no-cache, must-revalidate"
+</FilesMatch>
+
 # ── Ocultar versión del servidor ─────────────────────────────
 ServerSignature Off
 
