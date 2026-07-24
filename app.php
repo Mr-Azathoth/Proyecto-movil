@@ -30,7 +30,10 @@ try {
     if ($_pr = $_ps->fetch()) {
         $_plan_estado = $_pr['plan_estado'] ?? 'Activo';
         if (!empty($_pr['plan_vencimiento'])) {
-            $_plan_dias = (int)ceil((strtotime($_pr['plan_vencimiento']) - time()) / 86400);
+            // Comparación de fechas (no timestamps) para consistencia con guard()
+            $_plan_dias = (int)round(
+                (strtotime($_pr['plan_vencimiento']) - strtotime(date('Y-m-d'))) / 86400
+            );
         }
     }
 } catch (PDOException $ignored) {}

@@ -281,6 +281,14 @@ async function apiFetch(url, options = {}) {
     setTimeout(() => { window.location.href = BASE_PATH + '/index.php?expired=1'; }, 1500);
     throw new Error('session_expired');
   }
+  // Trial vencido o plan vencido mid-session: mostrar muro de pago sin destruir sesión
+  if (response.status === 402) {
+    var wall = document.getElementById('trial-wall');
+    var appEl = document.querySelector('.app');
+    if (wall) wall.classList.remove('hidden');
+    if (appEl) appEl.style.display = 'none';
+    throw new Error('trial_expired');
+  }
   if (response.status === 403) {
     var msg403 = '';
     try { msg403 = (await response.clone().json()).msg || ''; } catch(_) {}
@@ -308,7 +316,7 @@ async function apiFetch(url, options = {}) {
 // Helper: loggea el error real en consola y muestra mensaje adecuado al usuario.
 // Distingue errores de red genuinos de bugs de JS (TypeError, etc.)
 function _handleErr(ctx, e) {
-  if (e?.message === 'session_expired' || e?.message === 'account_suspended') return;
+  if (e?.message === 'session_expired' || e?.message === 'account_suspended' || e?.message === 'trial_expired') return;
   console.error(`[${ctx}]`, e);
   const msg = (e instanceof TypeError)
     ? `Error interno (${ctx}): ${e.message}`
@@ -1476,7 +1484,7 @@ async function loadSuscripcion() {
     if (el('subs-plan-nombre')) el('subs-plan-nombre').textContent = d.plan_tipo || 'Básico';
 
     if (el('subs-estado-badge')) {
-      const colores = { 'Activo':'pill-green', 'Por vencer':'pill-orange', 'Vencido':'pill-red', 'Pendiente':'pill-orange' };
+      const colores = { 'Activo':'pill-green', 'Trial':'pill-orange', 'Por vencer':'pill-orange', 'Vencido':'pill-red', 'Pendiente':'pill-orange', 'Gratis':'pill-gray' };
       el('subs-estado-badge').className = 'pill ' + (colores[d.plan_estado] || 'pill-gray');
       el('subs-estado-badge').textContent = d.plan_estado || 'Activo';
     }

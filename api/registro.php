@@ -81,10 +81,11 @@ $db = getDB();
 // Migraciones silenciosas — agrega columnas si no existen
 try {
     $db->exec("ALTER TABLE empresas
-        ADD COLUMN IF NOT EXISTS subdominio VARCHAR(60)  DEFAULT NULL,
-        ADD COLUMN IF NOT EXISTS rut        VARCHAR(20)  DEFAULT NULL,
-        ADD COLUMN IF NOT EXISTS direccion  VARCHAR(255) DEFAULT NULL,
-        ADD COLUMN IF NOT EXISTS comuna     VARCHAR(100) DEFAULT NULL");
+        ADD COLUMN IF NOT EXISTS subdominio      VARCHAR(60)  DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS rut             VARCHAR(20)  DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS direccion       VARCHAR(255) DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS comuna          VARCHAR(100) DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS plan_vencimiento DATE         NULL");
 } catch (PDOException $ignored) {}
 try {
     $db->exec("ALTER TABLE empresas ADD UNIQUE KEY uq_empresa_subdominio (subdominio)");
