@@ -20,6 +20,20 @@ try {
     $_st->execute([eid()]);
     if ($_row = $_st->fetch()) $empresa = $_row;
 } catch (PDOException $ignored) {}
+
+// Estado del plan para el banner/muro de trial
+$_plan_estado = 'Activo';
+$_plan_dias   = null;
+try {
+    $_ps = $_db->prepare("SELECT plan_estado, plan_vencimiento FROM empresas WHERE id_empresa=? LIMIT 1");
+    $_ps->execute([eid()]);
+    if ($_pr = $_ps->fetch()) {
+        $_plan_estado = $_pr['plan_estado'] ?? 'Activo';
+        if (!empty($_pr['plan_vencimiento'])) {
+            $_plan_dias = (int)ceil((strtotime($_pr['plan_vencimiento']) - time()) / 86400);
+        }
+    }
+} catch (PDOException $ignored) {}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -43,7 +57,9 @@ try {
       data-user="<?= htmlspecialchars(uname()) ?>"
       data-nombre="<?= htmlspecialchars(unombre()) ?>"
       data-uid="<?= uid() ?>"
-      data-base="<?= BASE ?>">
+      data-base="<?= BASE ?>"
+      data-plan-estado="<?= htmlspecialchars($_plan_estado) ?>"
+      data-plan-dias="<?= $_plan_dias !== null ? (int)$_plan_dias : '' ?>">
 
 <!-- Honeypot para gestores de contraseñas (Bitwarden/LastPass) -->
 <div class="pw-honeypot" aria-hidden="true">
@@ -143,6 +159,14 @@ try {
 
   <!-- ── MAIN ───────────────────────────────────────── -->
   <main class="main">
+
+    <!-- Trial: banner de días restantes (visible en todas las vistas) -->
+    <div id="trial-banner" class="trial-banner hidden">
+      <span class="material-icons-round">timer</span>
+      <span id="trial-banner-txt"></span>
+      <a href="#" id="trial-banner-btn" class="trial-banner-cta">Activar plan</a>
+      <button class="trial-banner-close" id="trial-banner-close" aria-label="Cerrar">×</button>
+    </div>
 
     <!-- ═══════════════════════ VIEW: SERVICIOS ════════════════════════ -->
     <div id="view-servicios" class="view active">
@@ -1118,6 +1142,43 @@ try {
   </div>
 </div>
 <?php endif; ?>
+
+<!-- Trial expirado: muro de pago (fullscreen) -->
+<div id="trial-wall" class="trial-wall hidden">
+  <div class="trial-wall-card">
+    <div class="trial-wall-icon">
+      <span class="material-icons-round">lock_clock</span>
+    </div>
+    <h2 class="trial-wall-title">Tu período de prueba ha finalizado</h2>
+    <p class="trial-wall-sub">Para continuar usando Centrotec sin interrupciones, activa uno de nuestros planes. Pago 100% seguro vía Mercado Pago.</p>
+    <div class="trial-wall-plans">
+      <?php foreach (MP_PLANES as $wkey => $wplan):
+          $wPorMes   = (int)round($wplan['precio'] / $wplan['meses']);
+          $wFeatured = ($wkey === '12meses');
+          $wBackUrl  = APP_URL . '/pago/retorno.php?gateway=mp_sub';
+          $wMpUrl    = 'https://www.mercadopago.cl/subscriptions/checkout'
+                     . '?preapproval_plan_id=' . urlencode($wplan['id'])
+                     . '&back_url=' . urlencode($wBackUrl)
+                     . '&external_reference=' . urlencode('eid_' . eid());
+      ?>
+      <div class="twp-card <?= $wFeatured ? 'twp-featured' : '' ?>">
+        <?php if ($wFeatured): ?><div class="twp-badge">Mejor valor</div><?php endif; ?>
+        <div class="twp-nombre"><?= htmlspecialchars($wplan['nombre']) ?></div>
+        <div class="twp-precio">$<?= number_format($wplan['precio'], 0, ',', '.') ?></div>
+        <div class="twp-por-mes">$<?= number_format($wPorMes, 0, ',', '.') ?>/mes</div>
+        <a href="<?= htmlspecialchars($wMpUrl) ?>" class="btn-plan-wall">
+          <span class="material-icons-round">shopping_cart</span>Suscribirse
+        </a>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <p class="trial-wall-note">
+      <span class="material-icons-round ic-inline">lock</span>
+      Pago seguro vía Mercado Pago. Tus datos de tarjeta nunca los vemos nosotros.
+    </p>
+    <a href="<?= BASE ?>/logout.php" class="trial-wall-logout">Cerrar sesión</a>
+  </div>
+</div>
 
 <!-- Toast -->
 <div id="toast" class="toast"></div>

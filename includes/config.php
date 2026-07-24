@@ -281,10 +281,23 @@ function guard(): void {
         json_err('Cuenta desactivada.', 403);
     }
 
-    $s = $db->prepare("SELECT activa, plan_estado FROM empresas WHERE id_empresa = ? LIMIT 1");
+    $s = $db->prepare("SELECT activa, plan_estado, plan_vencimiento FROM empresas WHERE id_empresa = ? LIMIT 1");
     $s->execute([eid()]);
     $emp = $s->fetch();
+
+    // Trial activo pero con fecha vencida (cron aún no corrió hoy)
+    if ($emp && (bool)$emp['activa'] && $emp['plan_estado'] === 'Trial') {
+        $venc = $emp['plan_vencimiento'] ?? null;
+        if ($venc && strtotime($venc) < strtotime('today')) {
+            json_err('trial_vencido', 402);
+        }
+    }
+
     if ($emp && !(bool)$emp['activa']) {
+        // Trial/plan vencido: NO destruir sesión — el usuario puede suscribirse desde el muro
+        if (in_array($emp['plan_estado'], ['Trial', 'Vencido'], true)) {
+            json_err('trial_vencido', 402);
+        }
         remember_clear();
         session_unset(); session_destroy();
         $msg = ($emp['plan_estado'] === 'Pendiente')

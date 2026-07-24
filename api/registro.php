@@ -130,8 +130,8 @@ $db->beginTransaction();
 try {
     $plan_nombre = (MP_PLANES[$plan_key]['nombre'] ?? null) ?: $plan_key;
     $db->prepare(
-        "INSERT INTO empresas (nombre, subdominio, rut, telefono, correo, direccion, comuna, activa, plan_tipo, plan_estado, creada_en)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, 'Pendiente', NOW())"
+        "INSERT INTO empresas (nombre, subdominio, rut, telefono, correo, direccion, comuna, activa, plan_tipo, plan_estado, plan_vencimiento, creada_en)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'Trial', DATE_ADD(NOW(), INTERVAL 7 DAY), NOW())"
     )->execute([$nombre_local, $subdominio, $rut, $telefono ?: null, $email, $direccion ?: null, $comuna ?: null, $plan_nombre]);
     $id_empresa = (int)$db->lastInsertId();
 
@@ -179,16 +179,5 @@ $_SESSION['last_activity'] = time();
 // Registrar acción (sesión ya activa)
 log_accion($db, 'registro_empresa', null);
 
-// Generar URL de pago Mercado Pago
-$planes = defined('MP_PLANES') ? MP_PLANES : [];
-if (isset($planes[$plan_key])) {
-    $back_url = APP_URL . '/pago/retorno.php?gateway=mp_sub&eid=' . $id_empresa;
-    $mp_url   = 'https://www.mercadopago.cl/subscriptions/checkout'
-              . '?preapproval_plan_id=' . urlencode($planes[$plan_key]['id'])
-              . '&back_url=' . urlencode($back_url)
-              . '&external_reference=' . urlencode('eid_' . $id_empresa);
-    json_ok(['redirect' => $mp_url]);
-}
-
-// Si MP no está configurado, ir directo al app (útil en desarrollo)
-json_ok(['redirect' => APP_URL . '/app.php']);
+// Trial de 7 días activado — ir directamente al app
+json_ok(['redirect' => APP_URL . '/app.php?trial=1']);

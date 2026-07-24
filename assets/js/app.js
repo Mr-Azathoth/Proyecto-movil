@@ -2749,3 +2749,70 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     l.addEventListener('click', closeSidebar);
   });
 }());
+
+// ── Trial: banner y muro de pago ─────────────────────────────────────────────
+(function() {
+  var body      = document.body;
+  var estado    = body.dataset.planEstado || '';
+  var diasRaw   = body.dataset.planDias;
+  var dias      = (diasRaw !== '' && diasRaw !== undefined) ? parseInt(diasRaw, 10) : null;
+  var banner    = document.getElementById('trial-banner');
+  var bannerTxt = document.getElementById('trial-banner-txt');
+  var wall      = document.getElementById('trial-wall');
+
+  var trialExpired = (estado === 'Trial' && (dias === null || dias <= 0))
+                  || estado === 'Vencido'
+                  || estado === 'Suspendido';
+
+  if (trialExpired) {
+    if (wall) wall.classList.remove('hidden');
+    var app = document.querySelector('.app');
+    if (app) app.style.display = 'none';
+    return;
+  }
+
+  // Banner de días restantes (solo trial activo)
+  if (estado === 'Trial' && dias !== null && dias > 0) {
+    if (banner && bannerTxt) {
+      bannerTxt.textContent = dias === 1
+        ? 'Último día de prueba gratuita.'
+        : 'Te quedan ' + dias + ' días de prueba gratuita.';
+      banner.classList.remove('hidden');
+    }
+  }
+
+  // Cerrar banner
+  var closeBtn = document.getElementById('trial-banner-close');
+  if (closeBtn && banner) {
+    closeBtn.addEventListener('click', function() {
+      banner.classList.add('hidden');
+    });
+  }
+
+  // Botón "Activar plan": ir a Configuración → Suscripción
+  var activarBtn = document.getElementById('trial-banner-btn');
+  if (activarBtn) {
+    activarBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var cfgLink = document.querySelector('[data-view="config"]');
+      if (cfgLink) cfgLink.click();
+      setTimeout(function() {
+        var tabSubs = document.querySelector('[data-tab="suscripcion"]');
+        if (tabSubs) tabSubs.click();
+      }, 80);
+    });
+  }
+
+  // ?trial=1: toast de bienvenida al registrarse por primera vez
+  var params = new URLSearchParams(location.search);
+  if (params.get('trial') === '1') {
+    history.replaceState({}, '', location.pathname);
+    toast('¡Bienvenido! Tienes 7 días de prueba gratuita.', 'ok');
+  }
+
+  // ?pago=suscripcion: toast al volver de Mercado Pago con pago aprobado
+  if (params.get('pago') === 'suscripcion') {
+    history.replaceState({}, '', location.pathname);
+    toast('¡Plan activado! Ya tienes acceso completo a Centrotec.', 'ok');
+  }
+}());

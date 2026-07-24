@@ -30,25 +30,52 @@ $sadmin_email  = $db->query("SELECT email, nombre FROM super_admins WHERE activo
 $sadmin_to     = $sadmin_email['email'] ?? null;
 $sadmin_nombre = $sadmin_email['nombre'] ?? 'Administrador';
 
-// ── Empresas que vencen en 7 o 1 día (sin notificación enviada hoy) ──
+// ── Planes pagados que vencen en 7 o 1 día (excluye trials) ─────
 $pronto = $db->query("
     SELECT id_empresa, nombre, correo, plan_tipo, plan_vencimiento,
            DATEDIFF(plan_vencimiento, CURDATE()) AS dias_restantes,
            notif_vencimiento
     FROM empresas
     WHERE activa = 1
+      AND plan_estado != 'Trial'
       AND plan_vencimiento IS NOT NULL
       AND plan_vencimiento > CURDATE()
       AND DATEDIFF(plan_vencimiento, CURDATE()) IN (7, 1)
       AND (notif_vencimiento IS NULL OR notif_vencimiento < CURDATE())
 ")->fetchAll();
 
-// ── Empresas ya vencidas (plan_vencimiento = ayer, notif no enviada) ──
+// ── Planes pagados ya vencidos (excluye trials) ───────────────────
 $vencidas = $db->query("
     SELECT id_empresa, nombre, correo, plan_tipo, plan_vencimiento,
            notif_vencimiento
     FROM empresas
     WHERE activa = 1
+      AND plan_estado != 'Trial'
+      AND plan_vencimiento IS NOT NULL
+      AND plan_vencimiento < CURDATE()
+      AND (notif_vencimiento IS NULL OR notif_vencimiento < plan_vencimiento)
+")->fetchAll();
+
+// ── Trials que vencen en 3 o 1 día ───────────────────────────────
+$pronto_trial = $db->query("
+    SELECT id_empresa, nombre, correo, plan_vencimiento,
+           DATEDIFF(plan_vencimiento, CURDATE()) AS dias_restantes,
+           notif_vencimiento
+    FROM empresas
+    WHERE activa = 1
+      AND plan_estado = 'Trial'
+      AND plan_vencimiento IS NOT NULL
+      AND plan_vencimiento > CURDATE()
+      AND DATEDIFF(plan_vencimiento, CURDATE()) IN (3, 1)
+      AND (notif_vencimiento IS NULL OR notif_vencimiento < CURDATE())
+")->fetchAll();
+
+// ── Trials ya vencidos ────────────────────────────────────────────
+$trial_vencidos = $db->query("
+    SELECT id_empresa, nombre, correo, plan_vencimiento, notif_vencimiento
+    FROM empresas
+    WHERE activa = 1
+      AND plan_estado = 'Trial'
       AND plan_vencimiento IS NOT NULL
       AND plan_vencimiento < CURDATE()
       AND (notif_vencimiento IS NULL OR notif_vencimiento < plan_vencimiento)
@@ -113,6 +140,63 @@ foreach ($vencidas as $e) {
     }
 }
 
+// ── Enviar correos a trials por vencer ──────────────────────────
+foreach ($pronto_trial as $e) {
+    $dias   = (int)$e['dias_restantes'];
+    $label  = $dias === 1 ? 'mañana' : "en $dias días";
+    $fecha  = date('d/m/Y', strtotime($e['plan_vencimiento']));
+    $nombre = htmlspecialchars($e['nombre']);
+
+    $html = "
+    <div style='font-family:Inter,sans-serif;max-width:520px;margin:0 auto;background:#161b22;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;'>
+      <div style='background:linear-gradient(135deg,#f59e0b,#fbbf24);padding:24px 28px;'>
+        <h2 style='color:#fff;margin:0;font-size:18px;'>⏳ Tu prueba gratuita termina {$label}</h2>
+      </div>
+      <div style='padding:24px 28px;color:#e6edf3;'>
+        <p>Hola <strong>{$nombre}</strong>,</p>
+        <p>Tu <strong>período de prueba gratuita</strong> de Centrotec termina el <strong>{$fecha}</strong>.</p>
+        <p>Para seguir accediendo sin interrupciones, activa uno de nuestros planes desde la sección <strong>Configuración → Mi suscripción</strong> dentro de la aplicación.</p>
+        <div style='background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:14px 18px;margin-top:16px;'>
+          <strong style='color:#fbbf24;'>Fecha límite: {$fecha}</strong>
+        </div>
+      </div>
+    </div>";
+
+    $log[] = ['tipo' => 'trial-pronto', 'empresa' => $e['nombre'], 'dias' => $dias, 'correo' => $e['correo'], 'enviado' => false];
+
+    if (!$dry_run && $e['correo']) {
+        $ok = send_email($e['correo'], $e['nombre'], "Tu prueba gratuita termina {$label} — Centrotec", $html);
+        $log[array_key_last($log)]['enviado'] = $ok;
+        if ($ok) $notif_ok_ids[] = $e['id_empresa'];
+    }
+}
+
+// ── Enviar correos a trials vencidos ────────────────────────────
+foreach ($trial_vencidos as $e) {
+    $fecha  = date('d/m/Y', strtotime($e['plan_vencimiento']));
+    $nombre = htmlspecialchars($e['nombre']);
+
+    $html = "
+    <div style='font-family:Inter,sans-serif;max-width:520px;margin:0 auto;background:#161b22;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;'>
+      <div style='background:linear-gradient(135deg,#dc2626,#f87171);padding:24px 28px;'>
+        <h2 style='color:#fff;margin:0;font-size:18px;'>⏰ Tu período de prueba ha finalizado</h2>
+      </div>
+      <div style='padding:24px 28px;color:#e6edf3;'>
+        <p>Hola <strong>{$nombre}</strong>,</p>
+        <p>Tu prueba gratuita de Centrotec finalizó el <strong>{$fecha}</strong>.</p>
+        <p>Para volver a acceder a tu cuenta, activa un plan desde la pantalla de suscripción. El pago es 100% seguro vía Mercado Pago.</p>
+      </div>
+    </div>";
+
+    $log[] = ['tipo' => 'trial-vencido', 'empresa' => $e['nombre'], 'correo' => $e['correo'], 'enviado' => false];
+
+    if (!$dry_run && $e['correo']) {
+        $ok = send_email($e['correo'], $e['nombre'], 'Tu período de prueba ha finalizado — Centrotec', $html);
+        $log[array_key_last($log)]['enviado'] = $ok;
+        if ($ok) $notif_ok_ids[] = $e['id_empresa'];
+    }
+}
+
 // ── Batch UPDATE notif_vencimiento (un solo query en lugar de N) ──
 if ($notif_ok_ids) {
     $ph = implode(',', array_fill(0, count($notif_ok_ids), '?'));
@@ -145,8 +229,10 @@ if ($auto_susp) {
 }
 
 // ── Email resumen al super admin ─────────────────────────────────
-$total_pronto   = count($pronto);
-$total_vencidas = count($vencidas);
+$total_pronto        = count($pronto);
+$total_vencidas      = count($vencidas);
+$total_pronto_trial  = count($pronto_trial);
+$total_trial_vencidos = count($trial_vencidos);
 
 if ($sadmin_to && ($total_pronto > 0 || $total_vencidas > 0)) {
     $filas_pronto  = '';
@@ -204,7 +290,7 @@ if ($sadmin_to && ($total_pronto > 0 || $total_vencidas > 0)) {
 
 // ── Respuesta ────────────────────────────────────────────────────
 if (php_sapi_name() === 'cli') {
-    echo ($dry_run ? '[DRY RUN] ' : '') . "Procesadas: {$total_pronto} por vencer, {$total_vencidas} vencidas, {$total_auto_susp} auto-suspendidas.\n";
+    echo ($dry_run ? '[DRY RUN] ' : '') . "Procesadas: {$total_pronto} por vencer, {$total_vencidas} vencidas, {$total_auto_susp} auto-suspendidas | trials: {$total_pronto_trial} por vencer, {$total_trial_vencidos} vencidos.\n";
     foreach ($log as $l) {
         if ($l['tipo'] === 'auto-suspendida') {
             $icon = $dry_run ? '~' : '✓';
