@@ -46,7 +46,7 @@ try {
       data-base="<?= BASE ?>">
 
 <!-- Honeypot para gestores de contraseñas (Bitwarden/LastPass) -->
-<div style="position:absolute;left:-9999px;overflow:hidden;width:0;height:0" aria-hidden="true">
+<div class="pw-honeypot" aria-hidden="true">
   <form autocomplete="on">
     <input type="text" name="username" autocomplete="username" tabindex="-1">
     <input type="password" name="password" autocomplete="current-password" tabindex="-1">
@@ -61,7 +61,7 @@ try {
       <span class="material-icons-round">menu</span>
     </button>
     <span class="mobile-app-name">Centrotec</span>
-    <button class="btn-pwa-install" title="Instalar app" style="display:none">
+    <button class="btn-pwa-install hidden" title="Instalar app">
       <span class="material-icons-round">install_mobile</span>
     </button>
   </div>
@@ -213,7 +213,7 @@ try {
       <div class="controls">
         <div class="search-wrap">
           <span class="material-icons-round search-ic">search</span>
-          <input id="search-bar" type="search" name="buscar-rep" style="display:none" class="search-input" placeholder="Buscar por cliente, modelo, # orden..." autocomplete="nope" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="search">
+          <input id="search-bar" type="search" name="buscar-rep" class="search-input hidden" placeholder="Buscar por cliente, modelo, # orden..." autocomplete="nope" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="search">
         </div>
         <input type="hidden" id="filter-status" value="">
         <div class="inv-per-page-wrap">
@@ -320,7 +320,7 @@ try {
           <table class="tbl">
             <thead>
               <tr>
-                <th class="th-sortable" data-sort-inv="id" style="width:52px;color:var(--txt2);font-size:0.8em">ID <span class="sort-icon"></span></th>
+                <th class="th-sortable th-inv-id" data-sort-inv="id">ID <span class="sort-icon"></span></th>
                 <th class="th-sortable" data-sort-inv="nombre">Repuesto <span class="sort-icon"></span></th>
                 <th class="th-sortable" data-sort-inv="marca">Marca compatible <span class="sort-icon"></span></th>
                 <th class="th-sortable" data-sort-inv="modelo">Modelo compatible <span class="sort-icon"></span></th>
@@ -640,7 +640,7 @@ try {
             <label>Mensaje</label>
             <div id="sop-mensaje" class="ce-field" contenteditable="true" data-ph="Detalla tu consulta o el problema que estás experimentando... Puedes pegar imágenes con Ctrl+V"></div>
           </div>
-          <p id="sop-error" style="color:#f87171;font-size:13px;min-height:18px;"></p>
+          <p id="sop-error"></p>
         </div>
         <div class="modal-ft">
           <button class="btn btn-sec" id="btn-sop-close-ft">Cancelar</button>
@@ -823,7 +823,7 @@ try {
             <p><span class="info-lbl">Teléfono</span><span class="info-val" id="det-tel"></span></p>
             <p><span class="info-lbl">Equipo</span><span class="info-val" id="det-equipo"></span></p>
             <p class="info-sm"><span class="info-lbl">Ingresado por</span><span class="info-val" id="det-tecnico"></span></p>
-            <p class="info-sm"><span class="info-lbl">Código seguimiento</span><span class="info-val" id="det-codigo" style="font-family:monospace;letter-spacing:0.08em"></span></p>
+            <p class="info-sm"><span class="info-lbl">Código seguimiento</span><span class="info-val" id="det-codigo"></span></p>
             <p class="info-full"><span class="info-lbl">Falla reportada</span><span class="info-val" id="det-daño"></span></p>
             <p class="info-full"><span class="info-lbl">IMEI / Clave</span><span class="info-val" id="det-imei"></span></p>
           </div>

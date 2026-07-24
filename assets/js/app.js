@@ -1578,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Revelar buscador después del escaneo de gestores de contraseñas
   setTimeout(() => {
     const sb = document.getElementById('search-bar');
-    if (sb) sb.style.display = '';
+    if (sb) sb.classList.remove('hidden');
   }, 50);
 
   document.querySelectorAll('.nav-link[data-view]').forEach(link => {

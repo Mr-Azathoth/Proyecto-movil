@@ -1036,7 +1036,11 @@ input.hidden           { display:none !important; }
   display:flex; align-items:center; padding:6px; border-radius:8px;
 }
 .hamburger:hover, .btn-pwa-install:hover { background:rgba(255,255,255,0.08); }
-.btn-pwa-install { color:var(--accent); }
+.btn-pwa-install { color:var(--accent); display:none; }
+.pw-honeypot     { position:absolute; left:-9999px; overflow:hidden; width:0; height:0; }
+.th-inv-id       { width:52px; color:var(--txt2); font-size:0.8em; }
+#sop-error       { color:#f87171; font-size:13px; min-height:18px; }
+#det-codigo      { font-family:monospace; letter-spacing:0.08em; }
 
 /* Overlay oscuro detrás del sidebar en móvil */
 .sidebar-overlay {

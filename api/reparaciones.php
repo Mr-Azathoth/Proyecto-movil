@@ -82,7 +82,12 @@ if ($method === 'POST') {
     if (!$f['nombre_cliente'])                            json_err('El nombre del cliente es obligatorio.');
     if (strlen($f['nombre_cliente']) > 120)               json_err('Nombre demasiado largo.');
     if (!$f['telefono_cliente'])                          json_err('El teléfono del cliente es obligatorio.');
+    if (strlen($f['telefono_cliente']) > 30)              json_err('Teléfono demasiado largo.');
+    if (strlen($f['rut_cliente'])      > 15)              json_err('RUT demasiado largo.');
+    if (strlen($f['imei'])             > 20)              json_err('IMEI demasiado largo.');
     if (!$f['dano_ingreso'])                              json_err('La descripción de la falla es obligatoria.');
+    if (strlen($f['dano_ingreso'])     > 2000)            json_err('Descripción de falla demasiado larga (máx. 2000 caracteres).');
+    if (strlen($f['obs'])              > 2000)            json_err('Observación demasiado larga (máx. 2000 caracteres).');
     if (!in_array($f['status'], VALID_STATUS, true))      json_err('Estado inicial inválido.');
 
     $tipos_validos = ['Telefono', 'Tablet', 'Notebook', 'Televisor', 'Otro'];

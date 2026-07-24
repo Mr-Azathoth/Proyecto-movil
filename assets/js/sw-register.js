@@ -9,14 +9,14 @@ window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   _pwaPrompt = e;
   document.querySelectorAll('.btn-pwa-install').forEach(function(btn) {
-    btn.style.display = '';
+    btn.classList.remove('hidden');
   });
 });
 
 window.addEventListener('appinstalled', function() {
   _pwaPrompt = null;
   document.querySelectorAll('.btn-pwa-install').forEach(function(btn) {
-    btn.style.display = 'none';
+    btn.classList.add('hidden');
   });
 });
 
@@ -26,7 +26,7 @@ function pwaInstall() {
   _pwaPrompt.userChoice.then(function() {
     _pwaPrompt = null;
     document.querySelectorAll('.btn-pwa-install').forEach(function(btn) {
-      btn.style.display = 'none';
+      btn.classList.add('hidden');
     });
   });
 }

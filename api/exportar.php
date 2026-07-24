@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
 guard();
-if (!isAdmin()) { http_response_code(403); exit('Sin permisos.'); }
+if (!isAdmin()) { json_err('Sin permisos.', 403); }
 
 $db  = getDB();
 $eid = eid();
@@ -34,7 +34,7 @@ $sql = "SELECT r.id_ingreso, r.fecha_ingreso, r.nombre_cliente, r.telefono_clien
           FROM reparaciones r
           LEFT JOIN inventario i ON i.id_repuesto = r.id_repuesto_usado
                                  AND i.id_empresa  = r.id_empresa
-         WHERE r.id_empresa = ?";
+         WHERE r.id_empresa = ? AND r.deleted_at IS NULL";
 $params = [$eid];
 
 if ($fecha_desde && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_desde)) {
@@ -84,6 +84,8 @@ if ($formato === 'csv') {
         'Valor ($)', 'Repuesto Inicial', 'Técnico'
     ], ';');
 
+    $csvSafe = fn(string $v): string => preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
+
     foreach ($rows as $r) {
         $fecha = $r['fecha_ingreso']
             ? date('d/m/Y H:i', strtotime($r['fecha_ingreso']))
@@ -91,17 +93,17 @@ if ($formato === 'csv') {
         fputcsv($out, [
             $r['id_ingreso'],
             $fecha,
-            $r['nombre_cliente'],
-            $r['telefono_cliente'],
-            $r['rut_cliente']     ?: '—',
-            $r['tipo_ingreso'],
-            $r['marca_ingreso'],
-            $r['modelo_ingreso'],
-            $r['dano_ingreso'],
-            $r['status'],
+            $csvSafe($r['nombre_cliente']),
+            $csvSafe($r['telefono_cliente']),
+            $csvSafe($r['rut_cliente']     ?: '—'),
+            $csvSafe($r['tipo_ingreso']),
+            $csvSafe($r['marca_ingreso']),
+            $csvSafe($r['modelo_ingreso']),
+            $csvSafe($r['dano_ingreso']),
+            $csvSafe($r['status']),
             $r['valor_ingreso'],
-            $r['repuesto_inicial'] ?: '—',
-            $r['ingresado_por'],
+            $csvSafe($r['repuesto_inicial'] ?: '—'),
+            $csvSafe($r['ingresado_por']),
         ], ';');
     }
     fclose($out);

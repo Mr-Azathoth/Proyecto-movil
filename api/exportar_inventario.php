@@ -8,7 +8,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 guard();
-if (!isAdmin()) { http_response_code(403); exit('Sin permisos.'); }
+if (!isAdmin()) { json_err('Sin permisos.', 403); }
 
 $db  = getDB();
 $eid = eid();
