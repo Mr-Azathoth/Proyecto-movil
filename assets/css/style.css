@@ -1036,7 +1036,7 @@ input.hidden           { display:none !important; }
   display:flex; align-items:center; padding:6px; border-radius:8px;
 }
 .hamburger:hover, .btn-pwa-install:hover { background:rgba(255,255,255,0.08); }
-.btn-pwa-install { color:var(--accent); display:none; }
+.btn-pwa-install { color:var(--accent); }
 .pw-honeypot     { position:absolute; left:-9999px; overflow:hidden; width:0; height:0; }
 .th-inv-id       { width:52px; color:var(--txt2); font-size:0.8em; }
 #sop-error       { color:#f87171; font-size:13px; min-height:18px; }
@@ -1116,15 +1116,21 @@ input.hidden           { display:none !important; }
   .scanner-wrap { max-height:calc(100dvh - 140px) !important; aspect-ratio:unset !important; height:calc(100dvh - 140px); }
   .scanner-frame { width:220px; height:220px; }
 
-  /* Stats en 2 columnas */
-  .stats-row { grid-template-columns:repeat(3,1fr) !important; gap:6px !important; }
-  .stat-card { padding:10px 8px !important; }
+  /* Stats: 3 columnas en grid para que los 6 cuadros queden 3×2 */
+  .stats-row { display:grid !important; grid-template-columns:repeat(3,1fr) !important; gap:6px !important; }
+  .stat-card { padding:10px 8px !important; flex:unset !important; min-width:unset !important; }
   .stat-val  { font-size:18px !important; }
   .stat-lbl  { font-size:10px !important; }
 
-  /* Topbar acciones apiladas */
+  /* Topbar acciones apiladas — botones ocupan el ancho completo */
   .topbar { flex-wrap:wrap; gap:8px; }
-  .topbar-actions { flex-wrap:wrap; gap:6px; }
+  .topbar-actions { flex-wrap:wrap; gap:6px; width:100%; }
+  .topbar-actions .btn, .topbar-actions .split-btn { flex:1; min-width:0; justify-content:center; }
+
+  /* Barra de controles: buscador y selector de página en columna */
+  .controls { flex-direction:column; gap:8px; }
+  .search-wrap { min-width:unset; width:100%; }
+  .inv-per-page-wrap { align-self:flex-end; }
 
   /* Botón de acción más fácil de tocar */
   .btn-row-action { width:36px; height:36px; }

@@ -1,4 +1,4 @@
-const CACHE = 'centrotec-v1';
+const CACHE = 'centrotec-v2';
 const OFFLINE_ASSETS = [
   'offline.html',
 ];
