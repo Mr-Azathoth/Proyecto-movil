@@ -269,7 +269,19 @@ function guard(): void {
     if (!logueado()) json_err('No autorizado', 401);
     session_check_timeout();
     $_SESSION['last_activity'] = time();
-    $s = getDB()->prepare("SELECT activa, plan_estado FROM empresas WHERE id_empresa = ? LIMIT 1");
+    $db = getDB();
+
+    // Verificar que el usuario sigue activo
+    $u = $db->prepare("SELECT activo FROM usuarios WHERE id_usuario = ? LIMIT 1");
+    $u->execute([uid()]);
+    $urow = $u->fetch();
+    if ($urow && !(bool)$urow['activo']) {
+        remember_clear();
+        session_unset(); session_destroy();
+        json_err('Cuenta desactivada.', 403);
+    }
+
+    $s = $db->prepare("SELECT activa, plan_estado FROM empresas WHERE id_empresa = ? LIMIT 1");
     $s->execute([eid()]);
     $emp = $s->fetch();
     if ($emp && !(bool)$emp['activa']) {
@@ -293,7 +305,7 @@ function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null): void 
         $_SESSION['user']    ?? null,
         $accion,
         $id_reparacion,
-        $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+        explode(',', $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')[0],
     ]);
 }
 

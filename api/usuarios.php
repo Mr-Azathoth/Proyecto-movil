@@ -56,10 +56,16 @@ if ($method === 'PUT') {
             $row->execute([$uid]);
             $hash = $row->fetchColumn();
             // Soportar bcrypt y MD5 legacy
-            $ok = str_starts_with((string)$hash, '$2')
+            $isBcrypt = str_starts_with((string)$hash, '$2');
+            $ok = $isBcrypt
                 ? password_verify($actual, $hash)
                 : ($hash === md5($actual));
             if (!$ok) json_err('Contraseña actual incorrecta.');
+            // Migrar hash MD5 a bcrypt en el primer login exitoso
+            if (!$isBcrypt) {
+                $db->prepare("UPDATE usuarios SET pass = ? WHERE id_usuario = ?")
+                   ->execute([password_hash($actual, PASSWORD_BCRYPT), $uid]);
+            }
         } else {
             if (!isAdmin()) json_err('Sin permisos.', 403);
         }
