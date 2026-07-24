@@ -69,24 +69,26 @@ if ($codigo !== '') {
             $id = $orden['id_ingreso'];
 
             // ── Historial de estados ─────────────────────────────────────
+            $id_empresa = (int) $orden['id_empresa'];
+
             $h = $db->prepare(
                 "SELECT 'estado' AS tipo, fecha_cambio AS fecha, status_cambio AS contenido,
                         status_anterior, user
                    FROM historial
-                  WHERE id_reparacion = ?
+                  WHERE id_reparacion = ? AND id_empresa = ?
                   ORDER BY fecha_cambio ASC"
             );
-            $h->execute([$id]);
+            $h->execute([$id, $id_empresa]);
             $estados = $h->fetchAll();
 
             // ── Observaciones con timestamp ──────────────────────────────
             $o = $db->prepare(
                 "SELECT 'obs' AS tipo, fecha, obs AS contenido, '' AS status_anterior, user
                    FROM observaciones
-                  WHERE id_registro = ?
+                  WHERE id_registro = ? AND id_empresa = ?
                   ORDER BY fecha ASC"
             );
-            $o->execute([$id]);
+            $o->execute([$id, $id_empresa]);
             $obs_rows = $o->fetchAll();
 
             // ── obs heredada del campo reparaciones (sin timestamp) ──────

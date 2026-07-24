@@ -112,6 +112,7 @@ if ($method === 'PUT') {
 
 if ($method === 'DELETE') {
     if (!isAdmin()) json_err('Sin permiso.', 403);
+    csrf_check();
     $rid = (int) ($_GET['id'] ?? 0);
     if (!$rid) json_err('ID inválido.');
     $st = $db->prepare("UPDATE inventario SET deleted_at = NOW() WHERE id_repuesto=? AND id_empresa=? AND deleted_at IS NULL");

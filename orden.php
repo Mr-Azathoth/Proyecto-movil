@@ -19,7 +19,7 @@ if (!$emp) { echo 'Empresa no encontrada.'; exit; }
 $sr = $db->prepare("SELECT id_ingreso, fecha_ingreso, nombre_cliente, telefono_cliente, rut_cliente,
                            tipo_ingreso, marca_ingreso, modelo_ingreso, dano_ingreso,
                            valor_ingreso, obs, ingresado_por
-                    FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+                    FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ? AND deleted_at IS NULL");
 $sr->execute([$id, $eid]);
 $rep = $sr->fetch();
 if (!$rep) { echo 'Orden de servicio no encontrada.'; exit; }
