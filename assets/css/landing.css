@@ -297,6 +297,13 @@ section[id], footer[id] { scroll-margin-top: var(--nav-h); }
   width: 100%; max-width: 700px;
   animation: float 6s ease-in-out infinite;
 }
+.mockup-window > img {
+  width: 100%; display: block;
+  border-radius: 0 0 10px 10px;
+  max-height: 360px;
+  object-fit: cover;
+  object-position: top;
+}
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-10px); }

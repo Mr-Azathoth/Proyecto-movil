@@ -26,7 +26,6 @@ $precio_mensual = 4990;
   <div class="nav-inner">
     <a href="#hero" class="nav-logo">
       <svg class="nav-logo-svg" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
-        <defs><style>.nlt{font-family:Impact,'Arial Black',sans-serif;font-size:86px;fill:#fff;}</style></defs>
         <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#3ec96e" stroke-width="20" fill="none" stroke-linecap="round"/>
         <line x1="120" y1="75" x2="136" y2="75" stroke="#3ec96e" stroke-width="2.5"/>
         <circle cx="139" cy="75" r="3.5" fill="#3ec96e"/>
@@ -48,7 +47,7 @@ $precio_mensual = 4990;
           <rect x="-8" y="24" width="9" height="5" rx="2" fill="#fcd9a0"/>
           <rect x="21" y="23" width="9" height="5" rx="2" fill="#fcd9a0"/>
         </g>
-        <text x="145" y="137" class="nlt">ENTR</text>
+        <text x="145" y="137" font-family="Impact,'Arial Black',sans-serif" font-size="86" fill="#fff">ENTR</text>
         <rect x="334" y="54" width="64" height="94" rx="12" fill="none" stroke="#d97706" stroke-width="4"/>
         <rect x="340" y="61" width="52" height="70" rx="5" fill="#111e2e"/>
         <circle cx="366" cy="81" r="10" fill="#7a9cb5"/>
@@ -60,7 +59,7 @@ $precio_mensual = 4990;
         <rect x="335" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
         <polygon points="384,134 373,154 395,154" fill="#f97316"/>
         <rect x="371" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
-        <text x="408" y="137" class="nlt">TEC</text>
+        <text x="408" y="137" font-family="Impact,'Arial Black',sans-serif" font-size="86" fill="#fff">TEC</text>
         <line x1="564" y1="164" x2="544" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
         <line x1="577" y1="164" x2="557" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
         <line x1="546" y1="63" x2="559" y2="63" stroke="#92400e" stroke-width="3"/>
@@ -130,8 +129,7 @@ $precio_mensual = 4990;
           <span class="mockup-url">centrotec.cl/app</span>
         </div>
         <img src="<?= BASE ?>/assets/img/banner 1.jpg?v=<?= filemtime(__DIR__.'/assets/img/banner 1.jpg') ?>"
-             alt="Vista del panel de reparaciones de Centrotec"
-             style="width:100%;display:block;border-radius:0 0 10px 10px;">
+             alt="Vista del panel de reparaciones de Centrotec">
       </div>
     </div>
   </div>
@@ -243,7 +241,6 @@ $precio_mensual = 4990;
   <div class="container footer-inner">
     <div class="footer-brand">
       <svg class="footer-logo-svg" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg">
-        <defs><style>.flt{font-family:Impact,'Arial Black',sans-serif;font-size:86px;fill:#fff;}</style></defs>
         <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#3ec96e" stroke-width="20" fill="none" stroke-linecap="round"/>
         <line x1="120" y1="75" x2="136" y2="75" stroke="#3ec96e" stroke-width="2.5"/>
         <circle cx="139" cy="75" r="3.5" fill="#3ec96e"/>
@@ -262,7 +259,7 @@ $precio_mensual = 4990;
           <rect x="2" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
           <rect x="12" y="39" width="8" height="16" rx="2" fill="#3b82f6"/>
         </g>
-        <text x="145" y="137" class="flt">ENTR</text>
+        <text x="145" y="137" font-family="Impact,'Arial Black',sans-serif" font-size="86" fill="#fff">ENTR</text>
         <rect x="334" y="54" width="64" height="94" rx="12" fill="none" stroke="#d97706" stroke-width="4"/>
         <rect x="340" y="61" width="52" height="70" rx="5" fill="#111e2e"/>
         <circle cx="366" cy="81" r="10" fill="#7a9cb5"/>
@@ -274,7 +271,7 @@ $precio_mensual = 4990;
         <rect x="335" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
         <polygon points="384,134 373,154 395,154" fill="#f97316"/>
         <rect x="371" y="152" width="26" height="5" rx="1" fill="#c2640a"/>
-        <text x="408" y="137" class="flt">TEC</text>
+        <text x="408" y="137" font-family="Impact,'Arial Black',sans-serif" font-size="86" fill="#fff">TEC</text>
         <line x1="564" y1="164" x2="544" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
         <line x1="577" y1="164" x2="557" y2="52" stroke="#92400e" stroke-width="4" stroke-linecap="round"/>
         <line x1="546" y1="63" x2="559" y2="63" stroke="#92400e" stroke-width="3"/>
