@@ -442,6 +442,16 @@ tr[data-href]:hover td { background: rgba(124,58,237,0.06); }
 }
 .mtk-respuesta-ant img { max-width: 100%; border-radius: 4px; margin: 4px 0; }
 
+/* ── Admin modal: hilo de conversación ──────────────────── */
+.mtk-thread { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 4px; }
+.mtk-thread-loading { font-size: 13px; color: var(--txt3); font-style: italic; }
+.mtk-thread-bubble { border-radius: 0 var(--r) var(--r) 0; padding: 10px 13px; font-size: 13px; line-height: 1.6; word-break: break-word; }
+.mtk-thread-bubble-cliente { background: rgba(251,191,36,.05); border: 1px solid rgba(251,191,36,.2); border-left: 3px solid #fbbf24; }
+.mtk-thread-bubble-admin   { background: rgba(79,70,229,.05);  border: 1px solid rgba(79,70,229,.2);  border-left: 3px solid #4f46e5; }
+.mtk-thread-bubble-meta { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--txt3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.mtk-thread-bubble-meta .material-icons-round { font-size: 13px; }
+.mtk-thread-bubble img { max-width: 100%; border-radius: 4px; display: block; margin: 4px 0; }
+
 /* == Papelera == */
 .pap-tabs { display:flex; gap:2px; border-bottom:1px solid var(--border); margin-bottom:20px; }
 .pap-tab {

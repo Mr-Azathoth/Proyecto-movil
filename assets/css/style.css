@@ -1174,6 +1174,15 @@ input.hidden           { display:none !important; }
 .msd-resp-label { font-size:11px; font-weight:700; color:#3fb950; text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:4px; }
 .msd-no-resp { font-size:13px; color:var(--txt3); font-style:italic; }
 .msd-sub { font-size:13px; color:var(--txt2); margin-bottom:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+/* ── Ticket: hilo de conversación ─────────────────────────── */
+.sop-thread { display:flex; flex-direction:column; gap:10px; }
+.sop-bubble { border-radius:0 var(--r) var(--r) 0; padding:11px 14px; font-size:13px; line-height:1.65; word-break:break-word; }
+.sop-bubble-cliente { background:rgba(251,191,36,.05); border:1px solid rgba(251,191,36,.2); border-left:3px solid #fbbf24; }
+.sop-bubble-admin   { background:rgba(63,185,80,.05);  border:1px solid rgba(63,185,80,.2);  border-left:3px solid #3fb950; }
+.sop-bubble-meta { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:7px; }
+.sop-bubble-meta .material-icons-round { font-size:14px; }
+.sop-bubble-body img { max-width:100%; border-radius:4px; display:block; margin:6px 0; }
+.sop-grace-warn { background:rgba(251,191,36,.08); border:1px solid rgba(251,191,36,.25); border-radius:var(--r); padding:10px 14px; font-size:12px; color:#d97706; margin-top:12px; }
 
 /* ── Trial: banner de días restantes ────────────────────────── */
 .trial-banner { display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(251,191,36,0.05)); border-bottom:1px solid rgba(251,191,36,0.25); padding:9px 20px; font-size:13px; color:#fbbf24; flex-shrink:0; }

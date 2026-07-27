@@ -13,47 +13,100 @@
   const modal    = document.getElementById('modal-ticket');
   const btnClose = document.getElementById('btn-modal-ticket-close');
 
+  function buildThreadBubble(tipo, autor, mensaje, dt) {
+    const isCliente = tipo === 'cliente';
+    const icon  = isCliente ? 'person' : 'support_agent';
+    const label = isCliente ? autor : 'Tú (' + autor + ')';
+    const d = new Date(dt.replace(' ', 'T'));
+    const dtFmt = d.toLocaleDateString('es-CL') + ' ' + d.toLocaleTimeString('es-CL', { hour:'2-digit', minute:'2-digit' });
+    return '<div class="mtk-thread-bubble mtk-thread-bubble-' + (isCliente ? 'cliente' : 'admin') + '">'
+      + '<div class="mtk-thread-bubble-meta"><span class="material-icons-round">' + icon + '</span>'
+      + label + ' · ' + dtFmt + '</div>'
+      + '<div>' + mensaje + '</div>'
+      + '</div>';
+  }
+
+  async function loadThread(ticketId, respAnterior) {
+    const wrap    = document.getElementById('mtk-thread-wrap');
+    const threadEl = document.getElementById('mtk-thread');
+    const lblEl   = document.getElementById('mtk-respuesta-lbl');
+
+    wrap.style.display = 'none';
+    threadEl.innerHTML = '<span class="mtk-thread-loading">Cargando...</span>';
+
+    const fd = new FormData();
+    fd.append('action',    'get_mensajes');
+    fd.append('id_ticket', ticketId);
+
+    let mensajes = [];
+    try {
+      const r = await sadminFetch('/reparo/api/admin_tickets.php', fd);
+      const j = await r.json();
+      if (j.ok) mensajes = j.data.mensajes || [];
+    } catch (_) {}
+
+    // Determinar si mostrar el hilo
+    const hasThread = respAnterior || mensajes.length > 0;
+    if (!hasThread) {
+      lblEl.textContent = 'Respuesta del técnico';
+      return;
+    }
+
+    // Construir HTML del hilo
+    let html = '';
+
+    // Respuesta existente (legacy o primera respuesta del admin)
+    const hasAdminInMensajes = mensajes.some(m => m.tipo === 'admin');
+    if (respAnterior && !hasAdminInMensajes) {
+      html += buildThreadBubble('admin', 'admin', respAnterior, new Date().toISOString().slice(0,19).replace('T',' '));
+    }
+
+    mensajes.forEach(m => {
+      html += buildThreadBubble(m.tipo, m.autor, m.mensaje, m.created_at);
+    });
+
+    threadEl.innerHTML = html || '<span class="mtk-thread-loading">Sin mensajes adicionales.</span>';
+    wrap.style.display = '';
+
+    // Etiqueta del campo de respuesta
+    const hasClientReply = mensajes.some(m => m.tipo === 'cliente');
+    if (hasClientReply) {
+      lblEl.textContent = 'Nueva respuesta al cliente';
+    } else if (respAnterior) {
+      lblEl.textContent = 'Nueva respuesta (reemplaza la anterior)';
+    } else {
+      lblEl.textContent = 'Respuesta del técnico';
+    }
+  }
+
   function openModal(btn) {
     ticketActual = btn.dataset.id;
     const empresa = btn.dataset.empresa || '';
     const estado  = btn.dataset.estado  || '';
 
-    document.getElementById('mtk-titulo').textContent   = 'Ticket #' + ticketActual + ' — ' + btn.dataset.asunto;
-    document.getElementById('mtk-empresa').textContent  = empresa;
-    document.getElementById('mtk-usuario').textContent  = btn.dataset.usuario;
+    document.getElementById('mtk-titulo').textContent = 'Ticket #' + ticketActual + ' — ' + btn.dataset.asunto;
+    document.getElementById('mtk-empresa').textContent = empresa;
+    document.getElementById('mtk-usuario').textContent = btn.dataset.usuario;
 
-    // Avatar: iniciales de la empresa (1 o 2 palabras)
     const words = empresa.trim().split(/\s+/).filter(Boolean);
     document.getElementById('mtk-avatar').textContent = words.length >= 2
       ? (words[0][0] + words[1][0]).toUpperCase()
       : empresa.slice(0, 2).toUpperCase() || '?';
 
-    // Badge de estado actual
     const badgeMap = { 'Abierto': 'adm-badge-off', 'En revision': 'adm-badge-warn', 'Resuelto': 'adm-badge-ok' };
     const badge = document.getElementById('mtk-estado-badge');
     badge.className = 'adm-badge ' + (badgeMap[estado] || '');
     badge.textContent = estado;
 
-    // Mensaje: textContent evita XSS; white-space:pre-wrap preserva saltos de línea
     document.getElementById('mtk-mensaje').textContent = btn.dataset.mensaje;
-
-    // Respuesta anterior: mostrar como read-only si existe, limpiar el campo editable
-    const respAnterior  = btn.dataset.respuesta || '';
-    const antWrap       = document.getElementById('mtk-ant-wrap');
-    const antEl         = document.getElementById('mtk-ant');
-    const lblEl         = document.getElementById('mtk-respuesta-lbl');
-    if (respAnterior) {
-      antEl.innerHTML        = respAnterior;
-      antWrap.style.display  = '';
-      lblEl.textContent      = 'Nueva respuesta (reemplaza la anterior)';
-    } else {
-      antWrap.style.display  = 'none';
-      lblEl.textContent      = 'Respuesta del técnico';
-    }
     document.getElementById('mtk-respuesta').innerHTML = '';
-
     document.getElementById('mtk-estado').value = estado;
+
     modal.classList.add('active');
+
+    // Cargar hilo de mensajes de forma asíncrona
+    const respAnterior = btn.dataset.respuesta || '';
+    loadThread(ticketActual, respAnterior);
   }
 
   function closeModal() {

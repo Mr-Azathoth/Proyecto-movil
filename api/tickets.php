@@ -3,6 +3,8 @@ require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/sanitize_ticket.php';
 guard();
 
+define('TICKET_GRACE_HOURS', 72);
+
 $db     = getDB();
 $eid    = eid();
 $uid    = uid();
@@ -10,7 +12,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'POST') csrf_check();
 
-// Auto-migrate
+// Auto-migrate tickets
 try {
     $db->exec("CREATE TABLE IF NOT EXISTS tickets (
         id_ticket      INT AUTO_INCREMENT PRIMARY KEY,
@@ -30,7 +32,20 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 } catch (PDOException $e) {}
 
-// Migración one-shot: solo corre una vez (flag en disco)
+// Auto-migrate ticket_mensajes
+try {
+    $db->exec("CREATE TABLE IF NOT EXISTS ticket_mensajes (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        id_ticket  INT NOT NULL,
+        tipo       ENUM('cliente','admin') NOT NULL,
+        autor      VARCHAR(100) NOT NULL,
+        mensaje    TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT NOW(),
+        KEY idx_ticket (id_ticket)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch (PDOException $e) {}
+
+// Migración one-shot: columna visto
 $_mig_flag = __DIR__ . '/../.migration_visto_done';
 if (!file_exists($_mig_flag)) {
     try {
@@ -42,7 +57,7 @@ if (!file_exists($_mig_flag)) {
     } catch (PDOException $e) {}
 }
 
-// GET — listar tickets de la empresa
+// GET — listar tickets de la empresa (incluye hilo de mensajes)
 if ($method === 'GET') {
     $st = $db->prepare(
         "SELECT id_ticket, id_usuario, usuario_nombre, asunto, mensaje,
@@ -52,21 +67,103 @@ if ($method === 'GET') {
           ORDER BY created_at DESC"
     );
     $st->execute([$eid]);
-    json_ok($st->fetchAll());
+    $tickets = $st->fetchAll();
+
+    if ($tickets) {
+        $ids = array_column($tickets, 'id_ticket');
+        $in  = implode(',', array_fill(0, count($ids), '?'));
+        $msj = $db->prepare(
+            "SELECT id_ticket, id, tipo, autor, mensaje, created_at
+               FROM ticket_mensajes
+              WHERE id_ticket IN ($in)
+              ORDER BY created_at ASC"
+        );
+        $msj->execute($ids);
+        $byTicket = [];
+        foreach ($msj->fetchAll() as $m) {
+            $byTicket[$m['id_ticket']][] = $m;
+        }
+        foreach ($tickets as &$t) {
+            $t['mensajes'] = $byTicket[$t['id_ticket']] ?? [];
+        }
+        unset($t);
+    }
+
+    json_ok($tickets);
 }
 
 if ($method === 'POST') {
     $action = trim($_POST['action'] ?? 'nuevo');
 
-    // Marcar ticket como visto (cliente abrió el detalle)
+    // Marcar ticket como visto
     if ($action === 'marcar_visto') {
         $id = (int)($_POST['id_ticket'] ?? 0);
         if (!$id) json_err('ID inválido.');
+        $db->prepare("UPDATE tickets SET visto=1 WHERE id_ticket=? AND id_empresa=?")
+           ->execute([$id, $eid]);
+        json_ok([]);
+    }
+
+    // Responder a ticket existente
+    if ($action === 'reply') {
+        $id      = (int)($_POST['id_ticket'] ?? 0);
+        $mensaje = sanitize_ticket_html($_POST['mensaje'] ?? '');
+
+        if (!$id) json_err('ID de ticket inválido.');
+        if (mb_strlen(strip_tags($mensaje)) < 2) json_err('El mensaje es demasiado corto.');
+
+        // Verificar que el ticket pertenece a la empresa
         $st = $db->prepare(
-            "UPDATE tickets SET visto=1 WHERE id_ticket=? AND id_empresa=?"
+            "SELECT id_ticket, estado, updated_at FROM tickets WHERE id_ticket=? AND id_empresa=?"
         );
         $st->execute([$id, $eid]);
-        json_ok([]);
+        $ticket = $st->fetch();
+        if (!$ticket) json_err('Ticket no encontrado.');
+
+        if ($ticket['estado'] === 'Resuelto') {
+            $resolvedAt = strtotime($ticket['updated_at'] ?: $ticket['created_at']);
+            $graceEnd   = $resolvedAt + TICKET_GRACE_HOURS * 3600;
+            if (time() > $graceEnd) {
+                json_err('El plazo de ' . TICKET_GRACE_HOURS . ' horas para responder este ticket ha vencido. Si necesitas más ayuda, abre un nuevo ticket.');
+            }
+            // Reabrir ticket
+            $db->prepare(
+                "UPDATE tickets SET estado='Abierto', visto=0, updated_at=NOW() WHERE id_ticket=?"
+            )->execute([$id]);
+        } else {
+            // Marcar como no leído para el admin
+            $db->prepare(
+                "UPDATE tickets SET visto=0, updated_at=NOW() WHERE id_ticket=?"
+            )->execute([$id]);
+        }
+
+        // Insertar mensaje en el hilo
+        $db->prepare(
+            "INSERT INTO ticket_mensajes (id_ticket, tipo, autor, mensaje) VALUES (?,?,?,?)"
+        )->execute([$id, 'cliente', unombre(), $mensaje]);
+
+        // Notificar al admin por correo
+        if (SMTP_USER) {
+            try {
+                $row = $db->prepare(
+                    "SELECT t.asunto, e.nombre AS empresa
+                       FROM tickets t JOIN empresas e ON e.id_empresa = t.id_empresa
+                      WHERE t.id_ticket = ? LIMIT 1"
+                );
+                $row->execute([$id]);
+                $tk = $row->fetch();
+                require_once __DIR__ . '/../includes/mailer.php';
+                send_email(
+                    'soporte@centrotec.cl', 'Soporte Centrotec',
+                    "[Ticket #{$id} — Respuesta cliente] " . ($tk['asunto'] ?? ''),
+                    "<p><b>Empresa:</b> " . htmlspecialchars($tk['empresa'] ?? '') . "<br>
+                     <b>Usuario:</b> " . htmlspecialchars(unombre()) . "</p>
+                     <p>" . $mensaje . "</p>"
+                );
+            } catch (Exception $e) {}
+        }
+
+        json_ok(['msg' => 'Respuesta enviada.']);
     }
 
     // Crear nuevo ticket
@@ -83,20 +180,21 @@ if ($method === 'POST') {
     $st->execute([$eid, $uid, unombre(), $asunto, $mensaje]);
     $id = $db->lastInsertId();
 
-    // Notificar a soporte
     if (SMTP_USER) {
-        require_once __DIR__ . '/../includes/mailer.php';
-        $empresa = $db->prepare("SELECT nombre FROM empresas WHERE id_empresa=? LIMIT 1");
-        $empresa->execute([$eid]);
-        $emp_nombre = $empresa->fetchColumn() ?: "Empresa #{$eid}";
-        send_email(
-            'soporte@centrotec.cl', 'Soporte Centrotec',
-            "[Ticket #{$id}] {$asunto}",
-            "<p><b>Empresa:</b> " . htmlspecialchars($emp_nombre) . "<br>
-             <b>Usuario:</b> " . htmlspecialchars(unombre()) . "<br>
-             <b>Asunto:</b> " . htmlspecialchars($asunto) . "</p>
-             <p>" . $mensaje . "</p>"
-        );
+        try {
+            require_once __DIR__ . '/../includes/mailer.php';
+            $empresa = $db->prepare("SELECT nombre FROM empresas WHERE id_empresa=? LIMIT 1");
+            $empresa->execute([$eid]);
+            $emp_nombre = $empresa->fetchColumn() ?: "Empresa #{$eid}";
+            send_email(
+                'soporte@centrotec.cl', 'Soporte Centrotec',
+                "[Ticket #{$id}] {$asunto}",
+                "<p><b>Empresa:</b> " . htmlspecialchars($emp_nombre) . "<br>
+                 <b>Usuario:</b> " . htmlspecialchars(unombre()) . "<br>
+                 <b>Asunto:</b> " . htmlspecialchars($asunto) . "</p>
+                 <p>" . $mensaje . "</p>"
+            );
+        } catch (Exception $e) {}
     }
 
     json_ok(['id_ticket' => (int)$id, 'msg' => 'Ticket enviado correctamente.']);

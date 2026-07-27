@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  const GRACE_HOURS = 72;
+
   const ESTADO_BADGE = {
     'Abierto':     'pill-blue',
     'En revision': 'pill-orange',
@@ -19,7 +21,8 @@
   function fmt(dt) {
     if (!dt) return '';
     const d = new Date(dt.replace(' ', 'T'));
-    return d.toLocaleDateString('es-CL');
+    return d.toLocaleDateString('es-CL', { day:'2-digit', month:'2-digit', year:'numeric' })
+      + ' ' + d.toLocaleTimeString('es-CL', { hour:'2-digit', minute:'2-digit' });
   }
 
   function updateBadge(count) {
@@ -57,6 +60,7 @@
       return;
     }
 
+    // Badge: tickets con respuesta nueva no vistos
     const unread = tickets.filter(t => t.respuesta && !parseInt(t.visto)).length;
     updateBadge(unread);
 
@@ -89,31 +93,91 @@
   // ── Modal detalle ──────────────────────────────────────────
   const modalDetalle = document.getElementById('modal-sop-detalle');
   const btnMsdClose  = document.getElementById('btn-msd-close');
+  const btnMsdCloseFt = document.getElementById('btn-msd-close-ft');
+  const btnReply     = document.getElementById('btn-msd-reply');
+
+  let currentTicketId = null;
+
+  function buildBubble(tipo, autor, mensaje, dt) {
+    const isCliente = tipo === 'cliente';
+    const icon = isCliente ? 'person' : 'support_agent';
+    const nombre = isCliente ? esc(autor) : 'Equipo Centrotec';
+    return `<div class="sop-bubble sop-bubble-${isCliente ? 'cliente' : 'admin'}">
+      <div class="sop-bubble-meta">
+        <span class="material-icons-round">${icon}</span>${nombre} · ${fmt(dt)}
+      </div>
+      <div class="sop-bubble-body">${mensaje}</div>
+    </div>`;
+  }
 
   function openDetalle(id) {
     const t = ticketsData.find(x => parseInt(x.id_ticket) === id);
     if (!t || !modalDetalle) return;
 
-    document.getElementById('msd-titulo').textContent = 'Ticket #' + t.id_ticket;
+    currentTicketId = id;
+
+    document.getElementById('msd-titulo').textContent = 'Ticket #' + t.id_ticket + ' — ' + t.asunto;
 
     const subEl = document.getElementById('msd-sub');
-    subEl.innerHTML = '<span>' + esc(t.asunto) + '</span>'
-      + '<span class="pill ' + (ESTADO_BADGE[t.estado] || '') + '">'
-      + esc(ESTADO_LABEL[t.estado] || t.estado) + '</span>';
+    subEl.innerHTML = '<span class="pill ' + (ESTADO_BADGE[t.estado] || '') + '">'
+      + esc(ESTADO_LABEL[t.estado] || t.estado) + '</span>'
+      + '<span style="color:var(--txt3);font-size:12px;">'
+      + esc(t.asunto) + '</span>';
 
-    document.getElementById('msd-msg').innerHTML = t.mensaje || '';
+    // Construir hilo de conversación
+    const thread = document.getElementById('msd-thread');
+    let html = buildBubble('cliente', t.usuario_nombre, t.mensaje || '', t.created_at);
 
-    const respWrap = document.getElementById('msd-resp-wrap');
-    const respTxt  = document.getElementById('msd-resp-txt');
-    const noResp   = document.getElementById('msd-no-resp');
+    const mensajes = t.mensajes || [];
+    const hasAdminMensajes = mensajes.some(m => m.tipo === 'admin');
 
-    if (t.respuesta) {
-      respWrap.classList.remove('sop-hidden');
-      noResp.classList.add('sop-hidden');
-      respTxt.innerHTML = t.respuesta;
+    // Si no hay mensajes en el hilo, mostrar respuesta legacy (tickets.respuesta)
+    if (!hasAdminMensajes && t.respuesta) {
+      html += buildBubble('admin', 'admin', t.respuesta, t.updated_at || t.created_at);
+    }
+
+    // Mensajes del hilo
+    mensajes.forEach(m => {
+      html += buildBubble(m.tipo, m.autor, m.mensaje, m.created_at);
+    });
+
+    if (!t.respuesta && !mensajes.length) {
+      html += '<p class="msd-no-resp" style="margin-top:12px;">Sin respuesta aún. Te notificaremos por correo cuando el equipo responda.</p>';
+    }
+
+    thread.innerHTML = html;
+
+    // Período de gracia y campo de respuesta
+    const graceWarn  = document.getElementById('msd-grace-warn');
+    const replyWrap  = document.getElementById('msd-reply-wrap');
+    const replyMsg   = document.getElementById('msd-reply-msg');
+    const replyError = document.getElementById('msd-reply-error');
+
+    replyMsg.innerHTML = '';
+    replyError.textContent = '';
+    graceWarn.classList.add('sop-hidden');
+    replyWrap.classList.add('sop-hidden');
+    btnReply.classList.add('sop-hidden');
+
+    let canReply = false;
+
+    if (t.estado !== 'Resuelto') {
+      canReply = true;
     } else {
-      respWrap.classList.add('sop-hidden');
-      noResp.classList.remove('sop-hidden');
+      const resolvedAt = new Date((t.updated_at || t.created_at).replace(' ', 'T')).getTime();
+      const graceEnd   = resolvedAt + GRACE_HOURS * 3600 * 1000;
+      const remaining  = graceEnd - Date.now();
+      if (remaining > 0) {
+        canReply = true;
+        const hrs = Math.ceil(remaining / 3600000);
+        graceWarn.textContent = '⏱ Puedes responder este ticket por ' + hrs + ' hora' + (hrs === 1 ? '' : 's') + ' más. Pasado ese plazo, abre un nuevo ticket si necesitas ayuda.';
+        graceWarn.classList.remove('sop-hidden');
+      }
+    }
+
+    if (canReply) {
+      replyWrap.classList.remove('sop-hidden');
+      btnReply.classList.remove('sop-hidden');
     }
 
     modalDetalle.classList.add('active');
@@ -121,6 +185,49 @@
     if (t.respuesta && !parseInt(t.visto)) {
       marcarVisto(id);
     }
+  }
+
+  // ── Enviar respuesta ────────────────────────────────────────
+  if (btnReply) {
+    btnReply.addEventListener('click', async () => {
+      if (!currentTicketId) return;
+      const replyMsg   = document.getElementById('msd-reply-msg');
+      const replyError = document.getElementById('msd-reply-error');
+
+      replyError.textContent = '';
+      const text = (replyMsg.innerText || '').trim();
+      if (text.length < 2) { replyError.textContent = 'El mensaje es demasiado corto.'; return; }
+      if (replyMsg.querySelector('.ce-uploading')) { replyError.textContent = 'Espera a que termine de subir la imagen.'; return; }
+
+      btnReply.disabled = true;
+      const fd = new FormData();
+      fd.append('action',    'reply');
+      fd.append('id_ticket', currentTicketId);
+      fd.append('mensaje',   replyMsg.innerHTML);
+
+      try {
+        const r = await apiFetch('/reparo/api/tickets.php', { method: 'POST', body: fd });
+        const j = await r.json();
+        if (j.ok) {
+          modalDetalle.classList.remove('active');
+          loadTickets();
+          showToast('Respuesta enviada correctamente.');
+        } else {
+          replyError.textContent = j.msg || 'Error al enviar.';
+        }
+      } catch {
+        replyError.textContent = 'Error de red. Intenta nuevamente.';
+      }
+      btnReply.disabled = false;
+    });
+  }
+
+  // Imagen en campo de respuesta
+  const replyMsgEl = document.getElementById('msd-reply-msg');
+  if (replyMsgEl && typeof setupImagePaste === 'function') {
+    setupImagePaste(replyMsgEl, function (fd) {
+      return apiFetch('/reparo/api/upload_ticket_img.php', { method: 'POST', body: fd });
+    });
   }
 
   async function marcarVisto(id) {
@@ -143,10 +250,10 @@
     } catch (_) {}
   }
 
-  if (btnMsdClose) btnMsdClose.addEventListener('click', () => modalDetalle.classList.remove('active'));
-  if (modalDetalle) modalDetalle.addEventListener('click', e => {
-    if (e.target === modalDetalle) modalDetalle.classList.remove('active');
-  });
+  function cerrarDetalle() { modalDetalle.classList.remove('active'); currentTicketId = null; }
+  if (btnMsdClose)   btnMsdClose.addEventListener('click', cerrarDetalle);
+  if (btnMsdCloseFt) btnMsdCloseFt.addEventListener('click', cerrarDetalle);
+  if (modalDetalle)  modalDetalle.addEventListener('click', e => { if (e.target === modalDetalle) cerrarDetalle(); });
 
   // ── Modal nuevo ticket ─────────────────────────────────────
   const btnNuevo   = document.getElementById('btn-nuevo-ticket');
@@ -158,7 +265,7 @@
   const sopError   = document.getElementById('sop-error');
 
   if (btnNuevo) btnNuevo.addEventListener('click', () => {
-    inpAsunto.value    = '';
+    inpAsunto.value      = '';
     inpMensaje.innerHTML = '';
     sopError.textContent = '';
     modalSop.classList.add('active');
@@ -172,7 +279,7 @@
   if (modalSop) modalSop.addEventListener('click', e => { if (e.target === modalSop) cerrarModal(); });
 
   if (btnEnviar) btnEnviar.addEventListener('click', async () => {
-    const asunto  = inpAsunto.value.trim();
+    const asunto      = inpAsunto.value.trim();
     const mensajeText = inpMensaje.innerText.trim();
     sopError.textContent = '';
     if (asunto.length < 3)       { sopError.textContent = 'El asunto es demasiado corto.'; return; }

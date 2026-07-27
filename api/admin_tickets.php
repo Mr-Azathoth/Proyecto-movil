@@ -19,6 +19,19 @@ if (!file_exists($_mig_flag)) {
     } catch (PDOException $e) {}
 }
 
+// Auto-migrate ticket_mensajes (misma tabla, idempotente)
+try {
+    $db->exec("CREATE TABLE IF NOT EXISTS ticket_mensajes (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        id_ticket  INT NOT NULL,
+        tipo       ENUM('cliente','admin') NOT NULL,
+        autor      VARCHAR(100) NOT NULL,
+        mensaje    TEXT NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT NOW(),
+        KEY idx_ticket (id_ticket)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+} catch (PDOException $e) {}
+
 // GET — listar todos los tickets (opcionalmente filtrar por empresa o estado)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $where = ['1=1'];
@@ -48,8 +61,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 // POST — responder/actualizar estado
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id       = (int)($_POST['id_ticket']  ?? 0);
-    $estado   = trim($_POST['estado']      ?? '');
+    // Obtener hilo de mensajes de un ticket
+    if (($_POST['action'] ?? '') === 'get_mensajes') {
+        $id = (int)($_POST['id_ticket'] ?? 0);
+        if (!$id) sadmin_json_err('ID inválido.');
+        $st = $db->prepare(
+            "SELECT id, tipo, autor, mensaje, created_at
+               FROM ticket_mensajes WHERE id_ticket=? ORDER BY created_at ASC"
+        );
+        $st->execute([$id]);
+        sadmin_json_ok(['mensajes' => $st->fetchAll()]);
+    }
+
+    $id        = (int)($_POST['id_ticket']  ?? 0);
+    $estado    = trim($_POST['estado']      ?? '');
     $respuesta = sanitize_ticket_html($_POST['respuesta'] ?? '');
 
     $estados_validos = ['Abierto', 'En revision', 'Resuelto'];
@@ -61,6 +86,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Actualizar estado (y respuesta si se proporcionó — nunca borrar respuesta existente)
     if ($respuesta !== '') {
+        // Solo insertar en el hilo si la respuesta cambió
+        $cur = $db->prepare("SELECT respuesta FROM tickets WHERE id_ticket=? LIMIT 1");
+        $cur->execute([$id]);
+        $curResp = $cur->fetchColumn();
+        if ($respuesta !== $curResp) {
+            $db->prepare(
+                "INSERT INTO ticket_mensajes (id_ticket, tipo, autor, mensaje) VALUES (?,?,?,?)"
+            )->execute([$id, 'admin', sadmin_nombre(), $respuesta]);
+        }
+
         $st = $db->prepare(
             "UPDATE tickets SET estado = ?, respuesta = ?, respondido_por = ?, visto = 0, updated_at = NOW() WHERE id_ticket = ?"
         );

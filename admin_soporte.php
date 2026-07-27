@@ -198,13 +198,13 @@ $kpis = $db->query(
 
       <div class="mtk-divider"></div>
 
-      <!-- Respuesta anterior (read-only, visible solo si ya existe) -->
-      <div id="mtk-ant-wrap" style="display:none;">
+      <!-- Hilo de mensajes adicionales (cliente ↔ admin) -->
+      <div id="mtk-thread-wrap" style="display:none;">
         <div class="mtk-section-label" style="color:var(--txt3);">
-          <span class="material-icons-round">history</span>
-          Respuesta anterior
+          <span class="material-icons-round">forum</span>
+          Conversación
         </div>
-        <div class="mtk-respuesta-ant" id="mtk-ant"></div>
+        <div id="mtk-thread" class="mtk-thread"><span class="mtk-thread-loading">Cargando...</span></div>
         <div class="mtk-divider" style="margin-top:14px;"></div>
       </div>
 

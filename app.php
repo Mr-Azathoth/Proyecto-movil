@@ -685,15 +685,24 @@ try {
           <h3 id="msd-titulo"></h3>
           <button class="modal-close" id="btn-msd-close"><span class="material-icons-round">close</span></button>
         </div>
-        <div class="modal-body">
-          <div class="msd-sub" id="msd-sub"></div>
-          <p class="msd-sublabel">Tu mensaje</p>
-          <div class="msd-msg" id="msd-msg"></div>
-          <div id="msd-resp-wrap" class="sop-hidden">
-            <p class="msd-sublabel"><span class="msd-resp-label">Respuesta del equipo</span></p>
-            <div class="msd-resp" id="msd-resp-txt"></div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:0;">
+          <div class="msd-sub" id="msd-sub" style="margin-bottom:16px;"></div>
+          <!-- Hilo de conversación -->
+          <div id="msd-thread" class="sop-thread"></div>
+          <!-- Aviso período de gracia -->
+          <div id="msd-grace-warn" class="sop-grace-warn sop-hidden"></div>
+          <!-- Campo de respuesta -->
+          <div id="msd-reply-wrap" class="sop-hidden" style="margin-top:16px;">
+            <p class="msd-sublabel" style="margin-bottom:6px;">Tu respuesta</p>
+            <div id="msd-reply-msg" class="ce-field" contenteditable="true" data-ph="Escribe tu respuesta... Puedes pegar imágenes con Ctrl+V"></div>
+            <p id="msd-reply-error" style="color:#f87171;font-size:13px;margin-top:6px;min-height:18px;"></p>
           </div>
-          <p class="msd-no-resp sop-hidden" id="msd-no-resp">Sin respuesta aún. Te notificaremos por correo cuando el equipo responda.</p>
+        </div>
+        <div class="modal-ft">
+          <button class="btn btn-sec" id="btn-msd-close-ft">Cerrar</button>
+          <button class="btn btn-primary sop-hidden" id="btn-msd-reply">
+            <span class="material-icons-round">send</span>Responder
+          </button>
         </div>
       </div>
     </div><!-- /modal-sop-detalle -->
