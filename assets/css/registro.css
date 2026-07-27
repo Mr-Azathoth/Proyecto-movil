@@ -379,8 +379,10 @@
 
 /* Tarjeta trial (full-width) */
 .rg-plan-trial {
-  grid-column: 1 / -1;
+  display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
   border-color: rgba(63,185,80,0.4);
   background: rgba(63,185,80,0.05);
   margin-bottom: 2px;
