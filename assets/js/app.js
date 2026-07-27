@@ -484,12 +484,18 @@ function updateStats(rows) {
   document.getElementById('st-gar').textContent   = counts['Garantia'];
 }
 
-// Retorna link directo al chat de WhatsApp sin mensaje predefinido
+// Retorna link de WhatsApp: incluye mensaje con código de seguimiento cuando está disponible
 function waLink(rep) {
-  const phone = (rep.telefono_cliente||'').replace(/[^0-9]/g,'');
-  // Normalizar número chileno: agregar 56 si no lo tiene
+  const phone      = (rep.telefono_cliente||'').replace(/[^0-9]/g,'');
   const normalized = /^56/.test(phone) ? phone : /^9\d{8}$/.test(phone) ? '56'+phone : phone;
-  return `https://wa.me/${normalized}`;
+  const base       = normalized.length >= 11 ? `https://wa.me/${normalized}` : `https://wa.me/`;
+  const codigo     = rep.codigo_seguimiento || '';
+  if (!codigo) return base;
+  const nombre = rep.nombre_cliente || 'cliente';
+  const local  = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+  const url    = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
+  const msg    = `Hola ${nombre}! Tu equipo está en *${local}*.\nCódigo de seguimiento: *${codigo}*\nConsulta el estado en: ${url}`;
+  return `${base}?text=${encodeURIComponent(msg)}`;
 }
 
 // SVG oficial de WhatsApp
