@@ -216,6 +216,9 @@
   var form      = document.getElementById('reg-form');
   var btnSubmit = document.getElementById('btn-submit');
 
+  // Inicializar UI según el plan pre-seleccionado al cargar la página
+  updatePlanUI(planHidden ? planHidden.value : 'trial');
+
   function resetBtn() {
     if (!btnSubmit) return;
     btnSubmit.disabled = false;
