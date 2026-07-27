@@ -176,9 +176,9 @@ $kpis = $db->query(
         <span class="material-icons-round">close</span>
       </button>
     </div>
-    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:18px;">
+    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
 
-      <!-- Remitente: avatar + empresa/usuario + badge de estado -->
+      <!-- Remitente -->
       <div class="mtk-header-row">
         <div class="mtk-avatar" id="mtk-avatar">?</div>
         <div class="mtk-sender-info">
@@ -188,35 +188,17 @@ $kpis = $db->query(
         <span class="adm-badge" id="mtk-estado-badge"></span>
       </div>
 
-      <!-- Mensaje del cliente -->
-      <div>
-        <div class="mtk-section-label">
-          <span class="material-icons-round">forum</span>
-          Mensaje del cliente
-        </div>
-        <div class="mtk-mensaje-box" id="mtk-mensaje"></div>
-      </div>
+      <!-- Mensaje original del cliente -->
+      <div class="mtk-mensaje-box" id="mtk-mensaje"></div>
 
-      <div class="mtk-divider"></div>
-
-      <!-- Hilo de mensajes adicionales (cliente ↔ admin) -->
+      <!-- Hilo de conversación (visible solo si hay mensajes) -->
       <div id="mtk-thread-wrap" style="display:none;">
-        <div class="mtk-section-label" style="color:var(--txt3);">
-          <span class="material-icons-round">forum</span>
-          Conversación
-        </div>
-        <div id="mtk-thread" class="mtk-thread"><span class="mtk-thread-loading">Cargando...</span></div>
-        <div class="mtk-divider" style="margin-top:14px;"></div>
+        <div id="mtk-thread" class="mtk-thread"></div>
       </div>
 
-      <!-- Nueva respuesta -->
-      <div>
-        <div class="mtk-section-label">
-          <span class="material-icons-round">reply</span>
-          <span id="mtk-respuesta-lbl">Respuesta del técnico</span>
-        </div>
-        <div id="mtk-respuesta" class="ce-field ce-field-admin" contenteditable="true" data-ph="Escribe la respuesta al cliente… Puedes pegar imágenes con Ctrl+V"></div>
-      </div>
+      <!-- Campo de respuesta -->
+      <div id="mtk-respuesta" class="ce-field ce-field-admin" contenteditable="true"
+           data-ph="Escribe la respuesta al cliente… Puedes pegar imágenes con Ctrl+V"></div>
 
       <!-- Pie: estado + guardar -->
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--border);">

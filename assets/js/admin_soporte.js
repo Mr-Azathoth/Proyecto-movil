@@ -29,7 +29,6 @@
   async function loadThread(ticketId, respAnterior, updatedAt) {
     const wrap     = document.getElementById('mtk-thread-wrap');
     const threadEl = document.getElementById('mtk-thread');
-    const lblEl    = document.getElementById('mtk-respuesta-lbl');
 
     wrap.style.display = 'none';
     threadEl.innerHTML = '<span class="mtk-thread-loading">Cargando...</span>';
@@ -50,10 +49,7 @@
 
     // Determinar si mostrar el hilo
     const hasThread = respAnterior || mensajes.length > 0;
-    if (!hasThread) {
-      lblEl.textContent = 'Respuesta del técnico';
-      return;
-    }
+    if (!hasThread) return;
 
     // Construir HTML del hilo
     let html = '';
@@ -69,18 +65,8 @@
       html += buildThreadBubble(m.tipo, m.autor, m.mensaje, m.created_at);
     });
 
-    threadEl.innerHTML = html || '<span class="mtk-thread-loading">Sin mensajes adicionales.</span>';
+    threadEl.innerHTML = html;
     wrap.style.display = '';
-
-    // Etiqueta del campo de respuesta
-    const hasClientReply = mensajes.some(m => m.tipo === 'cliente');
-    if (hasClientReply) {
-      lblEl.textContent = 'Nueva respuesta al cliente';
-    } else if (respAnterior) {
-      lblEl.textContent = 'Nueva respuesta (reemplaza la anterior)';
-    } else {
-      lblEl.textContent = 'Respuesta del técnico';
-    }
   }
 
   function openModal(btn) {
@@ -104,7 +90,6 @@
 
     document.getElementById('mtk-mensaje').textContent = btn.dataset.mensaje;
     document.getElementById('mtk-respuesta').innerHTML = '';
-    document.getElementById('mtk-respuesta-lbl').textContent = 'Respuesta del técnico';
     document.getElementById('mtk-estado').value = estado;
 
     modal.classList.add('active');
