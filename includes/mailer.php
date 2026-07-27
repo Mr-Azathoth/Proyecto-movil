@@ -16,6 +16,7 @@ function send_email(string $to, string $to_name, string $subject, string $html_b
         $mail->Password   = SMTP_PASS;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = SMTP_PORT;
+        $mail->Timeout    = 8;
         $mail->CharSet    = 'UTF-8';
 
         $mail->setFrom(SMTP_FROM ?: SMTP_USER, SMTP_NAME);

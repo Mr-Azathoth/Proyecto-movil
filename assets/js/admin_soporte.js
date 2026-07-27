@@ -35,9 +35,24 @@
     badge.textContent = estado;
 
     // Mensaje: textContent evita XSS; white-space:pre-wrap preserva saltos de línea
-    document.getElementById('mtk-mensaje').textContent  = btn.dataset.mensaje;
-    document.getElementById('mtk-respuesta').innerHTML  = btn.dataset.respuesta;
-    document.getElementById('mtk-estado').value         = estado;
+    document.getElementById('mtk-mensaje').textContent = btn.dataset.mensaje;
+
+    // Respuesta anterior: mostrar como read-only si existe, limpiar el campo editable
+    const respAnterior  = btn.dataset.respuesta || '';
+    const antWrap       = document.getElementById('mtk-ant-wrap');
+    const antEl         = document.getElementById('mtk-ant');
+    const lblEl         = document.getElementById('mtk-respuesta-lbl');
+    if (respAnterior) {
+      antEl.innerHTML        = respAnterior;
+      antWrap.style.display  = '';
+      lblEl.textContent      = 'Nueva respuesta (reemplaza la anterior)';
+    } else {
+      antWrap.style.display  = 'none';
+      lblEl.textContent      = 'Respuesta del técnico';
+    }
+    document.getElementById('mtk-respuesta').innerHTML = '';
+
+    document.getElementById('mtk-estado').value = estado;
     modal.classList.add('active');
   }
 

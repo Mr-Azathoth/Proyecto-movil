@@ -198,11 +198,21 @@ $kpis = $db->query(
 
       <div class="mtk-divider"></div>
 
-      <!-- Respuesta -->
+      <!-- Respuesta anterior (read-only, visible solo si ya existe) -->
+      <div id="mtk-ant-wrap" style="display:none;">
+        <div class="mtk-section-label" style="color:var(--txt3);">
+          <span class="material-icons-round">history</span>
+          Respuesta anterior
+        </div>
+        <div class="mtk-respuesta-ant" id="mtk-ant"></div>
+        <div class="mtk-divider" style="margin-top:14px;"></div>
+      </div>
+
+      <!-- Nueva respuesta -->
       <div>
         <div class="mtk-section-label">
           <span class="material-icons-round">reply</span>
-          Respuesta del técnico
+          <span id="mtk-respuesta-lbl">Respuesta del técnico</span>
         </div>
         <div id="mtk-respuesta" class="ce-field ce-field-admin" contenteditable="true" data-ph="Escribe la respuesta al cliente… Puedes pegar imágenes con Ctrl+V"></div>
       </div>
