@@ -416,13 +416,17 @@
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
 
-/* Grilla atenuada cuando trial está activo */
+/* Grilla atenuada cuando trial está activo, y viceversa */
 .rg-planes-dimmed {
   opacity: 0.4;
   transition: opacity .25s;
 }
 .rg-planes-dimmed + .rg-security { display: none !important; }
 .rg-planes-sep.rg-sep-dimmed { opacity: 0.4; transition: opacity .25s; }
+.rg-plan-trial-dimmed {
+  opacity: 0.4;
+  transition: opacity .25s;
+}
 
 .rg-security {
   display: flex; align-items: center; justify-content: center;

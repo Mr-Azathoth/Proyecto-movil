@@ -173,6 +173,8 @@
     if (securityEl) securityEl.style.display = isTrial ? 'none' : '';
     if (planesGrid) planesGrid.classList.toggle('rg-planes-dimmed', isTrial);
     if (planesSep)  planesSep.classList.toggle('rg-sep-dimmed', isTrial);
+    var trialCard = document.getElementById('plan-card-trial');
+    if (trialCard) trialCard.classList.toggle('rg-plan-trial-dimmed', !isTrial);
     if (btnSubmit) {
       btnSubmit.innerHTML = isTrial
         ? '<span class="material-icons-round">rocket_launch</span> Comenzar prueba gratis'
