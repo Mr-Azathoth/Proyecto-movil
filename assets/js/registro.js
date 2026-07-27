@@ -165,9 +165,14 @@
   var planHidden = document.getElementById('plan-hidden');
   var securityEl = document.getElementById('rg-security');
 
+  var planesGrid = document.getElementById('rg-planes');
+  var planesSep  = document.querySelector('.rg-planes-sep');
+
   function updatePlanUI(planKey) {
     var isTrial = planKey === 'trial';
     if (securityEl) securityEl.style.display = isTrial ? 'none' : '';
+    if (planesGrid) planesGrid.classList.toggle('rg-planes-dimmed', isTrial);
+    if (planesSep)  planesSep.classList.toggle('rg-sep-dimmed', isTrial);
     if (btnSubmit) {
       btnSubmit.innerHTML = isTrial
         ? '<span class="material-icons-round">rocket_launch</span> Comenzar prueba gratis'

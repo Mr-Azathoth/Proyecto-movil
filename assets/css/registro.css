@@ -416,6 +416,15 @@
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
 
+/* Grilla atenuada cuando trial está activo */
+.rg-planes-dimmed {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+.rg-planes-dimmed + .rg-security { display: none !important; }
+.rg-planes-sep.rg-sep-dimmed { opacity: 0.4; transition: opacity .25s; }
+
 .rg-security {
   display: flex; align-items: center; justify-content: center;
   gap: 6px; font-size: 11px; color: var(--txt3);
