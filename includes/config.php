@@ -58,6 +58,7 @@ session_start();
 // Esto previene que un error de PHP cause que el JS no pueda parsear la respuesta
 // y muestre "Error de red" en lugar del error real.
 set_exception_handler(function (Throwable $e): void {
+    while (ob_get_level() > 0) ob_end_clean();
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: application/json');
@@ -72,6 +73,7 @@ set_exception_handler(function (Throwable $e): void {
 register_shutdown_function(function (): void {
     $err = error_get_last();
     if (!$err || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) return;
+    while (ob_get_level() > 0) ob_end_clean();
     if (!headers_sent()) {
         http_response_code(500);
         header('Content-Type: application/json');

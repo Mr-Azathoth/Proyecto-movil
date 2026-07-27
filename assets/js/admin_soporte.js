@@ -15,12 +15,29 @@
 
   function openModal(btn) {
     ticketActual = btn.dataset.id;
+    const empresa = btn.dataset.empresa || '';
+    const estado  = btn.dataset.estado  || '';
+
     document.getElementById('mtk-titulo').textContent   = 'Ticket #' + ticketActual + ' — ' + btn.dataset.asunto;
-    document.getElementById('mtk-empresa').textContent  = btn.dataset.empresa;
+    document.getElementById('mtk-empresa').textContent  = empresa;
     document.getElementById('mtk-usuario').textContent  = btn.dataset.usuario;
-    document.getElementById('mtk-mensaje').innerHTML   = btn.dataset.mensaje;
-    document.getElementById('mtk-respuesta').innerHTML = btn.dataset.respuesta;
-    document.getElementById('mtk-estado').value        = btn.dataset.estado;
+
+    // Avatar: iniciales de la empresa (1 o 2 palabras)
+    const words = empresa.trim().split(/\s+/).filter(Boolean);
+    document.getElementById('mtk-avatar').textContent = words.length >= 2
+      ? (words[0][0] + words[1][0]).toUpperCase()
+      : empresa.slice(0, 2).toUpperCase() || '?';
+
+    // Badge de estado actual
+    const badgeMap = { 'Abierto': 'adm-badge-off', 'En revision': 'adm-badge-warn', 'Resuelto': 'adm-badge-ok' };
+    const badge = document.getElementById('mtk-estado-badge');
+    badge.className = 'adm-badge ' + (badgeMap[estado] || '');
+    badge.textContent = estado;
+
+    // Mensaje: textContent evita XSS; white-space:pre-wrap preserva saltos de línea
+    document.getElementById('mtk-mensaje').textContent  = btn.dataset.mensaje;
+    document.getElementById('mtk-respuesta').innerHTML  = btn.dataset.respuesta;
+    document.getElementById('mtk-estado').value         = estado;
     modal.classList.add('active');
   }
 
@@ -53,9 +70,10 @@
     fd.append('estado',     document.getElementById('mtk-estado').value);
     fd.append('respuesta',  document.getElementById('mtk-respuesta').innerHTML);
 
+    let resp = null;
     try {
-      const r = await sadminFetch('/reparo/api/admin_tickets.php', fd);
-      const j = await r.json();
+      resp = await sadminFetch('/reparo/api/admin_tickets.php', fd);
+      const j = await resp.json();
       if (j.ok) {
         toast('Ticket actualizado.', true);
         setTimeout(() => location.reload(), 1200);
@@ -63,8 +81,10 @@
         toast(j.msg || 'Error al guardar.', false);
         btn.disabled = false;
       }
-    } catch {
-      toast('Error de red.', false);
+    } catch (err) {
+      const status = resp ? ' (HTTP ' + resp.status + ')' : ' (sin respuesta)';
+      console.error('[tickets] Error al guardar ticket' + status, err);
+      toast('Error al guardar' + status + '. Ver consola para detalle.', false);
       btn.disabled = false;
     }
   });

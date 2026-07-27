@@ -175,18 +175,40 @@ $kpis = $db->query(
         <span class="material-icons-round">close</span>
       </button>
     </div>
-    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
-      <div style="font-size:12px;color:var(--txt2);">
-        <strong id="mtk-empresa"></strong> — <span id="mtk-usuario"></span>
-      </div>
-      <div class="ec-card" style="padding:14px 18px;font-size:13px;line-height:1.6;color:var(--txt);" id="mtk-mensaje"></div>
+    <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:18px;">
 
-      <div style="border-top:1px solid var(--border);padding-top:16px;">
-        <label style="font-size:12px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:8px;">Respuesta</label>
+      <!-- Remitente: avatar + empresa/usuario + badge de estado -->
+      <div class="mtk-header-row">
+        <div class="mtk-avatar" id="mtk-avatar">?</div>
+        <div class="mtk-sender-info">
+          <div class="mtk-empresa-name" id="mtk-empresa"></div>
+          <div class="mtk-usuario-name" id="mtk-usuario"></div>
+        </div>
+        <span class="adm-badge" id="mtk-estado-badge"></span>
+      </div>
+
+      <!-- Mensaje del cliente -->
+      <div>
+        <div class="mtk-section-label">
+          <span class="material-icons-round">forum</span>
+          Mensaje del cliente
+        </div>
+        <div class="mtk-mensaje-box" id="mtk-mensaje"></div>
+      </div>
+
+      <div class="mtk-divider"></div>
+
+      <!-- Respuesta -->
+      <div>
+        <div class="mtk-section-label">
+          <span class="material-icons-round">reply</span>
+          Respuesta del técnico
+        </div>
         <div id="mtk-respuesta" class="ce-field ce-field-admin" contenteditable="true" data-ph="Escribe la respuesta al cliente… Puedes pegar imágenes con Ctrl+V"></div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <!-- Pie: estado + guardar -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:4px;border-top:1px solid var(--border);">
         <label style="font-size:13px;font-weight:600;color:var(--txt);">Estado:</label>
         <select id="mtk-estado" class="adm-search" style="max-width:180px;">
           <option value="Abierto">Abierto</option>
