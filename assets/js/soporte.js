@@ -211,7 +211,7 @@
         if (j.ok) {
           modalDetalle.classList.remove('active');
           loadTickets();
-          showToast('Respuesta enviada correctamente.');
+          toast('Respuesta enviada correctamente.');
         } else {
           replyError.textContent = j.msg || 'Error al enviar.';
         }
@@ -297,7 +297,7 @@
       if (j.ok) {
         cerrarModal();
         loadTickets();
-        showToast('Ticket enviado. Te responderemos pronto.');
+        toast('Ticket enviado. Te responderemos pronto.');
       } else {
         sopError.textContent = j.msg || 'Error al enviar.';
       }

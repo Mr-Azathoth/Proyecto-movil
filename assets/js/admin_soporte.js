@@ -26,10 +26,10 @@
       + '</div>';
   }
 
-  async function loadThread(ticketId, respAnterior) {
-    const wrap    = document.getElementById('mtk-thread-wrap');
+  async function loadThread(ticketId, respAnterior, updatedAt) {
+    const wrap     = document.getElementById('mtk-thread-wrap');
     const threadEl = document.getElementById('mtk-thread');
-    const lblEl   = document.getElementById('mtk-respuesta-lbl');
+    const lblEl    = document.getElementById('mtk-respuesta-lbl');
 
     wrap.style.display = 'none';
     threadEl.innerHTML = '<span class="mtk-thread-loading">Cargando...</span>';
@@ -45,6 +45,9 @@
       if (j.ok) mensajes = j.data.mensajes || [];
     } catch (_) {}
 
+    // Descartar respuesta obsoleta si el usuario ya abrió otro ticket
+    if (ticketActual !== ticketId) return;
+
     // Determinar si mostrar el hilo
     const hasThread = respAnterior || mensajes.length > 0;
     if (!hasThread) {
@@ -55,10 +58,11 @@
     // Construir HTML del hilo
     let html = '';
 
-    // Respuesta existente (legacy o primera respuesta del admin)
+    // Respuesta legacy: sólo si no hay mensajes de admin en el hilo
     const hasAdminInMensajes = mensajes.some(m => m.tipo === 'admin');
     if (respAnterior && !hasAdminInMensajes) {
-      html += buildThreadBubble('admin', 'admin', respAnterior, new Date().toISOString().slice(0,19).replace('T',' '));
+      const legacyDate = updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ');
+      html += buildThreadBubble('admin', 'admin', respAnterior, legacyDate);
     }
 
     mensajes.forEach(m => {
@@ -100,13 +104,15 @@
 
     document.getElementById('mtk-mensaje').textContent = btn.dataset.mensaje;
     document.getElementById('mtk-respuesta').innerHTML = '';
+    document.getElementById('mtk-respuesta-lbl').textContent = 'Respuesta del técnico';
     document.getElementById('mtk-estado').value = estado;
 
     modal.classList.add('active');
 
     // Cargar hilo de mensajes de forma asíncrona
     const respAnterior = btn.dataset.respuesta || '';
-    loadThread(ticketActual, respAnterior);
+    const updatedAt    = btn.dataset.updated_at || '';
+    loadThread(ticketActual, respAnterior, updatedAt);
   }
 
   function closeModal() {

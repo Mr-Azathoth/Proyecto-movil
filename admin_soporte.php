@@ -133,7 +133,8 @@ $kpis = $db->query(
           data-asunto="<?= htmlspecialchars($t['asunto'], ENT_QUOTES) ?>"
           data-mensaje="<?= htmlspecialchars($t['mensaje'], ENT_QUOTES) ?>"
           data-estado="<?= htmlspecialchars($t['estado'], ENT_QUOTES) ?>"
-          data-respuesta="<?= htmlspecialchars($t['respuesta'] ?? '', ENT_QUOTES) ?>">
+          data-respuesta="<?= htmlspecialchars($t['respuesta'] ?? '', ENT_QUOTES) ?>"
+          data-updated_at="<?= htmlspecialchars($t['updated_at'] ?? '', ENT_QUOTES) ?>">
           <td style="font-weight:700;color:var(--txt2);">#<?= $t['id_ticket'] ?></td>
           <td style="font-size:12px;color:var(--txt2);"><?= htmlspecialchars($t['empresa']) ?></td>
           <td><?= htmlspecialchars($t['usuario_nombre']) ?></td>
