@@ -419,7 +419,6 @@
 /* Grilla atenuada cuando trial está activo */
 .rg-planes-dimmed {
   opacity: 0.4;
-  pointer-events: none;
   transition: opacity .25s;
 }
 .rg-planes-dimmed + .rg-security { display: none !important; }
