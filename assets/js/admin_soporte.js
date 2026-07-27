@@ -9,6 +9,20 @@
     setTimeout(() => t.classList.remove('show'), 3200);
   }
 
+  function sanitizeHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('script,style,iframe,object,embed,form,input,button,link').forEach(el => el.remove());
+    tmp.querySelectorAll('*').forEach(el => {
+      Array.from(el.attributes).forEach(attr => {
+        if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+        if (attr.name === 'href' && /^\s*javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+        if (attr.name === 'src'  && /^\s*javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+      });
+    });
+    return tmp.innerHTML;
+  }
+
   let ticketActual = null;
   const modal    = document.getElementById('modal-ticket');
   const btnClose = document.getElementById('btn-modal-ticket-close');
@@ -88,7 +102,7 @@
     badge.className = 'adm-badge ' + (badgeMap[estado] || '');
     badge.textContent = estado;
 
-    document.getElementById('mtk-mensaje').textContent = btn.dataset.mensaje;
+    document.getElementById('mtk-mensaje').innerHTML = sanitizeHtml(btn.dataset.mensaje);
     document.getElementById('mtk-respuesta').innerHTML = '';
     document.getElementById('mtk-estado').value = estado;
 
