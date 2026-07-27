@@ -91,6 +91,9 @@ try {
 try {
     $db->exec("ALTER TABLE empresas ADD UNIQUE KEY uq_empresa_subdominio (subdominio)");
 } catch (PDOException $ignored) {}
+try {
+    $db->exec("ALTER TABLE empresas ADD UNIQUE KEY uq_empresa_rut (rut)");
+} catch (PDOException $ignored) {}
 
 // Unicidad subdominio: si hay colisión agrega sufijo numérico automáticamente
 $base_sub = substr($subdominio, 0, 55) ?: 'empresa';
@@ -101,6 +104,13 @@ while (true) {
     $st->execute([$subdominio]);
     if (!$st->fetchColumn()) break;
     $subdominio = $base_sub . '-' . $sufijo++;
+}
+
+// Unicidad RUT — impide crear una segunda cuenta con el mismo RUT
+$stRut = $db->prepare("SELECT id_empresa FROM empresas WHERE rut = ? LIMIT 1");
+$stRut->execute([$rut]);
+if ($stRut->fetchColumn()) {
+    json_err('El RUT ' . $rut . ' ya tiene una cuenta registrada en Centrotec. Si tu período de prueba terminó, inicia sesión y activa un plan para continuar.');
 }
 
 // Unicidad email (usamos el email final que se guardará en empresas.correo)
