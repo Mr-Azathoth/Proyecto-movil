@@ -201,7 +201,7 @@
   function resetBtn() {
     if (!btnSubmit) return;
     btnSubmit.disabled = false;
-    btnSubmit.innerHTML = '<span class="material-icons-round">rocket_launch</span> Crear cuenta y pagar';
+    btnSubmit.innerHTML = '<span class="material-icons-round">rocket_launch</span> Comenzar prueba gratis';
   }
 
   if (form) {
@@ -222,7 +222,7 @@
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (j.ok) {
-            btnSubmit.textContent = 'Redirigiendo al pago...';
+            btnSubmit.textContent = 'Activando tu prueba...';
             window.location.href = j.data.redirect;
           } else {
             showError(j.msg || 'Error al crear la cuenta.');

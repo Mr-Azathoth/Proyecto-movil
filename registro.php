@@ -190,7 +190,16 @@ $precio_mensual = 4990;
         <!-- ── Paso 3: Tu plan ──────────────────────────────── -->
         <div class="reg-panel" id="panel-3">
           <h2 class="reg-panel-title">Elige tu plan</h2>
-          <p class="reg-panel-sub">Sin límite de usuarios ni órdenes. Todas las funciones incluidas.</p>
+
+          <div class="rg-trial-banner">
+            <span class="material-icons-round">auto_awesome</span>
+            <div>
+              <strong>7 días de prueba gratis</strong>
+              <span>Acceso completo · Sin tarjeta · Sin compromiso</span>
+            </div>
+          </div>
+
+          <p class="reg-panel-sub" style="margin-top:14px;">Elige el plan que quieres activar al terminar tu prueba. <strong>No se cobrará nada hoy.</strong></p>
 
           <div class="rg-planes" id="rg-planes">
             <?php foreach ($planes as $p):
@@ -230,7 +239,7 @@ $precio_mensual = 4990;
             </button>
             <button type="submit" class="rg-btn-next" id="btn-submit">
               <span class="material-icons-round">rocket_launch</span>
-              Crear cuenta y pagar
+              Comenzar prueba gratis
             </button>
           </div>
         </div>
