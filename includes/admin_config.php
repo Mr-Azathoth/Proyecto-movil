@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Guard: este archivo solo debe ser incluido desde páginas admin_*.php y api/admin/
 // Nunca incluir desde código de tenant.
 

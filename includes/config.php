@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // Cargar .env desde la raíz del proyecto (nunca commitear .env)
 (static function (): void {
     $file = dirname(__DIR__) . '/.env';
