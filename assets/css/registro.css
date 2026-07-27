@@ -394,6 +394,18 @@
 }
 .rg-plan-badge-trial { background: rgba(63,185,80,0.15); color: #3fb950; }
 
+.rg-trial-dias {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(63,185,80,0.12);
+  border: 1px solid rgba(63,185,80,0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-top: 8px;
+}
+.rg-trial-dias .material-icons-round { font-size: 14px; color: #3fb950; }
+.rg-trial-dias-label { font-size: 13px; font-weight: 600; color: #3fb950; }
+.rg-trial-dias-sub   { font-size: 11px; color: var(--txt3); }
+
 .rg-trial-body {
   display: flex; justify-content: space-between; align-items: center;
   gap: 16px; width: 100%;

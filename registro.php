@@ -201,7 +201,11 @@ $precio_mensual = 4990;
               <div>
                 <div class="rg-plan-nombre">Prueba gratuita</div>
                 <div class="rg-plan-precio">$0</div>
-                <div class="rg-plan-pormes">7 días · Sin tarjeta de crédito</div>
+                <div class="rg-trial-dias">
+                <span class="material-icons-round">schedule</span>
+                <span class="rg-trial-dias-label">7 días gratis</span>
+                <span class="rg-trial-dias-sub">· Sin tarjeta de crédito</span>
+              </div>
               </div>
               <ul class="rg-trial-feats">
                 <li><span class="material-icons-round">check_circle</span>Acceso completo a todas las funciones</li>
