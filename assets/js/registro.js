@@ -163,6 +163,18 @@
 
   /* ── Selección de plan ──────────────────────────────────────── */
   var planHidden = document.getElementById('plan-hidden');
+  var securityEl = document.getElementById('rg-security');
+
+  function updatePlanUI(planKey) {
+    var isTrial = planKey === 'trial';
+    if (securityEl) securityEl.style.display = isTrial ? 'none' : '';
+    if (btnSubmit) {
+      btnSubmit.innerHTML = isTrial
+        ? '<span class="material-icons-round">rocket_launch</span> Comenzar prueba gratis'
+        : '<span class="material-icons-round">credit_card</span> Crear cuenta y pagar';
+    }
+  }
+
   document.querySelectorAll('.rg-plan').forEach(function (card) {
     card.addEventListener('click', function () {
       document.querySelectorAll('.rg-plan').forEach(function (c) { c.classList.remove('selected'); });
@@ -171,6 +183,7 @@
       if (radio) {
         radio.checked = true;
         if (planHidden) planHidden.value = radio.value;
+        updatePlanUI(radio.value);
       }
     });
   });
@@ -201,7 +214,8 @@
   function resetBtn() {
     if (!btnSubmit) return;
     btnSubmit.disabled = false;
-    btnSubmit.innerHTML = '<span class="material-icons-round">rocket_launch</span> Comenzar prueba gratis';
+    var plan = planHidden ? planHidden.value : 'trial';
+    updatePlanUI(plan);
   }
 
   if (form) {
@@ -222,7 +236,7 @@
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (j.ok) {
-            btnSubmit.textContent = 'Activando tu prueba...';
+            btnSubmit.textContent = plan === 'trial' ? 'Activando tu prueba...' : 'Redirigiendo al pago...';
             window.location.href = j.data.redirect;
           } else {
             showError(j.msg || 'Error al crear la cuenta.');

@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 if (logueado()) { header('Location: '.BASE.'/app.php'); exit; }
 
-$plan_pre = preg_replace('/[^a-z0-9]/', '', $_GET['plan'] ?? '12meses');
+$plan_pre = preg_replace('/[^a-z0-9]/', '', $_GET['plan'] ?? 'trial');
 $csrf     = csrf_token();
 
 $planes = [
@@ -190,16 +190,28 @@ $precio_mensual = 4990;
         <!-- ── Paso 3: Tu plan ──────────────────────────────── -->
         <div class="reg-panel" id="panel-3">
           <h2 class="reg-panel-title">Elige tu plan</h2>
+          <p class="reg-panel-sub">Sin límite de usuarios ni órdenes. Todas las funciones incluidas.</p>
 
-          <div class="rg-trial-banner">
-            <span class="material-icons-round">auto_awesome</span>
-            <div>
-              <strong>7 días de prueba gratis</strong>
-              <span>Acceso completo · Sin tarjeta · Sin compromiso</span>
+          <!-- Tarjeta trial -->
+          <label class="rg-plan rg-plan-trial <?= $plan_pre === 'trial' ? 'selected' : '' ?>" id="plan-card-trial">
+            <input type="radio" name="plan_radio" value="trial" <?= $plan_pre === 'trial' ? 'checked' : '' ?>>
+            <div class="rg-plan-dot"><span class="material-icons-round">check</span></div>
+            <div class="rg-plan-badge rg-plan-badge-trial">✨ Recomendado para empezar</div>
+            <div class="rg-trial-body">
+              <div>
+                <div class="rg-plan-nombre">Prueba gratuita</div>
+                <div class="rg-plan-precio">$0</div>
+                <div class="rg-plan-pormes">7 días · Sin tarjeta de crédito</div>
+              </div>
+              <ul class="rg-trial-feats">
+                <li><span class="material-icons-round">check_circle</span>Acceso completo a todas las funciones</li>
+                <li><span class="material-icons-round">check_circle</span>Sin compromiso de permanencia</li>
+                <li><span class="material-icons-round">check_circle</span>Elige tu plan al terminar</li>
+              </ul>
             </div>
-          </div>
+          </label>
 
-          <p class="reg-panel-sub" style="margin-top:14px;">Elige el plan que quieres activar al terminar tu prueba. <strong>No se cobrará nada hoy.</strong></p>
+          <div class="rg-planes-sep"><span>o elige un plan directamente</span></div>
 
           <div class="rg-planes" id="rg-planes">
             <?php foreach ($planes as $p):
@@ -228,7 +240,7 @@ $precio_mensual = 4990;
             <?php endforeach; ?>
           </div>
 
-          <p class="rg-security">
+          <p class="rg-security" id="rg-security" <?= $plan_pre === 'trial' ? 'style="display:none"' : '' ?>>
             <span class="material-icons-round">lock</span>
             Pago seguro vía Mercado Pago. Tus datos de tarjeta nunca pasan por nosotros.
           </p>

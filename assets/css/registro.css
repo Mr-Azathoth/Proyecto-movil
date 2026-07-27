@@ -377,25 +377,43 @@
 .rg-footer a { color: var(--accent); text-decoration: none; }
 .rg-footer a:hover { text-decoration: underline; }
 
-.rg-trial-banner {
-  display: flex; align-items: center; gap: 12px;
-  background: linear-gradient(135deg, rgba(63,185,80,0.12), rgba(63,185,80,0.06));
-  border: 1px solid rgba(63,185,80,0.35);
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin-bottom: 4px;
+/* Tarjeta trial (full-width) */
+.rg-plan-trial {
+  grid-column: 1 / -1;
+  flex-direction: column;
+  border-color: rgba(63,185,80,0.4);
+  background: rgba(63,185,80,0.05);
+  margin-bottom: 2px;
 }
-.rg-trial-banner .material-icons-round {
-  font-size: 22px; color: #3fb950; flex-shrink: 0;
+.rg-plan-trial.selected {
+  border-color: #3fb950;
+  background: rgba(63,185,80,0.1);
+  box-shadow: 0 0 0 1px rgba(63,185,80,0.4);
 }
-.rg-trial-banner div {
-  display: flex; flex-direction: column; gap: 2px;
+.rg-plan-badge-trial { background: rgba(63,185,80,0.15); color: #3fb950; }
+
+.rg-trial-body {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; width: 100%;
 }
-.rg-trial-banner strong {
-  font-size: 14px; font-weight: 700; color: #3fb950;
+.rg-trial-feats {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 5px;
 }
-.rg-trial-banner span {
-  font-size: 11px; color: var(--txt2);
+.rg-trial-feats li {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--txt2);
+}
+.rg-trial-feats .material-icons-round { font-size: 14px; color: #3fb950; }
+
+/* Divisor "o elige un plan directamente" */
+.rg-planes-sep {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; color: var(--txt3);
+  margin: 10px 0 4px;
+}
+.rg-planes-sep::before, .rg-planes-sep::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
 }
 
 .rg-security {

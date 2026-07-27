@@ -22,7 +22,8 @@ $subdominio        = strtolower(trim(preg_replace('/[^a-z0-9]+/', '-', iconv('UT
 $rut               = trim($_POST['rut'] ?? '');
 $nombre_admin      = trim($_POST['nombre_admin'] ?? '');
 $pass              = $_POST['pass'] ?? '';
-$plan_key          = preg_replace('/[^a-z0-9]/', '', $_POST['plan'] ?? '1mes');
+$plan_key          = preg_replace('/[^a-z0-9]/', '', $_POST['plan'] ?? 'trial');
+if ($plan_key !== 'trial' && !isset(MP_PLANES[$plan_key])) $plan_key = 'trial';
 $direccion         = trim($_POST['direccion'] ?? '');
 $comuna            = trim($_POST['comuna']    ?? '');
 
@@ -129,7 +130,7 @@ if ($logo_tmp && is_uploaded_file($logo_tmp)) {
 // Crear empresa + usuario en una transacción
 $db->beginTransaction();
 try {
-    $plan_nombre = (MP_PLANES[$plan_key]['nombre'] ?? null) ?: $plan_key;
+    $plan_nombre = $plan_key === 'trial' ? 'Trial' : ((MP_PLANES[$plan_key]['nombre'] ?? null) ?: $plan_key);
     $db->prepare(
         "INSERT INTO empresas (nombre, subdominio, rut, telefono, correo, direccion, comuna, activa, plan_tipo, plan_estado, plan_vencimiento, creada_en)
          VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 'Trial', DATE_ADD(NOW(), INTERVAL 7 DAY), NOW())"
@@ -180,5 +181,14 @@ $_SESSION['last_activity'] = time();
 // Registrar acción (sesión ya activa)
 log_accion($db, 'registro_empresa', null);
 
-// Trial de 7 días activado — ir directamente al app
-json_ok(['redirect' => APP_URL . '/app.php?trial=1']);
+if ($plan_key === 'trial') {
+    json_ok(['redirect' => APP_URL . '/app.php?trial=1']);
+}
+
+// Plan de pago elegido al registrarse — ir al checkout de Mercado Pago
+$planId  = MP_PLANES[$plan_key]['id'];
+$backUrl = APP_URL . '/pago/retorno.php?gateway=mp_sub&eid=' . $id_empresa;
+$mpUrl   = 'https://www.mercadopago.cl/subscriptions/checkout'
+         . '?preapproval_plan_id=' . $planId
+         . '&back_url=' . urlencode($backUrl);
+json_ok(['redirect' => $mpUrl]);
