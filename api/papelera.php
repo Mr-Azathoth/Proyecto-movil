@@ -38,6 +38,9 @@ if ($accion === 'restaurar') {
         );
         $st->execute([$id, $eid]);
         if ($st->rowCount() === 0) sadmin_json_err('Registro no encontrado o ya activo.');
+        $db->prepare("INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip)
+                      VALUES (?, ?, ?, 'repuesto_restaurado', ?, ?)")
+           ->execute([$eid, sadmin_id(), sadmin_user(), $id, $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0']);
         sadmin_json_ok(['msg' => 'Repuesto restaurado.']);
     }
 }

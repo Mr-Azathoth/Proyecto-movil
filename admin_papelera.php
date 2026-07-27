@@ -65,7 +65,8 @@ $total_inv = count($inventario);
         <?php endforeach; ?>
       </select>
     </form>
-    <span style="font-size:12px;color:var(--txt3);margin-left:auto;">
+    <span style="font-size:12px;color:var(--txt3);margin-left:auto;"
+          data-summary data-rep="<?= $total_rep ?>" data-inv="<?= $total_inv ?>">
       <?= $total_rep ?> reparación<?= $total_rep !== 1 ? 'es' : '' ?> ·
       <?= $total_inv ?> repuesto<?= $total_inv !== 1 ? 's' : '' ?> en papelera
     </span>
