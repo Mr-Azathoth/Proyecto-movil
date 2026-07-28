@@ -188,8 +188,9 @@ if ($method === 'PUT') {
            ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $id, $eid]);
 
         // Gestión de reservas al cambiar el repuesto inicial
-        $id_rep_ant_v     = $row['id_repuesto_usado'] !== null ? (int)$row['id_repuesto_usado'] : null;
-        $repuesto_changed = isset($in['id_repuesto_usado']) && $id_repuesto_nuevo !== $id_rep_ant_v;
+        $id_rep_ant_v            = $row['id_repuesto_usado'] !== null ? (int)$row['id_repuesto_usado'] : null;
+        $repuesto_changed        = isset($in['id_repuesto_usado']) && $id_repuesto_nuevo !== $id_rep_ant_v;
+        $repuesto_ini_reservado  = !$repuesto_changed; // true = este trabajo tiene reserva activa sobre id_repuesto_nuevo
         if ($repuesto_changed) {
             // Liberar reserva anterior si el stock aún no fue consumido
             if ($id_rep_ant_v && !$ya_descontado) {
@@ -206,6 +207,7 @@ if ($method === 'PUT') {
                     $db->rollBack();
                     json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
                 }
+                $repuesto_ini_reservado = true; // reserva creada en este mismo PUT
             }
         }
 
@@ -217,11 +219,11 @@ if ($method === 'PUT') {
                 $chk->execute([$id_repuesto_nuevo, $eid]);
                 $rep_row = $chk->fetch();
                 if ($rep_row) {
-                    $db->prepare("UPDATE inventario
-                                    SET cantidad = cantidad - 1,
-                                        cantidad_reservada = GREATEST(0, cantidad_reservada - 1)
-                                  WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0")
-                       ->execute([$id_repuesto_nuevo, $eid]);
+                    // Solo decrementar cantidad_reservada si este trabajo tenía una reserva activa
+                    $sql_desc = $repuesto_ini_reservado
+                        ? "UPDATE inventario SET cantidad = cantidad - 1, cantidad_reservada = GREATEST(0, cantidad_reservada - 1) WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0"
+                        : "UPDATE inventario SET cantidad = cantidad - 1 WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0";
+                    $db->prepare($sql_desc)->execute([$id_repuesto_nuevo, $eid]);
                     $db->prepare("UPDATE reparaciones SET stock_descontado = 1 WHERE id_ingreso = ? AND id_empresa = ?")
                        ->execute([$id, $eid]);
                     $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
