@@ -173,8 +173,8 @@ if ($method === 'PUT') {
                       WHERE id_ingreso = ? AND id_empresa = ?")
            ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $id, $eid]);
 
-        // Descuento de stock cuando el servicio está o pasa a Entregado (cada repuesto solo se descuenta una vez)
-        if ($nuevo_status === 'Entregado') {
+        // Descuento de stock cuando el servicio pasa a Reparado (el repuesto ya fue usado)
+        if ($nuevo_status === 'Reparado') {
             // Descontar repuesto inicial
             if ($id_repuesto_nuevo && !$ya_descontado) {
                 $chk = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0");
