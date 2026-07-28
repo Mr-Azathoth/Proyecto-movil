@@ -263,11 +263,11 @@ try {
               <tr>
                 <th class="th-sortable" data-sort="cliente">Cliente <span class="sort-icon"></span></th>
                 <th>Equipo</th>
-                <th>Falla</th><th>Valor</th><th>Ingresado por</th><th>Fecha Ingreso</th><th>Estado</th><th>Acciones</th>
+                <th>Valor</th><th>Ingresado por</th><th>Fecha Ingreso</th><th>Estado</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="tbl-servicios">
-              <tr><td colspan="9" class="tbl-loading">Cargando servicios...</td></tr>
+              <tr><td colspan="8" class="tbl-loading">Cargando servicios...</td></tr>
             </tbody>
           </table>
         </div>

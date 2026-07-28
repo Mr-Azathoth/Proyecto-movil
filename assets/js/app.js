@@ -366,7 +366,6 @@ function _buildServicioRow(rep) {
         <div class="cell-main">${esc(rep.marca_ingreso)} ${esc(rep.modelo_ingreso)}</div>
         <div class="cell-sub">${esc(rep.tipo_ingreso)}</div>
       </td>
-      <td class="cell-sub">${esc(rep.dano_ingreso)}</td>
       <td class="cell-val">${v}</td>
       <td class="cell-sub">${esc(rep.ingresado_por)}</td>
       <td class="cell-sub">${fmtDate(rep.fecha_ingreso)}</td>
