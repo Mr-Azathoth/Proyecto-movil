@@ -26,6 +26,9 @@ if ($method === 'GET') {
     try {
         $db->exec("ALTER TABLE inventario ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
     } catch (PDOException $e) {}
+    try {
+        $db->exec("ALTER TABLE inventario ADD COLUMN cantidad_reservada INT NOT NULL DEFAULT 0");
+    } catch (PDOException $e) {}
 
     $q   = trim($_GET['q'] ?? '');
     $sql = "SELECT * FROM inventario WHERE id_empresa = ? AND deleted_at IS NULL";
@@ -95,17 +98,18 @@ if ($method === 'PUT') {
         if (!$nombre) json_err('El nombre es obligatorio.');
         if (strlen($nombre) > 100) json_err('Nombre demasiado largo (máx. 100).');
         $db->prepare("UPDATE inventario
-            SET nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?, cantidad=?
+            SET nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?,
+                cantidad=?, cantidad_reservada = LEAST(cantidad_reservada, ?)
             WHERE id_repuesto=? AND id_empresa=?")
-           ->execute([$nombre, $marca, $modelo, $precio, $qty, $rid, $eid]);
+           ->execute([$nombre, $marca, $modelo, $precio, $qty, $qty, $rid, $eid]);
         log_accion($db, 'repuesto_editado_inv', null);
         json_ok(['msg' => 'Repuesto actualizado.']);
     }
 
     // Solo stock: admin y técnico
     $qty = max(0, (int) ($in['cantidad'] ?? 0));
-    $db->prepare("UPDATE inventario SET cantidad=? WHERE id_repuesto=? AND id_empresa=?")
-       ->execute([$qty, $rid, $eid]);
+    $db->prepare("UPDATE inventario SET cantidad=?, cantidad_reservada = LEAST(cantidad_reservada, ?) WHERE id_repuesto=? AND id_empresa=?")
+       ->execute([$qty, $qty, $rid, $eid]);
     log_accion($db, 'stock_actualizado_inv', null);
     json_ok(['msg' => 'Stock actualizado.']);
 }

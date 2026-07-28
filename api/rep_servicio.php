@@ -82,13 +82,22 @@ if ($method === 'POST') {
     $chk->execute([$id_reparacion, $eid]);
     if (!$chk->fetch()) json_err('Servicio no encontrado.', 404);
 
-    // Snapshot del repuesto
+    // Snapshot del repuesto + verificar disponibilidad
     $ri = $db->prepare(
-        "SELECT nombre, marca_compatible, modelo_compatible, precio_venta FROM inventario WHERE id_repuesto = ? AND id_empresa = ?"
+        "SELECT nombre, marca_compatible, modelo_compatible, precio_venta, cantidad, cantidad_reservada
+           FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND deleted_at IS NULL"
     );
     $ri->execute([$id_repuesto, $eid]);
     $rep = $ri->fetch();
     if (!$rep) json_err('Repuesto no encontrado.', 404);
+
+    $disponible = (int)$rep['cantidad'] - (int)$rep['cantidad_reservada'];
+    if ($disponible < $cantidad) {
+        if ($disponible <= 0) {
+            json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
+        }
+        json_err("Solo hay {$disponible} unidad" . ($disponible !== 1 ? 'es' : '') . " disponible" . ($disponible !== 1 ? 's' : '') . " (las demás están reservadas).");
+    }
 
     $nombre_snap = $rep['nombre'];
     if ($rep['marca_compatible'])  $nombre_snap .= ' · ' . $rep['marca_compatible'];
@@ -100,6 +109,11 @@ if ($method === 'POST') {
          VALUES (?,?,?,?,?,?)"
     )->execute([$eid, $id_reparacion, $id_repuesto, $nombre_snap, $rep['precio_venta'], $cantidad]);
     $newId = (int) $db->lastInsertId();
+
+    // Reservar stock
+    $db->prepare("UPDATE inventario SET cantidad_reservada = cantidad_reservada + ?
+                   WHERE id_repuesto = ? AND id_empresa = ?")
+       ->execute([$cantidad, $id_repuesto, $eid]);
 
     // Sumar precio al valor del servicio
     $delta = (int) $rep['precio_venta'] * $cantidad;
@@ -142,6 +156,13 @@ if ($method === 'DELETE') {
     $db->prepare(
         "DELETE FROM reparacion_repuestos WHERE id = ? AND id_empresa = ?"
     )->execute([$id, $eid]);
+
+    // Liberar reserva si el stock no fue consumido aún
+    if (!(int)$row['stock_desc']) {
+        $db->prepare("UPDATE inventario SET cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
+                       WHERE id_repuesto = ? AND id_empresa = ?")
+           ->execute([(int)$row['cantidad'], (int)$row['id_repuesto'], $eid]);
+    }
 
     // Restar precio al valor del servicio
     $delta = (int) $row['precio_snap'] * (int) $row['cantidad'];
