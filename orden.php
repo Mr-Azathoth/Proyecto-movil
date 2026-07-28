@@ -31,8 +31,7 @@ $ubicacion = trim(implode(', ', array_filter([
 ])));
 $fechaFmt  = '';
 if ($rep['fecha_ingreso']) {
-    $dt = new DateTime($rep['fecha_ingreso'], new DateTimeZone('UTC'));
-    $dt->setTimezone(new DateTimeZone('America/Santiago'));
+    $dt = new DateTime($rep['fecha_ingreso'], new DateTimeZone('America/Santiago'));
     $fechaFmt = $dt->format('d/m/Y H:i');
 }
 $numFmt    = str_pad($rep['id_ingreso'], 3, '0', STR_PAD_LEFT);
