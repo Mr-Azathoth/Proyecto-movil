@@ -10,6 +10,15 @@ $links = [
 ];
 // admin_empresa es sub-página de clientes
 if ($current === 'admin_empresa') $current = 'admin_clientes';
+
+// Contar tickets pendientes (Abierto sin respuesta) para mostrar badge
+$_adm_soporte_badge = 0;
+if (isset($db)) {
+    try {
+        $s = $db->query("SELECT COUNT(*) FROM tickets WHERE estado = 'Abierto' AND (respuesta IS NULL OR respuesta = '')");
+        $_adm_soporte_badge = (int) $s->fetchColumn();
+    } catch (PDOException $e) {}
+}
 ?>
 <aside class="adm-sidebar">
   <div class="adm-brand">
@@ -23,6 +32,9 @@ if ($current === 'admin_empresa') $current = 'admin_clientes';
     <?php foreach ($links as $page => [$icon, $label]): ?>
     <a href="<?= BASE ?>/<?= $page ?>.php" class="adm-link <?= $current === $page ? 'active' : '' ?>">
       <span class="material-icons-round"><?= $icon ?></span><?= $label ?>
+      <?php if ($page === 'admin_soporte' && $_adm_soporte_badge > 0): ?>
+        <span class="nav-badge" id="nav-soporte-adm-badge"><?= $_adm_soporte_badge ?></span>
+      <?php endif; ?>
     </a>
     <?php endforeach; ?>
   </nav>

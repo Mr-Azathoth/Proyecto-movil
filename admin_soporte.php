@@ -139,12 +139,21 @@ $kpis = $db->query(
           <td style="font-size:12px;color:var(--txt2);"><?= htmlspecialchars($t['empresa']) ?></td>
           <td><?= htmlspecialchars($t['usuario_nombre']) ?></td>
           <td style="max-width:320px;">
-            <div class="tbl-name-main" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              <?= htmlspecialchars($t['asunto']) ?>
+            <div style="display:flex;align-items:center;gap:7px;">
+              <?php if ($t['estado'] === 'Abierto' && ($t['respuesta'] === null || $t['respuesta'] === '')): ?>
+                <span class="sop-dot" title="Sin respuesta"></span>
+              <?php else: ?>
+                <span class="sop-dot-placeholder"></span>
+              <?php endif; ?>
+              <div style="min-width:0;">
+                <div class="tbl-name-main" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  <?= htmlspecialchars($t['asunto']) ?>
+                </div>
+                <?php if ($t['respondido_por']): ?>
+                  <div style="font-size:11px;color:var(--txt3);">Resp. por <?= htmlspecialchars($t['respondido_por']) ?></div>
+                <?php endif; ?>
+              </div>
             </div>
-            <?php if ($t['respondido_por']): ?>
-              <div style="font-size:11px;color:var(--txt3);">Resp. por <?= htmlspecialchars($t['respondido_por']) ?></div>
-            <?php endif; ?>
           </td>
           <td>
             <?php
