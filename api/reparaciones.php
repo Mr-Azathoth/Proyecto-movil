@@ -16,6 +16,39 @@ try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE historial ADD COLUMN detalle TEXT NULL DEFAULT NULL"); } catch(PDOException $e) {}
 
+// Backfill: sincronizar cantidad_reservada para trabajos activos creados antes del sistema de reservas.
+// Calcula el total correcto (inicial + adicionales) y hace SET solo donde cantidad_reservada = 0.
+// Idempotente: tras la primera corrida los repuestos afectados quedan con valor > 0 y el INNER JOIN
+// no los vuelve a tocar (WHERE cantidad_reservada = 0 no aplica).
+try {
+    $db->exec("
+        UPDATE inventario i
+        INNER JOIN (
+            SELECT id_repuesto, id_empresa, SUM(total) AS cnt
+            FROM (
+                SELECT id_repuesto_usado AS id_repuesto, id_empresa, COUNT(*) AS total
+                FROM reparaciones
+                WHERE id_repuesto_usado IS NOT NULL
+                  AND stock_descontado = 0
+                  AND deleted_at IS NULL
+                  AND status NOT IN ('Reparado','Entregado')
+                GROUP BY id_repuesto_usado, id_empresa
+                UNION ALL
+                SELECT rr.id_repuesto, rr.id_empresa, SUM(rr.cantidad)
+                FROM reparacion_repuestos rr
+                JOIN reparaciones r ON r.id_ingreso = rr.id_reparacion
+                WHERE rr.stock_desc = 0
+                  AND r.deleted_at IS NULL
+                  AND r.status NOT IN ('Reparado','Entregado')
+                GROUP BY rr.id_repuesto, rr.id_empresa
+            ) combined
+            GROUP BY id_repuesto, id_empresa
+        ) x ON i.id_repuesto = x.id_repuesto AND i.id_empresa = x.id_empresa
+        SET i.cantidad_reservada = LEAST(i.cantidad, x.cnt)
+        WHERE i.cantidad_reservada = 0
+    ");
+} catch(PDOException $e) {}
+
 function generar_codigo_seguimiento(PDO $db): string {
     $chars = 'ABCDEFGHJKMNPQRSTUVWXY3456789';
     $len   = strlen($chars);
