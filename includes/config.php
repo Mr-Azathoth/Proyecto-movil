@@ -235,11 +235,18 @@ define('MP_PUBLIC_KEY',   $_ENV['MP_PUBLIC_KEY']   ?? '');
 define('MP_ENV',          $_ENV['MP_ENV']          ?? 'sandbox');   // 'sandbox' | 'production'
 
 // Planes de suscripción (IDs de preapproval_plan de Mercado Pago)
-define('MP_PLANES', [
+// Los IDs cambian según el entorno (sandbox vs production)
+define('MP_PLANES', MP_ENV === 'production' ? [
     '1mes'    => ['id' => '9ff62047640046eea92e392dc14fb459', 'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
     '3meses'  => ['id' => '4108c57b01b7402d8e6966f40164f836', 'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
     '6meses'  => ['id' => 'c6e46ec28cb44765951bb96aa86e4aaa', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
     '12meses' => ['id' => 'db9a46e00a7a44d4bca5dcc852ea584f', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
+] : [
+    // Sandbox — planes creados con token TEST-
+    '1mes'    => ['id' => '05ea7e297ece4261be1f32e031d95590', 'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
+    '3meses'  => ['id' => 'd69e1eabdfc44c0080adc9ebee74e7ed', 'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
+    '6meses'  => ['id' => 'f48fa82a5e0d4953b4b4c98e6409a671', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
+    '12meses' => ['id' => '55e20eb0c43941e9a957f89f86a5f74d', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
 ]);
 
 // Webpay Plus (Transbank)

@@ -25,6 +25,7 @@ if ($metodo === 'mercadopago') {
     $backUrl = $returnUrl . '?gateway=mp_sub&eid=' . $eid;
     $url     = 'https://www.mercadopago.cl/subscriptions/checkout'
              . '?preapproval_plan_id=' . $planId
+             . '&external_reference=' . urlencode('eid_' . $eid)
              . '&back_url=' . urlencode($backUrl);
 
     json_ok(['url' => $url]);
