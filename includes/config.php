@@ -242,11 +242,11 @@ define('MP_PLANES', MP_ENV === 'production' ? [
     '6meses'  => ['id' => 'c6e46ec28cb44765951bb96aa86e4aaa', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
     '12meses' => ['id' => 'db9a46e00a7a44d4bca5dcc852ea584f', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
 ] : [
-    // Sandbox — planes creados con token TEST-
-    '1mes'    => ['id' => '05ea7e297ece4261be1f32e031d95590', 'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
-    '3meses'  => ['id' => 'd69e1eabdfc44c0080adc9ebee74e7ed', 'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
-    '6meses'  => ['id' => 'f48fa82a5e0d4953b4b4c98e6409a671', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
-    '12meses' => ['id' => '55e20eb0c43941e9a957f89f86a5f74d', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
+    // Sandbox — planes TEST (prefijo CentroTec-Test-)
+    '1mes'    => ['id' => '7f4716ddea66470c82157a5aa93a335f', 'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
+    '3meses'  => ['id' => 'c13687e85c6b48ae9b85422d51572af6', 'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
+    '6meses'  => ['id' => '53d38166c804478987d05bbb46c2f6bf', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
+    '12meses' => ['id' => '1e77c1a755aa445b9ff7607875a0b6c0', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
 ]);
 
 // Webpay Plus (Transbank)
