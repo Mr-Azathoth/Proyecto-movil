@@ -8,11 +8,10 @@ if (($_GET['token'] ?? '') !== 'exp2025') {
 $db = getDB();
 
 $stmt = $db->prepare("
-    UPDATE empresas e
-    JOIN usuarios u ON u.id_empresa = e.id_empresa
-    SET e.plan_vencimiento = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
-    WHERE u.user = ?
+    UPDATE empresas
+    SET plan_vencimiento = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+    WHERE nombre = ?
 ");
-$stmt->execute(['demian_laprofecia@hotmail.com']);
+$stmt->execute(['Tecnico prueba pagos']);
 
 echo "Trial vencido. Filas afectadas: " . $stmt->rowCount();
