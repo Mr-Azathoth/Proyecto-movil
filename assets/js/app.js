@@ -284,9 +284,7 @@ async function apiFetch(url, options = {}) {
   // Trial vencido o plan vencido mid-session: mostrar muro de pago sin destruir sesión
   if (response.status === 402) {
     var wall = document.getElementById('trial-wall');
-    var appEl = document.querySelector('.app');
     if (wall) wall.classList.remove('hidden');
-    if (appEl) appEl.style.display = 'none';
     throw new Error('trial_expired');
   }
   if (response.status === 403) {
@@ -2779,8 +2777,6 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
 
   if (trialExpired) {
     if (wall) wall.classList.remove('hidden');
-    var app = document.querySelector('.app');
-    if (app) app.style.display = 'none';
     return;
   }
 

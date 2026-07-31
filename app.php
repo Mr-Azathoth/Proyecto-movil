@@ -1162,7 +1162,7 @@ try {
       <span class="material-icons-round">lock_clock</span>
     </div>
     <h2 class="trial-wall-title">Tu período de prueba ha finalizado</h2>
-    <p class="trial-wall-sub">Para continuar usando Centrotec sin interrupciones, activa uno de nuestros planes. Pago 100% seguro vía Mercado Pago.</p>
+    <p class="trial-wall-sub">Tu trabajo sigue aquí. Activa un plan para recuperar el acceso completo.</p>
     <div class="trial-wall-plans">
       <?php foreach (MP_PLANES as $wkey => $wplan):
           $wPorMes   = (int)round($wplan['precio'] / $wplan['meses']);
