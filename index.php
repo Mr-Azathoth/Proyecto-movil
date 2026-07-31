@@ -28,10 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $err = 'Completa todos los campos.';
         } else {
             // Buscar por nombre de usuario O correo de la empresa (Admin primero)
+            // Sin filtrar u.activo para poder detectar usuarios suspendidos
             $st = getDB()->prepare(
                 "SELECT u.*, e.activa AS empresa_activa, e.plan_estado FROM usuarios u
                  LEFT JOIN empresas e ON e.id_empresa = u.id_empresa
-                 WHERE (u.user = ? OR e.correo = ?) AND u.activo = 1
+                 WHERE (u.user = ? OR e.correo = ?)
                  ORDER BY FIELD(u.cargo, 'Admin', 'Tecnico') LIMIT 1"
             );
             $st->execute([$u, $u]);
@@ -58,7 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($autenticado) {
-                if (!(bool)$row['empresa_activa']) {
+                if (!(bool)$row['activo']) {
+                    $suspended = 'suspendido';
+                } elseif (!(bool)$row['empresa_activa']) {
                     $suspended = $row['plan_estado'] === 'Pendiente' ? 'pendiente' : 'vencido';
                 } else {
                     login_ok($ip);
@@ -123,7 +126,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if (isset($_GET['reset']) && !$err): ?>
       <div class="alert-ok">Contraseña actualizada correctamente. Ya puedes ingresar.</div>
     <?php endif; ?>
-    <?php if ($suspended === 'pendiente'): ?>
+    <?php if ($suspended === 'suspendido'): ?>
+      <div class="alert-susp">
+        <span class="material-icons-round" style="font-size:18px;vertical-align:middle;margin-right:6px;">block</span>
+        Tu cuenta ha sido desactivada. Contacta a soporte.
+        <div class="alert-susp-links">
+          <a href="mailto:soporte@centrotec.cl">soporte@centrotec.cl</a>
+        </div>
+      </div>
+    <?php elseif ($suspended === 'pendiente'): ?>
       <div class="alert-susp">
         <span class="material-icons-round" style="font-size:18px;vertical-align:middle;margin-right:6px;">schedule</span>
         Pago pendiente. Completa tu suscripción para acceder.
