@@ -61,9 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($autenticado) {
                 if (!(bool)$row['activo']) {
                     $suspended = 'suspendido';
-                } elseif (!(bool)$row['empresa_activa']) {
-                    $suspended = $row['plan_estado'] === 'Pendiente' ? 'pendiente' : 'vencido';
+                } elseif (!(bool)$row['empresa_activa'] && $row['plan_estado'] === 'Pendiente') {
+                    $suspended = 'pendiente';
                 } else {
+                    // Login exitoso (incluye plan vencido — el muro en app.php se encarga)
                     login_ok($ip);
                     session_regenerate_id(true);
                     $_SESSION['user_id']       = $row['id_usuario'];
