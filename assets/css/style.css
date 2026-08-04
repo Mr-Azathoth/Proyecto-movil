@@ -735,6 +735,8 @@ input.hidden           { display:none !important; }
 }
 .plan-badge-popular { background:var(--accent);  color:#fff; }
 .plan-badge-ahorro  { background:var(--green-bg); color:var(--green); border:1px solid rgba(63,185,80,0.3); }
+.plan-badge-current { background:var(--green-bg); color:var(--green); border:1px solid rgba(63,185,80,0.35); }
+.plan-card-current  { border-color:rgba(63,185,80,0.45) !important; background:linear-gradient(160deg,rgba(63,185,80,0.07) 0%,var(--bg3) 60%) !important; }
 .plan-nombre  { font-family:'Outfit',sans-serif; font-size:15px; font-weight:600; color:var(--txt); margin-top:4px; }
 .plan-precio  { font-family:'Outfit',sans-serif; font-size:24px; font-weight:800; color:var(--txt); }
 .plan-por-mes { font-size:11px; color:var(--txt3); }
@@ -747,6 +749,8 @@ input.hidden           { display:none !important; }
 }
 .btn-plan:hover:not(:disabled) { background:var(--accent2); transform:translateY(-1px); }
 .btn-plan:disabled { opacity:.6; cursor:not-allowed; transform:none !important; }
+.btn-plan-renovar { background:transparent !important; color:var(--green) !important; border:1px solid rgba(63,185,80,0.45) !important; }
+.btn-plan-renovar:hover:not(:disabled) { background:var(--green-bg) !important; transform:translateY(-1px); }
 
 /* ── ESTADÍSTICAS ────────────────────────────────────────────────── */
 .est-filtros {
