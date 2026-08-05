@@ -39,9 +39,10 @@ $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($code !== 200 && $code !== 201) {
-    $mpError = json_decode($resp, true);
-    $msg = $mpError['message'] ?? 'Error al comunicarse con Mercado Pago (HTTP ' . $code . ')';
-    json_err($msg);
+    if ($code === 0) {
+        json_err('No se pudo conectar con Mercado Pago. Intenta nuevamente o cancela desde tu cuenta de MP.');
+    }
+    json_err('No se pudo cancelar la suscripción en Mercado Pago. Por favor cancela directamente desde mercadopago.cl → Tu actividad → Suscripciones.');
 }
 
 // Marcar como cancelado localmente
