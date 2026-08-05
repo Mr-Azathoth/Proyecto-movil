@@ -1490,7 +1490,7 @@ async function loadSuscripcion() {
       const colores = { 'Activo':'pill-green', 'Trial':'pill-orange', 'Por vencer':'pill-orange', 'Vencido':'pill-red', 'Pendiente':'pill-orange', 'Gratis':'pill-gray', 'Cancelado':'pill-orange' };
       el('subs-estado-badge').className = 'pill ' + (colores[d.plan_estado] || 'pill-gray');
       el('subs-estado-badge').textContent = d.plan_estado === 'Cancelado'
-        ? 'Cancelado – acceso hasta ' + (d.plan_vencimiento ? fmtDate(d.plan_vencimiento) : '–')
+        ? 'Cancelado'
         : (d.plan_estado || 'Activo');
     }
 

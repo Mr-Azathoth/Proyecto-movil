@@ -9,6 +9,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_err('Método no permitido', 405)
 $db  = getDB();
 $eid = eid();
 
+// Migración defensiva — columna puede no existir en instalaciones antiguas
+try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); } catch(PDOException $e) {}
+
 $row = $db->prepare("SELECT mp_preapproval_id, plan_estado, plan_vencimiento FROM empresas WHERE id_empresa = ? LIMIT 1");
 $row->execute([$eid]);
 $empresa = $row->fetch();
