@@ -2138,7 +2138,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       const j = await r.json();
       if (j.ok) {
-        toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
+        if (j.data?.mp_cancel_ok === false) {
+          toast('Suscripción cancelada en Centrotec. Recuerda cancelar también en mercadopago.cl → Tu actividad → Suscripciones.', 'err');
+        } else {
+          toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
+        }
         loadSuscripcion();
       } else {
         toast(j.msg || 'Error al cancelar', 'err');

@@ -23,30 +23,27 @@ if ($empresa['plan_estado'] !== 'Activo') json_err('No hay suscripción activa p
 $preapprovalId = $empresa['mp_preapproval_id'] ?? '';
 if (!$preapprovalId) json_err('No se encontró el ID de suscripción. Cancela directamente desde tu cuenta de Mercado Pago.');
 
-// Cancelar en Mercado Pago
-$ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preapprovalId));
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_CUSTOMREQUEST  => 'PATCH',
-    CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
-    CURLOPT_HTTPHEADER     => [
-        'Authorization: Bearer ' . MP_ACCESS_TOKEN,
-        'Content-Type: application/json',
-    ],
-    CURLOPT_TIMEOUT => 10,
-]);
-$resp = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($code !== 200 && $code !== 201) {
-    if ($code === 0) {
-        json_err('No se pudo conectar con Mercado Pago. Intenta nuevamente o cancela desde tu cuenta de MP.');
-    }
-    json_err('No se pudo cancelar la suscripción en Mercado Pago. Por favor cancela directamente desde mercadopago.cl → Tu actividad → Suscripciones.');
+// Intentar cancelar en Mercado Pago (puede fallar si la suscripción fue creada por checkout)
+$mpCancelOk = false;
+if ($preapprovalId) {
+    $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preapprovalId));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST  => 'PATCH',
+        CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
+        CURLOPT_HTTPHEADER     => [
+            'Authorization: Bearer ' . MP_ACCESS_TOKEN,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_TIMEOUT => 10,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    $mpCancelOk = ($code === 200 || $code === 201);
 }
 
-// Marcar como cancelado localmente
+// Marcar como cancelado localmente (independiente de si MP respondió ok)
 $db->prepare("UPDATE empresas SET plan_estado='Cancelado', mp_preapproval_id=NULL WHERE id_empresa=?")
    ->execute([$eid]);
 
@@ -63,7 +60,8 @@ if ($correo) {
       </div>
       <div style='padding:24px 28px;color:#e6edf3;line-height:1.6;'>
         <p>Hola <strong>{$nombre}</strong>,</p>
-        <p>Tu suscripción a Centrotec ha sido cancelada correctamente. No se realizarán más cobros automáticos.</p>
+        <p>Tu suscripción a Centrotec ha sido cancelada en nuestro sistema. Tu acceso no se renovará automáticamente.</p>
+        <p style='background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:6px;padding:12px 14px;font-size:13px;color:#d4a72c;'>Para evitar cobros futuros, también cancela la suscripción directamente desde tu cuenta de Mercado Pago: <strong>mercadopago.cl → Tu actividad → Suscripciones</strong>.</p>
         <div style='background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px 20px;margin:20px 0;'>
           <p style='margin:0 0 6px;font-size:13px;color:#8b949e;'>Acceso hasta</p>
           <p style='margin:0;font-size:20px;font-weight:700;color:#e6edf3;'>{$fecha}</p>
@@ -76,4 +74,4 @@ if ($correo) {
     send_email($correo, $nombre, 'Tu suscripción ha sido cancelada — Centrotec', $html);
 }
 
-json_ok(['vencimiento' => $empresa['plan_vencimiento']]);
+json_ok(['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk]);
