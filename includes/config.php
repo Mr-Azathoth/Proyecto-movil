@@ -135,7 +135,12 @@ function session_check_timeout(int $segundos = 3600): void {
 
 function requireLogin(): void {
     remember_check();
-    if (!logueado()) { header('Location: '.BASE.'/index.php'); exit; }
+    if (!logueado()) {
+        $here = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+              . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $_SESSION['redirect_after_login'] = $here;
+        header('Location: '.BASE.'/index.php'); exit;
+    }
     session_check_timeout();
     $_SESSION['last_activity'] = time();
 }

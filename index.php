@@ -77,7 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         remember_set($row['id_usuario'], $row['id_empresa']);
                     }
                     log_accion(getDB(), 'login_ok');
-                    header('Location: '.BASE.'/app.php');
+                    $redir = $_SESSION['redirect_after_login'] ?? null;
+                    unset($_SESSION['redirect_after_login']);
+                    header('Location: ' . ($redir ?: BASE.'/app.php'));
                     exit;
                 }
             } else {
