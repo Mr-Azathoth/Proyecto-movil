@@ -20,6 +20,7 @@ function send_email(string $to, string $to_name, string $subject, string $html_b
         $mail->CharSet    = 'UTF-8';
 
         $mail->setFrom(SMTP_FROM ?: SMTP_USER, SMTP_NAME);
+        $mail->addReplyTo(SMTP_FROM ?: SMTP_USER, SMTP_NAME);
         $mail->addAddress($to, $to_name);
 
         $mail->isHTML(true);
