@@ -1511,7 +1511,7 @@ async function loadSuscripcion() {
       } else {
         diasNum.textContent = d.dias_restantes;
         diasLbl.textContent = d.dias_restantes === 1 ? 'día restante' : 'días restantes';
-        const cls = d.dias_restantes > 30 ? 'ok' : d.dias_restantes > 7 ? 'warn' : 'danger';
+        const cls = d.dias_restantes > 10 ? 'ok' : d.dias_restantes > 3 ? 'warn' : 'danger';
         diasWrap.className = 'subs-dias-wrap ' + cls;
       }
     }
@@ -2819,7 +2819,8 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     return;
   }
 
-  // Banner de días restantes (solo trial activo)
+  // Banner de días restantes — trial activo o suscripción con ≤10 días
+  var activarBtn = document.getElementById('trial-banner-btn');
   if (estado === 'Trial' && dias !== null && dias > 0) {
     if (banner && bannerTxt) {
       bannerTxt.textContent = dias === 1
@@ -2827,6 +2828,15 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
         : 'Te quedan ' + dias + ' días de prueba gratuita.';
       banner.classList.remove('hidden');
     }
+    if (activarBtn) activarBtn.textContent = 'Activar plan';
+  } else if (estado === 'Activo' && dias !== null && dias <= 10 && dias > 0) {
+    if (banner && bannerTxt) {
+      bannerTxt.textContent = dias === 1
+        ? 'Tu suscripción vence mañana.'
+        : 'Tu suscripción vence en ' + dias + ' días.';
+      banner.classList.remove('hidden');
+    }
+    if (activarBtn) activarBtn.textContent = 'Ver suscripción';
   }
 
   // Cerrar banner
@@ -2837,8 +2847,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     });
   }
 
-  // Botón "Activar plan": ir a Configuración → Suscripción
-  var activarBtn = document.getElementById('trial-banner-btn');
+  // Botón del banner: ir a Configuración → Suscripción
   if (activarBtn) {
     activarBtn.addEventListener('click', function(e) {
       e.preventDefault();

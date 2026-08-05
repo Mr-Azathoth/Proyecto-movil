@@ -40,7 +40,7 @@ $pronto = $db->query("
       AND plan_estado != 'Trial'
       AND plan_vencimiento IS NOT NULL
       AND plan_vencimiento > CURDATE()
-      AND DATEDIFF(plan_vencimiento, CURDATE()) IN (7, 1)
+      AND DATEDIFF(plan_vencimiento, CURDATE()) IN (10, 5, 1)
       AND (notif_vencimiento IS NULL OR notif_vencimiento < CURDATE())
 ")->fetchAll();
 
