@@ -497,7 +497,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="subs-notif-row">
             <div class="subs-notif-text">
               <div class="subs-notif-title">Aviso por correo al administrador</div>
-              <div class="subs-notif-sub">Notifica al correo registrado cuando queden 30, 15 y 7 días para el vencimiento</div>
+              <div class="subs-notif-sub">Notifica al correo registrado cuando queden 10, 5 y 1 día para el vencimiento</div>
             </div>
             <label class="toggle-sw">
               <input type="checkbox" id="subs-notif-chk">
