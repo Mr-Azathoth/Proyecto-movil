@@ -29,7 +29,7 @@ try {
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $row = $db->prepare("SELECT plan_tipo, plan_estado, plan_vencimiento, notif_vencimiento, mp_preapproval_id FROM empresas WHERE id_empresa = ?");
+    $row = $db->prepare("SELECT plan_tipo, plan_estado, plan_vencimiento, notif_vencimiento FROM empresas WHERE id_empresa = ?");
     $row->execute([$eid]);
     $data = $row->fetch();
 
@@ -37,6 +37,14 @@ if ($method === 'GET') {
     if (!empty($data['plan_vencimiento'])) {
         $dias = (int) ceil((strtotime($data['plan_vencimiento']) - time()) / 86400);
     }
+
+    // Consulta separada para mp_preapproval_id — columna añadida por migración silenciosa
+    $hasPreapproval = false;
+    try {
+        $pa = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa = ? LIMIT 1");
+        $pa->execute([$eid]);
+        $hasPreapproval = !empty($pa->fetchColumn());
+    } catch(PDOException $e) {}
 
     $pagos = $db->prepare(
         "SELECT fecha, monto, descripcion, estado FROM historial_pagos
@@ -50,7 +58,7 @@ if ($method === 'GET') {
         'plan_vencimiento'  => $data['plan_vencimiento'] ?? null,
         'notif_vencimiento' => ($data['notif_vencimiento'] ?? '') !== '2099-12-31',
         'dias_restantes'    => $dias,
-        'tiene_preapproval' => !empty($data['mp_preapproval_id']),
+        'tiene_preapproval' => $hasPreapproval,
         'historial'         => $pagos->fetchAll(),
     ]);
 }
