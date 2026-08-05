@@ -1487,9 +1487,11 @@ async function loadSuscripcion() {
     if (el('subs-plan-nombre')) el('subs-plan-nombre').textContent = d.plan_tipo || 'Básico';
 
     if (el('subs-estado-badge')) {
-      const colores = { 'Activo':'pill-green', 'Trial':'pill-orange', 'Por vencer':'pill-orange', 'Vencido':'pill-red', 'Pendiente':'pill-orange', 'Gratis':'pill-gray' };
+      const colores = { 'Activo':'pill-green', 'Trial':'pill-orange', 'Por vencer':'pill-orange', 'Vencido':'pill-red', 'Pendiente':'pill-orange', 'Gratis':'pill-gray', 'Cancelado':'pill-orange' };
       el('subs-estado-badge').className = 'pill ' + (colores[d.plan_estado] || 'pill-gray');
-      el('subs-estado-badge').textContent = d.plan_estado || 'Activo';
+      el('subs-estado-badge').textContent = d.plan_estado === 'Cancelado'
+        ? 'Cancelado – acceso hasta ' + (d.plan_vencimiento ? fmtDate(d.plan_vencimiento) : '–')
+        : (d.plan_estado || 'Activo');
     }
 
     if (el('subs-vence-txt')) {

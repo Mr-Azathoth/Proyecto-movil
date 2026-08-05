@@ -294,8 +294,8 @@ function guard(): void {
     $s->execute([eid()]);
     $emp = $s->fetch();
 
-    // Trial activo pero con fecha vencida (cron aún no corrió hoy)
-    if ($emp && (bool)$emp['activa'] && $emp['plan_estado'] === 'Trial') {
+    // Trial o Cancelado activo pero con fecha vencida (cron aún no corrió hoy)
+    if ($emp && (bool)$emp['activa'] && in_array($emp['plan_estado'], ['Trial', 'Cancelado'], true)) {
         $venc = $emp['plan_vencimiento'] ?? null;
         if ($venc && strtotime($venc) < strtotime('today')) {
             json_err('trial_vencido', 402);
