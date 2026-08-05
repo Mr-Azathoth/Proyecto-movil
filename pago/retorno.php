@@ -73,6 +73,9 @@ if ($gateway === 'mp_sub') {
                     // Activar plan inmediatamente con estado Pendiente.
                     // El webhook actualizará a Pagado cuando MP confirme el cobro.
                     activar_plan($db, $eid, $planInfo, 'Pendiente', 'Mercado Pago');
+                    // Guardar preapproval_id para poder cancelar desde el panel
+                    $db->prepare("UPDATE empresas SET mp_preapproval_id=? WHERE id_empresa=?")
+                       ->execute([$preapprovalId, $eid]);
                 }
             }
         }

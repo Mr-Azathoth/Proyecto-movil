@@ -9,6 +9,7 @@ $eid = eid();
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS plan_tipo VARCHAR(50) NOT NULL DEFAULT 'Básico'"); }        catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS plan_estado VARCHAR(20) NOT NULL DEFAULT 'Activo'"); }      catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS plan_vencimiento DATE NULL"); }                              catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); }        catch(PDOException $e) {}
 // Migrar notif_vencimiento TINYINT→DATE: DROP+ADD es el único camino seguro en strict mode
 try { $db->exec("ALTER TABLE empresas DROP COLUMN notif_vencimiento"); }                                        catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE empresas ADD COLUMN notif_vencimiento DATE NULL DEFAULT NULL"); }                  catch(PDOException $e) {}
@@ -28,7 +29,7 @@ try {
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $row = $db->prepare("SELECT plan_tipo, plan_estado, plan_vencimiento, notif_vencimiento FROM empresas WHERE id_empresa = ?");
+    $row = $db->prepare("SELECT plan_tipo, plan_estado, plan_vencimiento, notif_vencimiento, mp_preapproval_id FROM empresas WHERE id_empresa = ?");
     $row->execute([$eid]);
     $data = $row->fetch();
 
@@ -49,6 +50,7 @@ if ($method === 'GET') {
         'plan_vencimiento'  => $data['plan_vencimiento'] ?? null,
         'notif_vencimiento' => ($data['notif_vencimiento'] ?? '') !== '2099-12-31',
         'dias_restantes'    => $dias,
+        'tiene_preapproval' => !empty($data['mp_preapproval_id']),
         'historial'         => $pagos->fetchAll(),
     ]);
 }

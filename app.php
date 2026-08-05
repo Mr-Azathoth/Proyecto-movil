@@ -559,6 +559,20 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </div>
         </div>
 
+        <!-- Cancelar suscripción -->
+        <div class="cfg-section cfg-danger-zone hidden" id="subs-cancelar-section">
+          <h3 class="cfg-section-title">Cancelar suscripción</h3>
+          <p class="cfg-section-sub">Detiene la renovación automática al vencer el período actual.</p>
+          <div class="subs-cancel-info">
+            <span class="material-icons-round">info</span>
+            <span>Al cancelar, mantienes acceso hasta el <strong id="subs-cancel-fecha">–</strong>. Después de esa fecha no se realizará ningún cargo adicional.</span>
+          </div>
+          <button type="button" id="btn-cancelar-suscripcion" class="btn-danger-outline">
+            <span class="material-icons-round">cancel</span>
+            Cancelar suscripción
+          </button>
+        </div>
+
       </div><!-- /cfg-suscripcion -->
 
     </div><!-- /view-config -->

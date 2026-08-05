@@ -1517,6 +1517,15 @@ async function loadSuscripcion() {
     const notifChk = el('subs-notif-chk');
     if (notifChk) notifChk.checked = !!d.notif_vencimiento;
 
+    // Mostrar sección de cancelación solo si está Activo y tiene preapproval guardado
+    const cancelSection = el('subs-cancelar-section');
+    const cancelFecha   = el('subs-cancel-fecha');
+    if (cancelSection) {
+      const mostrar = d.plan_estado === 'Activo' && d.tiene_preapproval;
+      cancelSection.classList.toggle('hidden', !mostrar);
+      if (cancelFecha && d.plan_vencimiento) cancelFecha.textContent = fmtDate(d.plan_vencimiento);
+    }
+
     if (!d.historial.length) {
       wrap.innerHTML = `<div class="subs-empty-state">
         <span class="material-icons-round">receipt_long</span>
@@ -2111,6 +2120,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     allBtns.forEach(b => { b.disabled = false; });
     btn.innerHTML = '<span class="material-icons-round">shopping_cart</span><span>Suscribirse</span>';
+  });
+
+  // ── Cancelar suscripción ─────────────────────────────────────
+  document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', async () => {
+    if (!confirm('¿Cancelar tu suscripción?\n\nMantendrás el acceso completo hasta que venza el período actual. No se realizarán más cobros.')) return;
+    const btn = document.getElementById('btn-cancelar-suscripcion');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Cancelando...</span>';
+    try {
+      const r = await apiFetch('/reparo/api/cancelar_suscripcion.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
+        loadSuscripcion();
+      } else {
+        toast(j.msg || 'Error al cancelar', 'err');
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
+      }
+    } catch(ex) {
+      if (ex.message !== 'session_expired') toast('Error de conexión', 'err');
+      btn.disabled = false;
+      btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
+    }
   });
 
   // ── Toggle notificación de vencimiento ──────────────────────
