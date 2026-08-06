@@ -71,7 +71,7 @@ if ($gateway === 'mp_sub') {
                     if ($plan['id'] === $planId) { $planInfo = $plan; break; }
                 }
                 if ($planInfo) {
-                    activar_plan($db, $eid, $planInfo, 'Pendiente', 'Mercado Pago');
+                    activar_plan($db, $eid, $planInfo, 'Pagado', 'Mercado Pago');
                     try {
                         $db->prepare("UPDATE empresas SET mp_preapproval_id=? WHERE id_empresa=?")
                            ->execute([$preapprovalId, $eid]);
