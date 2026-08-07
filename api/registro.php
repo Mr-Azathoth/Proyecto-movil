@@ -195,10 +195,31 @@ if ($plan_key === 'trial') {
     json_ok(['redirect' => APP_URL . '/app.php?trial=1']);
 }
 
-// Plan de pago elegido al registrarse — ir al checkout de Mercado Pago
-$planId  = MP_PLANES[$plan_key]['id'];
-$backUrl = APP_URL . '/pago/retorno.php?gateway=mp_sub&eid=' . $id_empresa;
-$mpUrl   = 'https://www.mercadopago.cl/subscriptions/checkout'
-         . '?preapproval_plan_id=' . $planId
-         . '&back_url=' . urlencode($backUrl);
-json_ok(['redirect' => $mpUrl]);
+// Plan de pago elegido al registrarse — crear suscripción vía API (vendedor la controla)
+$plan    = MP_PLANES[$plan_key];
+$backUrl = APP_URL . '/pago/retorno.php?gateway=mp_sub';
+$ch = curl_init('https://api.mercadopago.com/preapproval');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => json_encode([
+        'preapproval_plan_id' => $plan['id'],
+        'payer_email'         => $email,
+        'back_url'            => $backUrl,
+        'external_reference'  => 'eid_' . $id_empresa,
+        'status'              => 'pending',
+    ]),
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer ' . MP_ACCESS_TOKEN,
+        'Content-Type: application/json',
+    ],
+    CURLOPT_TIMEOUT => 15,
+]);
+$resp = curl_exec($ch);
+$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+if ($code !== 200 && $code !== 201) json_err('Error al crear la suscripción. Intenta de nuevo.');
+$mpData    = json_decode($resp, true);
+$initPoint = $mpData['init_point'] ?? '';
+if (!$initPoint) json_err('No se pudo obtener el link de pago. Intenta de nuevo.');
+json_ok(['redirect' => $initPoint]);

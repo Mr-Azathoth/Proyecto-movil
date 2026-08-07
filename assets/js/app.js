@@ -2097,6 +2097,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => document.querySelector('[data-tab="suscripcion"]')?.click(), 150);
   }
 
+  // ── Trial wall: botones de plan ──────────────────────────────
+  document.getElementById('trial-wall')?.addEventListener('click', async e => {
+    const btn = e.target.closest('.btn-plan-wall');
+    if (!btn) return;
+    const plan    = btn.dataset.plan;
+    const allBtns = document.querySelectorAll('.btn-plan-wall');
+    allBtns.forEach(b => { b.disabled = true; });
+    btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Procesando...</span>';
+    try {
+      const r = await apiFetch('/reparo/api/pago.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metodo: 'mercadopago', plan }),
+      });
+      const j = await r.json();
+      if (j.ok) { window.location.href = j.data.url; return; }
+      toast(j.msg || 'Error al iniciar el pago', 'err');
+    } catch(ex) { if (ex.message !== 'session_expired') toast('Error de conexión', 'err'); }
+    allBtns.forEach(b => { b.disabled = false; });
+    btn.innerHTML = '<span class="material-icons-round">shopping_cart</span><span>Suscribirse</span>';
+  });
+
   // ── Seleccionar plan y pagar con Mercado Pago ────────────────
   document.querySelector('.plan-grid')?.addEventListener('click', async e => {
     const btn = e.target.closest('.btn-plan');

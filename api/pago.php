@@ -24,21 +24,47 @@ $db     = getDB();
 $returnUrl = APP_URL . '/pago/retorno.php';
 
 // ── MERCADO PAGO — Suscripción recurrente ─────────────────────
-// Redirige directamente al checkout del plan en MP.
-// No se necesita llamada a la API para iniciar el flujo.
+// Crea la suscripción vía API (el vendedor la controla → puede cancelar via PATCH).
 if ($metodo === 'mercadopago') {
     $planKey = $input['plan'] ?? '';
     $planes  = MP_PLANES;
     if (!isset($planes[$planKey])) json_err('Plan no válido');
 
-    $planId  = $planes[$planKey]['id'];
-    $backUrl = $returnUrl . '?gateway=mp_sub&eid=' . $eid;
-    $url     = 'https://www.mercadopago.cl/subscriptions/checkout'
-             . '?preapproval_plan_id=' . $planId
-             . '&external_reference=' . urlencode('eid_' . $eid)
-             . '&back_url=' . urlencode($backUrl);
+    $plan = $planes[$planKey];
 
-    json_ok(['url' => $url]);
+    $empRow = $db->prepare("SELECT correo FROM empresas WHERE id_empresa = ? LIMIT 1");
+    $empRow->execute([$eid]);
+    $payerEmail = $empRow->fetchColumn() ?: '';
+    if (!$payerEmail) json_err('No se encontró el correo registrado. Actualiza tu correo en Configuración.');
+
+    $ch = curl_init('https://api.mercadopago.com/preapproval');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode([
+            'preapproval_plan_id' => $plan['id'],
+            'payer_email'         => $payerEmail,
+            'back_url'            => $returnUrl . '?gateway=mp_sub',
+            'external_reference'  => 'eid_' . $eid,
+            'status'              => 'pending',
+        ]),
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . MP_ACCESS_TOKEN,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_TIMEOUT => 15,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code !== 200 && $code !== 201) json_err('Error al crear la suscripción en Mercado Pago. Intenta de nuevo.');
+
+    $data      = json_decode($resp, true);
+    $initPoint = $data['init_point'] ?? '';
+    if (!$initPoint) json_err('No se pudo obtener el link de pago. Intenta de nuevo.');
+
+    json_ok(['url' => $initPoint]);
 }
 
 json_err('Método de pago no válido');

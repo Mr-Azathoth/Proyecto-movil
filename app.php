@@ -1201,20 +1201,15 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       <?php foreach (MP_PLANES as $wkey => $wplan):
           $wPorMes   = (int)round($wplan['precio'] / $wplan['meses']);
           $wFeatured = ($wkey === '12meses');
-          $wBackUrl  = APP_URL . '/pago/retorno.php?gateway=mp_sub';
-          $wMpUrl    = 'https://www.mercadopago.cl/subscriptions/checkout'
-                     . '?preapproval_plan_id=' . urlencode($wplan['id'])
-                     . '&back_url=' . urlencode($wBackUrl)
-                     . '&external_reference=' . urlencode('eid_' . eid());
       ?>
       <div class="twp-card <?= $wFeatured ? 'twp-featured' : '' ?>">
         <?php if ($wFeatured): ?><div class="twp-badge">Mejor valor</div><?php endif; ?>
         <div class="twp-nombre"><?= htmlspecialchars($wplan['nombre']) ?></div>
         <div class="twp-precio">$<?= number_format($wplan['precio'], 0, ',', '.') ?></div>
         <div class="twp-por-mes">$<?= number_format($wPorMes, 0, ',', '.') ?>/mes</div>
-        <a href="<?= htmlspecialchars($wMpUrl) ?>" class="btn-plan-wall">
-          <span class="material-icons-round">shopping_cart</span>Suscribirse
-        </a>
+        <button class="btn-plan-wall" data-plan="<?= htmlspecialchars($wkey) ?>">
+          <span class="material-icons-round">shopping_cart</span><span>Suscribirse</span>
+        </button>
       </div>
       <?php endforeach; ?>
     </div>
