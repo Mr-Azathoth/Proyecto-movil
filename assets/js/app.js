@@ -2149,40 +2149,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Cancelar suscripción ─────────────────────────────────────
   document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', () => {
-    showConfirm(
-      '¿Cancelar suscripción?',
-      'Mantendrás el acceso completo hasta que venza el período actual. No se realizarán más cobros.',
-      async () => {
-        const btn = document.getElementById('btn-cancelar-suscripcion');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Cancelando...</span>';
-        try {
-          const r = await apiFetch('/reparo/api/cancelar_suscripcion.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-          });
-          const j = await r.json();
-          if (j.ok) {
-            if (j.data?.mp_cancel_ok === false) {
-              toast('Suscripción cancelada en Centrotec. Recuerda cancelar también en mercadopago.cl → Tu actividad → Suscripciones.', 'err');
-            } else {
-              toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
-            }
-            loadSuscripcion();
-          } else {
-            toast(j.msg || 'Error al cancelar', 'err');
-            btn.disabled = false;
-            btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
-          }
-        } catch(ex) {
-          if (ex.message !== 'session_expired') toast('Error de conexión', 'err');
-          btn.disabled = false;
-          btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
+    const fechaTxt = document.getElementById('subs-cancel-fecha')?.textContent || '—';
+    const modalFecha = document.getElementById('modal-cancel-fecha');
+    if (modalFecha) modalFecha.textContent = fechaTxt;
+    openModal('modal-cancelar-sub');
+  });
+
+  document.getElementById('modal-cancelar-sub-ok')?.addEventListener('click', async () => {
+    closeModal('modal-cancelar-sub');
+    const btn = document.getElementById('btn-cancelar-suscripcion');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Cancelando...</span>'; }
+    try {
+      const r = await apiFetch('/reparo/api/cancelar_suscripcion.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        if (j.data?.mp_cancel_ok === false) {
+          toast('Suscripción cancelada en Centrotec. Recuerda cancelar también en mercadopago.cl → Tu actividad → Suscripciones.', 'err');
+        } else {
+          toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
         }
-      },
-      'Sí, cancelar'
-    );
+        loadSuscripcion();
+      } else {
+        toast(j.msg || 'Error al cancelar', 'err');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>'; }
+      }
+    } catch(ex) {
+      if (ex.message !== 'session_expired') toast('Error de conexión', 'err');
+      if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>'; }
+    }
   });
 
   // ── Toggle notificación de vencimiento ──────────────────────

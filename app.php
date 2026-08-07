@@ -1008,6 +1008,31 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 </div>
 
 <!-- ══════════════════════════════════════════════════
+     MODAL: Cancelar suscripción
+══════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-cancelar-sub">
+  <div class="modal-box modal-sm">
+    <div class="modal-hd">
+      <h3>¿Cancelar suscripción?</h3>
+      <button type="button" class="modal-close" data-modal="modal-cancelar-sub" aria-label="Cerrar">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-msg" style="margin-bottom:14px;">Mantendrás el acceso completo hasta que venza el período actual. No se realizarán más cobros.</p>
+      <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:8px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;">
+        <span class="material-icons-round" style="font-size:16px;color:#d4a72c;flex-shrink:0;margin-top:1px;">warning</span>
+        <p style="margin:0;font-size:13px;color:#d4a72c;line-height:1.5;">Tu acceso continúa hasta el <strong id="modal-cancel-fecha">—</strong>. Después de esa fecha no se renovará.</p>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button type="button" class="btn-sec" data-modal="modal-cancelar-sub">Volver</button>
+      <button type="button" class="btn-danger" id="modal-cancelar-sub-ok">Sí, cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
      MODAL: Importar inventario Excel
 ══════════════════════════════════════════════════ -->
 <div class="modal-bg" id="modal-importar-inv">
