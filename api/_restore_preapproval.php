@@ -21,27 +21,25 @@ curl_close($ch);
 $data = json_decode($resp, true);
 $results = $data['results'] ?? [];
 
-// Usar la primera autorizada, o forzar con ?id=xxx
-$forcedId = $_GET['id'] ?? '';
-
 header('Content-Type: application/json');
 
-if ($forcedId) {
-    $preapprovalId = $forcedId;
-} else {
-    $match = $results[0] ?? null;
-    if (!$match) {
-        echo json_encode(['ok' => false, 'msg' => 'No se encontró ninguna suscripción autorizada', 'code' => $code]);
-        exit;
-    }
-    // Extraer ID desde init_point ya que el campo id puede estar bloqueado
-    $initPoint = $match['init_point'] ?? '';
-    preg_match('/preapproval_id=([a-f0-9]+)/i', $initPoint, $m);
-    $preapprovalId = $m[1] ?? $match['id'];
+$match = $results[0] ?? null;
+if (!$match) {
+    echo json_encode(['ok' => false, 'msg' => 'No se encontró ninguna suscripción autorizada', 'http_code' => $code]);
+    exit;
+}
+
+// Usar el campo 'id' real del objeto (instance ID, no el plan ID)
+$preapprovalId = $match['id'] ?? '';
+if (!$preapprovalId) {
+    echo json_encode(['ok' => false, 'msg' => 'No se pudo extraer el id de la suscripción', 'match_keys' => array_keys($match)]);
+    exit;
 }
 
 // Restaurar en DB
 $db->prepare("UPDATE empresas SET plan_estado='Activo', mp_preapproval_id=? WHERE id_empresa=?")
    ->execute([$preapprovalId, $eid]);
 
-echo json_encode(['ok' => true, 'preapproval_id' => $preapprovalId, 'restored' => true]);
+// Devolver primeros/últimos 4 chars para verificar sin exponer el ID completo
+$preview = substr($preapprovalId, 0, 4) . '...' . substr($preapprovalId, -4);
+echo json_encode(['ok' => true, 'id_preview' => $preview, 'status' => $match['status'], 'external_ref' => $match['external_reference'] ?? '', 'restored' => true]);
