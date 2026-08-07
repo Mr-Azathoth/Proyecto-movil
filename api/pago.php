@@ -58,7 +58,7 @@ if ($metodo === 'mercadopago') {
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($code !== 200 && $code !== 201) json_err('Error al crear la suscripción en Mercado Pago. Intenta de nuevo.');
+    if ($code !== 200 && $code !== 201) json_err('MP '.$code.': '.substr($resp,0,400));
 
     $data      = json_decode($resp, true);
     $initPoint = $data['init_point'] ?? '';
