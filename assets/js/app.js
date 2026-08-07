@@ -979,9 +979,10 @@ async function alterStock(id, qty) {
 
 // ── Confirmación genérica ────────────────────────────────
 let _confirmCallback = null;
-function showConfirm(title, msg, onConfirm) {
+function showConfirm(title, msg, onConfirm, okLabel) {
   document.getElementById('confirm-title').textContent = title;
   document.getElementById('confirm-msg').textContent   = msg;
+  document.getElementById('confirm-ok').textContent    = okLabel || 'Eliminar';
   _confirmCallback = onConfirm;
   openModal('modal-confirm');
 }
@@ -2147,35 +2148,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ── Cancelar suscripción ─────────────────────────────────────
-  document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', async () => {
-    if (!confirm('¿Cancelar tu suscripción?\n\nMantendrás el acceso completo hasta que venza el período actual. No se realizarán más cobros.')) return;
-    const btn = document.getElementById('btn-cancelar-suscripcion');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Cancelando...</span>';
-    try {
-      const r = await apiFetch('/reparo/api/cancelar_suscripcion.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const j = await r.json();
-      if (j.ok) {
-        if (j.data?.mp_cancel_ok === false) {
-          toast('Suscripción cancelada en Centrotec. Recuerda cancelar también en mercadopago.cl → Tu actividad → Suscripciones.', 'err');
-        } else {
-          toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
+  document.getElementById('btn-cancelar-suscripcion')?.addEventListener('click', () => {
+    showConfirm(
+      '¿Cancelar suscripción?',
+      'Mantendrás el acceso completo hasta que venza el período actual. No se realizarán más cobros.',
+      async () => {
+        const btn = document.getElementById('btn-cancelar-suscripcion');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-icons-round" style="animation:spin 1s linear infinite;font-size:16px">sync</span><span>Cancelando...</span>';
+        try {
+          const r = await apiFetch('/reparo/api/cancelar_suscripcion.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          });
+          const j = await r.json();
+          if (j.ok) {
+            if (j.data?.mp_cancel_ok === false) {
+              toast('Suscripción cancelada en Centrotec. Recuerda cancelar también en mercadopago.cl → Tu actividad → Suscripciones.', 'err');
+            } else {
+              toast('Suscripción cancelada. Tu acceso continúa hasta el vencimiento del plan.', 'ok');
+            }
+            loadSuscripcion();
+          } else {
+            toast(j.msg || 'Error al cancelar', 'err');
+            btn.disabled = false;
+            btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
+          }
+        } catch(ex) {
+          if (ex.message !== 'session_expired') toast('Error de conexión', 'err');
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
         }
-        loadSuscripcion();
-      } else {
-        toast(j.msg || 'Error al cancelar', 'err');
-        btn.disabled = false;
-        btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
-      }
-    } catch(ex) {
-      if (ex.message !== 'session_expired') toast('Error de conexión', 'err');
-      btn.disabled = false;
-      btn.innerHTML = '<span class="material-icons-round">cancel</span><span>Cancelar suscripción</span>';
-    }
+      },
+      'Sí, cancelar'
+    );
   });
 
   // ── Toggle notificación de vencimiento ──────────────────────
