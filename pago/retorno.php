@@ -3,9 +3,14 @@ require_once __DIR__.'/../includes/config.php';
 require_once __DIR__.'/../includes/mailer.php';
 requireLogin();
 
-$gateway = $_GET['gateway'] ?? '';
-$eid     = eid();
-$db      = getDB();
+$gateway       = $_GET['gateway']        ?? '';
+$preapprovalId = $_GET['preapproval_id'] ?? '';
+// MP appends ?preapproval_id= to back_url — detect mp_sub by its presence
+if (!$gateway && $preapprovalId) {
+    $gateway = 'mp_sub';
+}
+$eid = eid();
+$db  = getDB();
 
 function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string $gateway = ''): void {
     $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa = ?");
@@ -45,9 +50,14 @@ function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string
 
 // ── MERCADO PAGO — retorno de suscripción recurrente ─────────
 if ($gateway === 'mp_sub') {
-    $preapprovalId = $_GET['preapproval_id'] ?? '';
-
     if ($preapprovalId) {
+        // Evitar activar dos veces el mismo preapproval
+        $already = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1");
+        $already->execute([$eid]);
+        if ($already->fetchColumn() === $preapprovalId) {
+            header('Location: '.BASE.'/app.php?pago=suscripcion');
+            exit;
+        }
         // Consultar la suscripción creada a MP para saber qué plan eligió el cliente
         $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preapprovalId));
         curl_setopt_array($ch, [

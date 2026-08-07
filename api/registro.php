@@ -197,7 +197,7 @@ if ($plan_key === 'trial') {
 
 // Plan de pago elegido al registrarse — crear suscripción vía API (vendedor la controla)
 $plan    = MP_PLANES[$plan_key];
-$backUrl = APP_URL . '/pago/retorno.php?gateway=mp_sub';
+$backUrl = APP_URL . '/pago/retorno.php';
 $ch = curl_init('https://api.mercadopago.com/preapproval');
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,

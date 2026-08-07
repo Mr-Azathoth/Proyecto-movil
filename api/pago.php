@@ -44,7 +44,7 @@ if ($metodo === 'mercadopago') {
         CURLOPT_POSTFIELDS     => json_encode([
             'reason'             => $plan['nombre'] . ' — Centrotec',
             'payer_email'        => $payerEmail,
-            'back_url'           => $returnUrl . '?gateway=mp_sub',
+            'back_url'           => $returnUrl,
             'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
             'auto_recurring'     => [
                 'frequency'          => $plan['meses'],
