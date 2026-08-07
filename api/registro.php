@@ -203,11 +203,17 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
     CURLOPT_POSTFIELDS     => json_encode([
-        'preapproval_plan_id' => $plan['id'],
-        'payer_email'         => $email,
-        'back_url'            => $backUrl,
-        'external_reference'  => 'eid_' . $id_empresa . '_plan_' . $plan_key,
-        'status'              => 'pending',
+        'reason'             => $plan['nombre'] . ' — Centrotec',
+        'payer_email'        => $email,
+        'back_url'           => $backUrl,
+        'external_reference' => 'eid_' . $id_empresa . '_plan_' . $plan_key,
+        'auto_recurring'     => [
+            'frequency'          => $plan['meses'],
+            'frequency_type'     => 'months',
+            'transaction_amount' => $plan['precio'],
+            'currency_id'        => 'CLP',
+        ],
+        'status'             => 'pending',
     ]),
     CURLOPT_HTTPHEADER => [
         'Authorization: Bearer ' . MP_ACCESS_TOKEN,

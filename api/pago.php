@@ -42,11 +42,17 @@ if ($metodo === 'mercadopago') {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => json_encode([
-            'preapproval_plan_id' => $plan['id'],
-            'payer_email'         => $payerEmail,
-            'back_url'            => $returnUrl . '?gateway=mp_sub',
-            'external_reference'  => 'eid_' . $eid . '_plan_' . $planKey,
-            'status'              => 'pending',
+            'reason'             => $plan['nombre'] . ' — Centrotec',
+            'payer_email'        => $payerEmail,
+            'back_url'           => $returnUrl . '?gateway=mp_sub',
+            'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
+            'auto_recurring'     => [
+                'frequency'          => $plan['meses'],
+                'frequency_type'     => 'months',
+                'transaction_amount' => $plan['precio'],
+                'currency_id'        => 'CLP',
+            ],
+            'status'             => 'pending',
         ]),
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . MP_ACCESS_TOKEN,
@@ -58,7 +64,7 @@ if ($metodo === 'mercadopago') {
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($code !== 200 && $code !== 201) json_err('MP '.$code.': '.substr($resp,0,400));
+    if ($code !== 200 && $code !== 201) json_err('Error al crear la suscripción en Mercado Pago. Intenta de nuevo.');
 
     $data      = json_decode($resp, true);
     $initPoint = $data['init_point'] ?? '';
