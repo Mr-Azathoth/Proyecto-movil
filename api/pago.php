@@ -42,11 +42,17 @@ if ($metodo === 'mercadopago') {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => json_encode([
-            'preapproval_plan_id' => $plan['id'],
-            'payer_email'         => $payerEmail,
-            'back_url'            => $returnUrl . '?gateway=mp_sub',
-            'external_reference'  => 'eid_' . $eid,
-            'status'              => 'pending',
+            'reason'             => 'Centrotec — ' . $plan['nombre'],
+            'auto_recurring'     => [
+                'frequency'          => $plan['meses'],
+                'frequency_type'     => 'months',
+                'transaction_amount' => $plan['precio'],
+                'currency_id'        => 'CLP',
+            ],
+            'payer_email'        => $payerEmail,
+            'back_url'           => $returnUrl . '?gateway=mp_sub',
+            'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
+            'status'             => 'pending',
         ]),
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . MP_ACCESS_TOKEN,

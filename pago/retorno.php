@@ -61,14 +61,21 @@ if ($gateway === 'mp_sub') {
 
         if ($code === 200) {
             $sub    = json_decode($resp, true);
-            $planId = $sub['preapproval_plan_id'] ?? '';
-            $status = $sub['status']              ?? '';
+            $status = $sub['status'] ?? '';
 
             if ($status === 'authorized') {
-                // Buscar plan en nuestra configuración
+                // Identificar plan: primero por external_reference (nuevo flujo),
+                // luego por preapproval_plan_id como fallback (suscripciones antiguas)
                 $planInfo = null;
-                foreach (MP_PLANES as $plan) {
-                    if ($plan['id'] === $planId) { $planInfo = $plan; break; }
+                $extRef   = $sub['external_reference'] ?? '';
+                if (preg_match('/^eid_\d+_plan_([a-z0-9]+)$/', $extRef, $m) && isset(MP_PLANES[$m[1]])) {
+                    $planInfo = MP_PLANES[$m[1]];
+                }
+                if (!$planInfo) {
+                    $planId = $sub['preapproval_plan_id'] ?? '';
+                    foreach (MP_PLANES as $p) {
+                        if ($p['id'] === $planId) { $planInfo = $p; break; }
+                    }
                 }
                 if ($planInfo) {
                     activar_plan($db, $eid, $planInfo, 'Pagado', 'Mercado Pago');
