@@ -21,25 +21,27 @@ curl_close($ch);
 $data = json_decode($resp, true);
 $results = $data['results'] ?? [];
 
-// Filtrar las que tengan external_reference = eid_{eid}
-$match = null;
-foreach ($results as $r) {
-    if (($r['external_reference'] ?? '') === 'eid_' . $eid) {
-        $match = $r;
-        break;
-    }
-}
+// Usar la primera autorizada, o forzar con ?id=xxx
+$forcedId = $_GET['id'] ?? '';
 
 header('Content-Type: application/json');
-if (!$match) {
-    echo json_encode(['ok' => false, 'msg' => 'No se encontró suscripción autorizada para eid_'.$eid, 'all' => $results]);
-    exit;
-}
 
-$preapprovalId = $match['id'];
+if ($forcedId) {
+    $preapprovalId = $forcedId;
+} else {
+    $match = $results[0] ?? null;
+    if (!$match) {
+        echo json_encode(['ok' => false, 'msg' => 'No se encontró ninguna suscripción autorizada', 'code' => $code]);
+        exit;
+    }
+    // Extraer ID desde init_point ya que el campo id puede estar bloqueado
+    $initPoint = $match['init_point'] ?? '';
+    preg_match('/preapproval_id=([a-f0-9]+)/i', $initPoint, $m);
+    $preapprovalId = $m[1] ?? $match['id'];
+}
 
 // Restaurar en DB
 $db->prepare("UPDATE empresas SET plan_estado='Activo', mp_preapproval_id=? WHERE id_empresa=?")
    ->execute([$preapprovalId, $eid]);
 
-echo json_encode(['ok' => true, 'preapproval_id' => $preapprovalId, 'status' => $match['status'], 'restored' => true]);
+echo json_encode(['ok' => true, 'preapproval_id' => $preapprovalId, 'restored' => true]);
