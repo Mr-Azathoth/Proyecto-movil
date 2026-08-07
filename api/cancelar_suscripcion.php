@@ -47,6 +47,12 @@ if ($preapprovalId) {
 $db->prepare("UPDATE empresas SET plan_estado='Cancelado', mp_preapproval_id=NULL WHERE id_empresa=?")
    ->execute([$eid]);
 
+// Registrar cancelación en el historial de suscripción
+$db->prepare(
+    "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
+     VALUES (?, ?, 0, 'Cancelación de suscripción', 'Cancelado')"
+)->execute([$eid, date('Y-m-d')]);
+
 // Enviar correo de confirmación al cliente
 $correo = $empresa['correo'] ?? '';
 $nombre = htmlspecialchars($empresa['nombre'] ?? 'Cliente');

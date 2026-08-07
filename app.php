@@ -551,9 +551,9 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </p>
         </div>
 
-        <!-- Historial de pagos -->
+        <!-- Historial de suscripción -->
         <div class="cfg-section">
-          <h3 class="cfg-section-title">Historial de pagos</h3>
+          <h3 class="cfg-section-title">Historial de suscripción</h3>
           <div id="subs-historial-wrap">
             <p class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</p>
           </div>
