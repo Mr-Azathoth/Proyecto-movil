@@ -64,8 +64,7 @@ if ($gateway === 'mp_sub') {
             $status = $sub['status'] ?? '';
 
             if ($status === 'authorized') {
-                // Identificar plan: primero por external_reference (nuevo flujo),
-                // luego por preapproval_plan_id como fallback (suscripciones antiguas)
+                // Identificar plan: por external_reference o por preapproval_plan_id
                 $planInfo = null;
                 $extRef   = $sub['external_reference'] ?? '';
                 if (preg_match('/^eid_\d+_plan_([a-z0-9]+)$/', $extRef, $m) && isset(MP_PLANES[$m[1]])) {
