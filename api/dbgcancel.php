@@ -24,7 +24,7 @@ $chPut = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preap
 curl_setopt_array($chPut, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_CUSTOMREQUEST  => 'PUT',
-    CURLOPT_POSTFIELDS     => json_encode(['status' => 'canceled']),
+    CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
     CURLOPT_HTTPHEADER     => [
         'Authorization: Bearer ' . MP_ACCESS_TOKEN,
         'Content-Type: application/json',
