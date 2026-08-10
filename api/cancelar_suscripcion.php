@@ -41,6 +41,7 @@ if ($preapprovalId) {
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     $mpCancelOk = ($code === 200 || $code === 201);
+    $mpDebug = ['code' => $code, 'resp' => substr($resp, 0, 300)];
 }
 
 // Marcar como cancelado localmente (independiente de si MP respondió ok)
@@ -80,4 +81,4 @@ if ($correo) {
     send_email($correo, $nombre, 'Tu suscripción ha sido cancelada — Centrotec', $html);
 }
 
-json_ok(['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk]);
+json_ok(['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk, 'mp_debug' => $mpDebug ?? null]);
