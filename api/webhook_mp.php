@@ -35,12 +35,52 @@ if ($xSig && $webhookSecret) {
     }
 }
 
-$data    = json_decode($payload, true) ?? [];
-
+$data   = json_decode($payload, true) ?? [];
 $type   = $data['type']       ?? ($_GET['type']    ?? '');
-$dataId = $data['data']['id'] ?? ($_GET['data_id'] ?? '');
+$dataId = $data['data']['id'] ?? ($_GET['data_id'] ?? ($_GET['id'] ?? ''));
 
 if (!$type || !$dataId) exit;
+
+// ── SUSCRIPCIÓN CANCELADA DESDE MERCADO PAGO ─────────────────────────────────
+// MP envía type="subscription_preapproval" cuando el estado del preapproval cambia.
+// Verificamos el estado real en la API antes de actualizar la DB.
+if ($type === 'subscription_preapproval') {
+    $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($dataId));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
+        CURLOPT_TIMEOUT        => 10,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code === 200) {
+        $sub    = json_decode($resp, true);
+        $status = $sub['status'] ?? '';
+
+        if ($status === 'cancelled') {
+            $db  = getDB();
+            $row = $db->prepare(
+                "SELECT id_empresa, plan_estado FROM empresas WHERE mp_preapproval_id = ? LIMIT 1"
+            );
+            $row->execute([$dataId]);
+            $empresa = $row->fetch();
+
+            if ($empresa && $empresa['plan_estado'] === 'Activo') {
+                $eid = (int) $empresa['id_empresa'];
+                $db->prepare(
+                    "UPDATE empresas SET plan_estado='Cancelado', mp_preapproval_id=NULL WHERE id_empresa=?"
+                )->execute([$eid]);
+                $db->prepare(
+                    "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
+                     VALUES (?, ?, 0, 'Cancelación de suscripción (notificación Mercado Pago)', 'Cancelado')"
+                )->execute([$eid, date('Y-m-d')]);
+            }
+        }
+    }
+    exit;
+}
 
 // Solo procesar pagos (las suscripciones envían type="payment")
 if ($type !== 'payment') exit;

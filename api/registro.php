@@ -206,6 +206,7 @@ curl_setopt_array($ch, [
         'reason'             => $plan['nombre'] . ' — Centrotec',
         'payer_email'        => $email,
         'back_url'           => $backUrl,
+        'notification_url'   => APP_URL . '/api/webhook_mp.php',
         'external_reference' => 'eid_' . $id_empresa . '_plan_' . $plan_key,
         'auto_recurring'     => [
             'frequency'          => $plan['meses'],

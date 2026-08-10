@@ -45,6 +45,7 @@ if ($metodo === 'mercadopago') {
             'reason'             => $plan['nombre'] . ' — Centrotec',
             'payer_email'        => $payerEmail,
             'back_url'           => $returnUrl,
+            'notification_url'   => APP_URL . '/api/webhook_mp.php',
             'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
             'auto_recurring'     => [
                 'frequency'          => $plan['meses'],
