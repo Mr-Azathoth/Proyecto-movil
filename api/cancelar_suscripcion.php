@@ -33,7 +33,7 @@ if ($preapprovalId) {
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST  => 'PUT',
-            CURLOPT_POSTFIELDS     => json_encode(['status' => 'canceled']),
+            CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
             CURLOPT_HTTPHEADER     => [
                 'Authorization: Bearer ' . MP_ACCESS_TOKEN,
                 'Content-Type: application/json',
