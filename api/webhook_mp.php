@@ -59,7 +59,7 @@ if ($type === 'subscription_preapproval') {
         $sub    = json_decode($resp, true);
         $status = $sub['status'] ?? '';
 
-        if ($status === 'cancelled') {
+        if ($status === 'canceled') {
             $db  = getDB();
             $row = $db->prepare(
                 "SELECT id_empresa, plan_estado FROM empresas WHERE mp_preapproval_id = ? LIMIT 1"
