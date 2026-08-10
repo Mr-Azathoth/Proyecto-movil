@@ -23,25 +23,32 @@ if ($empresa['plan_estado'] !== 'Activo') json_err('No hay suscripción activa p
 $preapprovalId = $empresa['mp_preapproval_id'] ?? '';
 if (!$preapprovalId) json_err('No se encontró el ID de suscripción. Cancela directamente desde tu cuenta de Mercado Pago.');
 
-// Intentar cancelar en Mercado Pago
+// Intentar cancelar en Mercado Pago (hasta 3 intentos con backoff)
 $mpCancelOk = false;
 if ($preapprovalId) {
-    $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preapprovalId));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CUSTOMREQUEST  => 'PATCH',
-        CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
-        CURLOPT_HTTPHEADER     => [
-            'Authorization: Bearer ' . MP_ACCESS_TOKEN,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_TIMEOUT => 15,
-    ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    $mpCancelOk = ($code === 200 || $code === 201);
-    $mpDebug = ['code' => $code, 'resp' => substr($resp, 0, 300)];
+    $idempotencyKey = 'cancel-' . $eid . '-' . $preapprovalId;
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+        if ($attempt > 1) sleep(2);
+        $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preapprovalId));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CUSTOMREQUEST  => 'PATCH',
+            CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
+            CURLOPT_HTTPHEADER     => [
+                'Authorization: Bearer ' . MP_ACCESS_TOKEN,
+                'Content-Type: application/json',
+                'X-Idempotency-Key: ' . $idempotencyKey . '-' . $attempt,
+            ],
+            CURLOPT_TIMEOUT => 30,
+        ]);
+        $resp = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code === 200 || $code === 201) {
+            $mpCancelOk = true;
+            break;
+        }
+    }
 }
 
 // Marcar como cancelado localmente (independiente de si MP respondió ok)
@@ -81,4 +88,4 @@ if ($correo) {
     send_email($correo, $nombre, 'Tu suscripción ha sido cancelada — Centrotec', $html);
 }
 
-json_ok(['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk, 'mp_debug' => $mpDebug ?? null]);
+json_ok(['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk]);
