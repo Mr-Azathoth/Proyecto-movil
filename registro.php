@@ -26,6 +26,8 @@ $precio_mensual = 4990;
 </head>
 <body>
 
+<canvas id="gl-canvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none;"></canvas>
+
 <!-- Navbar -->
 <nav class="reg-nav-bar">
   <a href="<?= BASE ?>/landing.php" style="display:block;line-height:0">
@@ -321,5 +323,6 @@ $precio_mensual = 4990;
 </div>
 
 <script src="<?= BASE ?>/assets/js/registro.js?v=<?= filemtime(__DIR__.'/assets/js/registro.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/landing.js?v=<?= filemtime(__DIR__.'/assets/js/landing.js') ?>"></script>
 </body>
 </html>
