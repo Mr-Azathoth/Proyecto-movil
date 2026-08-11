@@ -17,7 +17,7 @@ $eid = (int)($_GET['eid'] ?? ($row[0]['id_empresa'] ?? 0));
 
 // Listar todos los preapprovals recientes
 echo "<h3>Todos los preapprovals en MP (últimos 20, ordenados por fecha)</h3>";
-$ch0 = curl_init('https://api.mercadopago.com/preapproval/search?limit=20&sort=date_created&criteria=desc');
+$ch0 = curl_init('https://api.mercadopago.com/preapproval/search?status=pending&limit=10');
 curl_setopt_array($ch0, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
