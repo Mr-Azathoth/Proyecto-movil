@@ -14,31 +14,46 @@ echo "</pre>";
 
 // Si hay empresa, buscar preapproval en MP por external_reference
 $eid = (int)($_GET['eid'] ?? ($row[0]['id_empresa'] ?? 0));
+
+// Listar todos los preapprovals recientes
+echo "<h3>Todos los preapprovals en MP (últimos 20, ordenados por fecha)</h3>";
+$ch0 = curl_init('https://api.mercadopago.com/preapproval/search?limit=20&sort=date_created&criteria=desc');
+curl_setopt_array($ch0, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
+    CURLOPT_TIMEOUT => 15,
+]);
+$resp0 = curl_exec($ch0);
+$code0 = curl_getinfo($ch0, CURLINFO_HTTP_CODE);
+curl_close($ch0);
+$all = json_decode($resp0, true);
+echo "<p>HTTP {$code0} — Total: " . ($all['paging']['total'] ?? '?') . "</p>";
+foreach (($all['results'] ?? []) as $pa) {
+    $color = $pa['status'] === 'authorized' ? 'green' : ($pa['status'] === 'pending' ? 'orange' : 'gray');
+    echo "<div style='border:1px solid #ccc;margin:6px;padding:8px;font-family:monospace;font-size:12px'>";
+    echo "<b style='color:{$color}'>[{$pa['status']}]</b> ";
+    echo "ID: {$pa['id']}<br>";
+    echo "reason: {$pa['reason']} | ext_ref: " . ($pa['external_reference'] ?? '-') . "<br>";
+    echo "payer_id: " . ($pa['payer_id'] ?? '-') . " | created: {$pa['date_created']}<br>";
+    echo "semaphore: " . ($pa['summarized']['semaphore'] ?? '-');
+    echo "</div>";
+}
+
 if ($eid) {
-    $extRef = 'eid_' . $eid . '_plan_mensual';
-    echo "<h3>Buscando preapproval en MP para eid={$eid} (external_reference={$extRef})</h3>";
-
-    $ch = curl_init('https://api.mercadopago.com/preapproval/search?external_reference=' . urlencode($extRef) . '&limit=5');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
-        CURLOPT_TIMEOUT => 15,
-    ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    echo "<p>HTTP {$code}</p><pre>" . json_encode(json_decode($resp, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "</pre>";
-
-    // También probar plan anual
-    $extRef2 = 'eid_' . $eid . '_plan_anual';
-    $ch2 = curl_init('https://api.mercadopago.com/preapproval/search?external_reference=' . urlencode($extRef2) . '&limit=5');
-    curl_setopt_array($ch2, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
-        CURLOPT_TIMEOUT => 15,
-    ]);
-    $resp2 = curl_exec($ch2);
-    curl_close($ch2);
-    echo "<h3>Plan anual</h3><pre>" . json_encode(json_decode($resp2, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "</pre>";
+    foreach (['1mes','3meses','6meses','12meses'] as $pk) {
+        $extRef = 'eid_' . $eid . '_plan_' . $pk;
+        $ch = curl_init('https://api.mercadopago.com/preapproval/search?external_reference=' . urlencode($extRef) . '&limit=5');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
+            CURLOPT_TIMEOUT => 15,
+        ]);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        $d = json_decode($resp, true);
+        $found = array_filter($d['results'] ?? [], fn($r) => ($r['external_reference'] ?? '') === $extRef);
+        if ($found) {
+            echo "<h3>Preapproval encontrado: {$extRef}</h3><pre>" . json_encode(array_values($found), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "</pre>";
+        }
+    }
 }
