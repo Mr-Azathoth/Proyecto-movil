@@ -53,9 +53,9 @@
   justify-content: center;
   padding-top: calc(var(--nav-h) + 12px);
   padding-bottom: 10px;
-  background: var(--bg)
-    radial-gradient(at 12% 28%, rgba(47,129,247,0.13) 0, transparent 55%),
-    radial-gradient(at 88% 72%, rgba(188,140,255,0.08) 0, transparent 55%);
+  background: #030507
+    radial-gradient(at 12% 28%, rgba(14,85,128,0.18) 0, transparent 55%),
+    radial-gradient(at 88% 72%, rgba(20,80,160,0.1) 0, transparent 55%);
 }
 
 .reg-container {
