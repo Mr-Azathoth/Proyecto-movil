@@ -12,6 +12,9 @@ if (!$gateway && $preapprovalId) {
 $eid = eid();
 $db  = getDB();
 
+// Migración silenciosa — columna usada más abajo; registro.php llega aquí sin pasar por suscripcion.php
+try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); } catch(PDOException $e) {}
+
 function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string $gateway = ''): void {
     $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa = ?");
     $row->execute([$eid]);
@@ -52,12 +55,14 @@ function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string
 if ($gateway === 'mp_sub') {
     if ($preapprovalId) {
         // Evitar activar dos veces el mismo preapproval
-        $already = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1");
-        $already->execute([$eid]);
-        if ($already->fetchColumn() === $preapprovalId) {
-            header('Location: '.BASE.'/app.php?pago=suscripcion');
-            exit;
-        }
+        try {
+            $already = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1");
+            $already->execute([$eid]);
+            if ($already->fetchColumn() === $preapprovalId) {
+                header('Location: '.BASE.'/app.php?pago=suscripcion');
+                exit;
+            }
+        } catch(PDOException $e) {}
         // Consultar la suscripción creada a MP para saber qué plan eligió el cliente
         $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($preapprovalId));
         curl_setopt_array($ch, [
@@ -69,6 +74,7 @@ if ($gateway === 'mp_sub') {
         $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
+        $activado = false;
         if ($code === 200) {
             $sub    = json_decode($resp, true);
             $status = $sub['status'] ?? '';
@@ -92,6 +98,7 @@ if ($gateway === 'mp_sub') {
                         $db->prepare("UPDATE empresas SET mp_preapproval_id=? WHERE id_empresa=?")
                            ->execute([$preapprovalId, $eid]);
                     } catch(PDOException $e) {}
+                    $activado = true;
 
                     // Correo de confirmación de suscripción
                     try {
@@ -130,7 +137,8 @@ if ($gateway === 'mp_sub') {
         }
     }
 
-    header('Location: '.BASE.'/app.php?pago=suscripcion');
+    // authorized → plan activado; cualquier otro estado (pending, etc.) → aviso de procesamiento
+    header('Location: '.BASE.'/app.php?pago=' . ($activado ? 'suscripcion' : 'procesando'));
     exit;
 }
 

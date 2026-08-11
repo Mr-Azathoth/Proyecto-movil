@@ -387,8 +387,9 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
   box-shadow:0 8px 24px rgba(0,0,0,.4); z-index:500; transform:translateY(100px);
   opacity:0; transition:all .25s cubic-bezier(0.4,0,0.2,1); pointer-events:none; }
 .toast.show { transform:translateY(0); opacity:1; }
-.toast.toast-ok  { border-color:rgba(63,185,80,.4); color:var(--green); }
-.toast.toast-err { border-color:rgba(248,81,73,.4); color:#f85149; }
+.toast.toast-ok   { border-color:rgba(63,185,80,.4); color:var(--green); }
+.toast.toast-err  { border-color:rgba(248,81,73,.4); color:#f85149; }
+.toast.toast-info { border-color:rgba(47,129,247,.4); color:#79b8ff; }
 
 /* ── INPUT NUEVA MARCA / MODELO ────────────────────────────── */
 .inp-nueva-item {

@@ -2903,4 +2903,9 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     history.replaceState({}, '', location.pathname);
     toast('¡Plan activado! Ya tienes acceso completo a Centrotec.', 'ok');
   }
+  // ?pago=procesando: MP aún no confirmó el pago (status pending)
+  if (params.get('pago') === 'procesando') {
+    history.replaceState({}, '', location.pathname);
+    toast('Pago recibido, verificando con Mercado Pago… Tu plan se activará en unos minutos.', 'info');
+  }
 }());
