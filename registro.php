@@ -134,13 +134,13 @@ $precio_mensual = 4990;
           <div class="rg">
             <label for="nombre_admin">Tu nombre completo</label>
             <input type="text" name="nombre_admin" id="nombre_admin"
-                   placeholder="Jorge López" autocomplete="name">
+                   autocomplete="name">
           </div>
 
           <div class="rg">
             <label for="email_personal">Email</label>
             <input type="email" name="email_personal" id="email_personal"
-                   placeholder="jorge@milocal.cl" autocomplete="email">
+                   autocomplete="email">
           </div>
 
           <div class="rg">
@@ -150,7 +150,7 @@ $precio_mensual = 4990;
                 <span class="material-icons-round" style="font-size:14px" aria-hidden="true">smartphone</span>
                 +56
               </span>
-              <input type="tel" id="tel_personal_num" placeholder="9 1234 5678"
+              <input type="tel" id="tel_personal_num"
                      maxlength="11" autocomplete="tel-national">
             </div>
             <input type="hidden" name="telefono_personal" id="telefono_personal">
@@ -183,25 +183,25 @@ $precio_mensual = 4990;
           <div class="rg">
             <label for="nombre_local">Nombre del local</label>
             <input type="text" name="nombre_local" id="nombre_local"
-                   placeholder="Ej: Servicio Técnico López" autocomplete="organization">
+                   autocomplete="organization">
           </div>
 
           <div class="rg">
             <label for="rut">RUT del local</label>
             <input type="text" name="rut" id="rut"
-                   placeholder="12.345.678-9" maxlength="12" autocomplete="off">
+                   placeholder="Ej: 76.123.456-0" maxlength="12" autocomplete="off">
           </div>
 
           <div class="rg-row">
             <div class="rg">
               <label for="direccion">Dirección</label>
               <input type="text" name="direccion" id="direccion"
-                     placeholder="Av. O'Higgins 1234" autocomplete="street-address">
+                     autocomplete="street-address">
             </div>
             <div class="rg">
               <label for="comuna">Comuna</label>
               <input type="text" name="comuna" id="comuna"
-                     placeholder="Ej: Providencia" autocomplete="address-level2">
+                     autocomplete="address-level2">
             </div>
           </div>
 
@@ -215,7 +215,7 @@ $precio_mensual = 4990;
                 </label>
               </div>
               <input type="email" name="email_local" id="email_local"
-                     placeholder="contacto@milocal.cl" autocomplete="email">
+                     autocomplete="email">
             </div>
             <div class="rg">
               <div class="rg-label-row">
@@ -227,7 +227,7 @@ $precio_mensual = 4990;
               </div>
               <div class="rg-phone">
                 <span class="rg-phone-prefix">+56</span>
-                <input type="tel" id="tel_local_num" placeholder="9 1234 5678" maxlength="11">
+                <input type="tel" id="tel_local_num" maxlength="11">
               </div>
               <input type="hidden" name="telefono_local" id="telefono_local">
             </div>
