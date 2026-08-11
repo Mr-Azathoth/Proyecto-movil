@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/mailer.php';
 header('Content-Type: application/json; charset=utf-8');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }
 
@@ -177,6 +178,38 @@ try {
     $db->rollBack();
     json_err('Error al crear la cuenta. Intenta nuevamente.');
 }
+
+// Correo de bienvenida
+try {
+    $es_trial   = $plan_key === 'trial';
+    $plan_label = $es_trial ? '7 días de prueba gratuita' : ($plan_nombre . ' — ' . number_format(MP_PLANES[$plan_key]['precio'], 0, ',', '.') . ' CLP');
+    $vence_txt  = date('d/m/Y', strtotime('+7 days'));
+    $html_bienvenida = "
+    <div style='font-family:Inter,sans-serif;max-width:520px;margin:0 auto;background:#161b22;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;'>
+      <div style='background:linear-gradient(135deg,#0e3a5c,#1a7ab0);padding:28px;text-align:center;'>
+        <h1 style='color:#fff;margin:0;font-size:22px;font-weight:700;letter-spacing:1px;'>¡Bienvenido a Centrotec!</h1>
+        <p style='color:rgba(255,255,255,0.75);margin:8px 0 0;font-size:14px;'>Tu cuenta ha sido creada exitosamente</p>
+      </div>
+      <div style='padding:28px;color:#e6edf3;line-height:1.7;font-size:14px;'>
+        <p>Hola <strong>" . htmlspecialchars($nombre_admin) . "</strong>,</p>
+        <p>Tu local <strong>" . htmlspecialchars($nombre_local) . "</strong> ya está registrado en Centrotec. Puedes empezar a gestionar tus reparaciones desde el panel.</p>
+        <div style='background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:18px 20px;margin:20px 0;'>
+          <table style='width:100%;border-collapse:collapse;font-size:13px;'>
+            <tr><td style='color:#8b949e;padding:5px 0;'>Local</td><td style='text-align:right;color:#e6edf3;font-weight:600;'>" . htmlspecialchars($nombre_local) . "</td></tr>
+            <tr><td style='color:#8b949e;padding:5px 0;'>Usuario</td><td style='text-align:right;color:#e6edf3;font-weight:600;'>" . htmlspecialchars($user_login) . "</td></tr>
+            <tr><td style='color:#8b949e;padding:5px 0;'>Plan</td><td style='text-align:right;color:#e6edf3;font-weight:600;'>" . htmlspecialchars($plan_label) . "</td></tr>" .
+            ($es_trial ? "<tr><td style='color:#8b949e;padding:5px 0;'>Prueba hasta</td><td style='text-align:right;color:#50d2ff;font-weight:600;'>{$vence_txt}</td></tr>" : '') . "
+          </table>
+        </div>
+        <div style='text-align:center;margin:24px 0;'>
+          <a href='" . APP_URL . "/app.php' style='display:inline-block;background:#1a7ab0;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;'>Ir al panel →</a>
+        </div>" .
+        ($es_trial ? "<p style='font-size:13px;color:#8b949e;'>Durante tu período de prueba tienes acceso completo. Cuando quieras activar un plan, ve a <strong>Configuración → Suscripción</strong> en el panel.</p>" : '') . "
+        <p style='margin-top:24px;font-size:12px;color:#6e7681;'>Este es un correo automático, por favor no respondas a este mensaje.</p>
+      </div>
+    </div>";
+    send_email($email_personal, $nombre_admin, '¡Bienvenido a Centrotec! Tu cuenta está lista', $html_bienvenida);
+} catch (Throwable $e) {}
 
 // Iniciar sesión automáticamente
 login_ok($ip);
