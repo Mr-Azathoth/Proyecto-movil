@@ -80,3 +80,19 @@ if ($eid) {
     }
     echo "<p><a href='?t=ct_diag_9xK2m&cancel=1&eid={$eid}' style='background:red;color:white;padding:8px 16px;text-decoration:none;border-radius:4px'>Cancelar preapprovals huérfanos (eid_7)</a></p>";
 }
+
+// Borrar empresa de prueba (solo eid con nombre que no sea cliente real)
+if (isset($_GET['del'])) {
+    $delId = (int)$_GET['del'];
+    $check = $db->prepare("SELECT nombre, correo FROM empresas WHERE id_empresa=? LIMIT 1");
+    $check->execute([$delId]);
+    $emp = $check->fetch();
+    if ($emp && strtolower($emp['correo']) !== 'planetelectroled@gmail.com') {
+        $db->prepare("DELETE FROM usuarios WHERE id_empresa=?")->execute([$delId]);
+        $db->prepare("DELETE FROM empresas WHERE id_empresa=?")->execute([$delId]);
+        echo "<p style='color:green'>✅ Empresa {$delId} ({$emp['nombre']}) eliminada.</p>";
+    } else {
+        echo "<p style='color:red'>❌ No se puede eliminar esa empresa.</p>";
+    }
+}
+echo "<p><a href='?t=ct_diag_9xK2m&del=9' style='background:#c00;color:white;padding:8px 16px;text-decoration:none;border-radius:4px' onclick=\"return confirm('¿Borrar empresa 9?')\">Borrar empresa 9 (Empresa3)</a></p>";
