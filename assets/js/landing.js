@@ -9,7 +9,7 @@
     'uniform vec2 u_res;uniform vec2 u_mouse;uniform float u_t;\n'+
     'float hash(vec2 p){p=fract(p*vec2(234.34,435.345));p+=dot(p,p+34.23);return fract(p.x*p.y);}\n'+
     'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}\n'+
-    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<6;i++){v+=a*noise(p);p=p*2.1+vec2(1.7,9.2);a*=.5;}return v;}\n'+
+    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<4;i++){v+=a*noise(p);p=p*2.1+vec2(1.7,9.2);a*=.5;}return v;}\n'+
     'void main(){\n'+
     '  vec2 uv=gl_FragCoord.xy/u_res;uv.y=1.-uv.y;\n'+
     '  vec2 m=u_mouse/u_res;m.y=1.-m.y;\n'+
@@ -36,9 +36,11 @@
   var mx=window.innerWidth/2,my=window.innerHeight/2,tmx=mx,tmy=my;
   document.addEventListener('mousemove',function(e){tmx=e.clientX;tmy=e.clientY;});
   document.addEventListener('touchmove',function(e){if(e.touches[0]){tmx=e.touches[0].clientX;tmy=e.touches[0].clientY;}},{passive:true});
-  function resize(){canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;gl.viewport(0,0,canvas.width,canvas.height);}
+  var DPR=Math.min(window.devicePixelRatio||1,1.5);
+  function resize(){var dpr=Math.min(window.devicePixelRatio||1,1.5)*0.5;canvas.width=Math.round(canvas.offsetWidth*dpr);canvas.height=Math.round(canvas.offsetHeight*dpr);gl.viewport(0,0,canvas.width,canvas.height);}
   new ResizeObserver(resize).observe(canvas);resize();
-  function loop(t){mx+=(tmx-mx)*.06;my+=(tmy-my)*.06;gl.uniform2f(uRes,canvas.width,canvas.height);gl.uniform2f(uMouse,mx,my);gl.uniform1f(uT,t*.001);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);requestAnimationFrame(loop);}
+  var lastT=0,interval=1000/30;
+  function loop(t){requestAnimationFrame(loop);if(t-lastT<interval)return;lastT=t;mx+=(tmx-mx)*.06;my+=(tmy-my)*.06;gl.uniform2f(uRes,canvas.width,canvas.height);gl.uniform2f(uMouse,mx*0.5,my*0.5);gl.uniform1f(uT,t*.001);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);}
   requestAnimationFrame(loop);
 })();
 
