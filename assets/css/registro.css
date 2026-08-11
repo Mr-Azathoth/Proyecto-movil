@@ -33,16 +33,20 @@
   color: #fff; font-family: 'Outfit', sans-serif;
 }
 .reg-nav-login {
-  font-size: 13px;
-  color: var(--txt2);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  color: rgba(180,215,240,.85);
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   transition: color 0.2s;
+  white-space: nowrap;
 }
-.reg-nav-login:hover { color: var(--txt); }
-.reg-nav-login .material-icons-round { font-size: 16px; }
+.reg-nav-login:hover { color: #e8f4ff; }
+.reg-nav-login .material-icons-round { font-size: 18px; }
 
 /* Page — flex vertical para centrar sin scroll */
 .reg-page {
