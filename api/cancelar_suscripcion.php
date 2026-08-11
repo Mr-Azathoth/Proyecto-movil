@@ -24,7 +24,9 @@ $preapprovalId = $empresa['mp_preapproval_id'] ?? '';
 if (!$preapprovalId) json_err('No se encontró el ID de suscripción. Cancela directamente desde tu cuenta de Mercado Pago.');
 
 // Intentar cancelar en Mercado Pago (hasta 3 intentos con backoff)
-$mpCancelOk = false;
+$mpCancelOk  = false;
+$mpLastCode  = 0;
+$mpLastBody  = '';
 if ($preapprovalId) {
     $idempotencyKey = 'cancel-' . $eid . '-' . $preapprovalId;
     for ($attempt = 1; $attempt <= 3; $attempt++) {
@@ -41,13 +43,21 @@ if ($preapprovalId) {
             ],
             CURLOPT_TIMEOUT => 30,
         ]);
-        $resp = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $mpLastBody = curl_exec($ch);
+        $mpLastCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        if ($code === 200 || $code === 201) {
-            $mpCancelOk = true;
-            break;
+        // Verificar que el status en el body sea realmente "cancelled"
+        if ($mpLastCode === 200 || $mpLastCode === 201) {
+            $mpBody = json_decode($mpLastBody, true);
+            if (($mpBody['status'] ?? '') === 'cancelled') {
+                $mpCancelOk = true;
+                break;
+            }
         }
+    }
+    // Log para diagnóstico en caso de fallo
+    if (!$mpCancelOk) {
+        error_log("[cancelar_suscripcion] eid={$eid} preapproval={$preapprovalId} code={$mpLastCode} body=" . substr($mpLastBody, 0, 300));
     }
 }
 
@@ -88,4 +98,9 @@ if ($correo) {
     send_email($correo, $nombre, 'Tu suscripción ha sido cancelada — Centrotec', $html);
 }
 
-json_ok(['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk]);
+$out = ['vencimiento' => $empresa['plan_vencimiento'], 'mp_cancel_ok' => $mpCancelOk];
+if (!$mpCancelOk) {
+    $mpErr = json_decode($mpLastBody, true);
+    $out['mp_error'] = ($mpErr['message'] ?? null) ?: "HTTP {$mpLastCode}";
+}
+json_ok($out);
