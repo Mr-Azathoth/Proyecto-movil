@@ -28,9 +28,63 @@ $precio_mensual = 4990;
 
 <!-- Navbar -->
 <nav class="reg-nav-bar">
-  <a href="<?= BASE ?>/landing.php" class="reg-nav-logo">
-    <div class="reg-nav-logo-icon">C</div>
-    <span>Centrotec</span>
+  <a href="<?= BASE ?>/landing.php" style="display:block;line-height:0">
+    <svg class="nav-logo-svg" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" aria-label="Centrotec">
+      <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#50d2ff" stroke-width="11" fill="none" stroke-linecap="round"/>
+      <line x1="120" y1="75" x2="138" y2="75" stroke="#50d2ff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="141" cy="75" r="3" fill="#50d2ff"/>
+      <line x1="141" y1="75" x2="141" y2="59" stroke="rgba(80,210,255,.5)" stroke-width="1.4"/>
+      <line x1="120" y1="127" x2="138" y2="127" stroke="#50d2ff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="141" cy="127" r="3" fill="#50d2ff"/>
+      <line x1="141" y1="127" x2="141" y2="143" stroke="rgba(80,210,255,.5)" stroke-width="1.4"/>
+      <line x1="54" y1="95" x2="72" y2="95" stroke="rgba(80,210,255,.45)" stroke-width="1.4"/>
+      <circle cx="51" cy="95" r="3" fill="rgba(80,210,255,.6)"/>
+      <line x1="54" y1="109" x2="72" y2="109" stroke="rgba(80,210,255,.45)" stroke-width="1.4"/>
+      <circle cx="51" cy="109" r="3" fill="rgba(80,210,255,.6)"/>
+      <g transform="translate(79,86) scale(0.62)">
+        <path d="M-1 7 Q11 -3 23 7" stroke="rgba(80,210,255,.92)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+        <rect x="-1" y="7" width="24" height="2.5" rx="1" fill="rgba(80,210,255,.7)"/>
+        <rect x="3" y="9" width="16" height="12" rx="2.5" fill="none" stroke="rgba(210,235,255,.8)" stroke-width="1.5"/>
+        <rect x="1" y="22" width="20" height="16" rx="2" fill="none" stroke="rgba(80,210,255,.75)" stroke-width="1.5"/>
+        <rect x="2" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="12" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="-8" y="24" width="9" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+        <rect x="21" y="23" width="9" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+      </g>
+      <text x="148" y="150" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="82" font-weight="400" letter-spacing="4" fill="#e8f4ff">ENTR</text>
+      <rect x="337" y="52" width="60" height="96" rx="3" fill="none" stroke="rgba(80,210,255,.58)" stroke-width="1.6"/>
+      <rect x="343" y="59" width="48" height="72" rx="2" fill="#030507"/>
+      <rect x="352" y="55" width="28" height="2.5" rx="1" fill="rgba(80,210,255,.35)"/>
+      <circle cx="367" cy="80" r="8.5" fill="none" stroke="rgba(80,210,255,.52)" stroke-width="1.4"/>
+      <circle cx="367" cy="80" r="3.5" fill="rgba(80,210,255,.45)"/>
+      <line x1="355" y1="95" x2="379" y2="95" stroke="rgba(80,210,255,.32)" stroke-width="1.2"/>
+      <line x1="355" y1="101" x2="367" y2="101" stroke="rgba(80,210,255,.22)" stroke-width="1.2"/>
+      <circle cx="355" cy="117" r="4" fill="rgba(80,210,255,.65)"/>
+      <circle cx="379" cy="117" r="4" fill="none" stroke="rgba(80,210,255,.45)" stroke-width="1.4"/>
+      <line x1="351" y1="148" x2="341" y2="160" stroke="rgba(80,210,255,.35)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="385" y1="148" x2="395" y2="160" stroke="rgba(80,210,255,.35)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="337" y1="160" x2="356" y2="160" stroke="rgba(80,210,255,.3)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="378" y1="160" x2="399" y2="160" stroke="rgba(80,210,255,.3)" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="408" y="150" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="82" font-weight="400" letter-spacing="4" fill="#e8f4ff">TEC</text>
+      <line x1="563" y1="162" x2="544" y2="53" stroke="rgba(80,210,255,.42)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="576" y1="162" x2="557" y2="53" stroke="rgba(80,210,255,.42)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="546" y1="64" x2="559" y2="64" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="548" y1="81" x2="561" y2="81" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="549" y1="98" x2="562" y2="98" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="551" y1="115" x2="564" y2="115" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="553" y1="132" x2="566" y2="132" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="556" y1="149" x2="569" y2="149" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <g transform="translate(539,68) scale(0.62)">
+        <path d="M-1 7 Q11 -3 23 7" stroke="rgba(80,210,255,.92)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+        <rect x="-1" y="7" width="24" height="2.5" rx="1" fill="rgba(80,210,255,.7)"/>
+        <rect x="3" y="9" width="16" height="12" rx="2.5" fill="none" stroke="rgba(210,235,255,.8)" stroke-width="1.5"/>
+        <rect x="1" y="22" width="20" height="16" rx="2" fill="none" stroke="rgba(80,210,255,.75)" stroke-width="1.5"/>
+        <rect x="2" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="12" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="-9" y="23" width="10" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+        <rect x="21" y="23" width="10" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+      </g>
+    </svg>
   </a>
   <a href="<?= BASE ?>/" class="reg-nav-login">
     <span>¿Ya tienes cuenta?</span>

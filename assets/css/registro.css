@@ -4,11 +4,10 @@
 .reg-nav-bar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: var(--nav-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
+  padding: .75rem 1.5rem;
   background: rgba(3,5,7,0.8);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -51,7 +50,7 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding-top: calc(var(--nav-h) + 12px);
+  padding-top: calc(54px + 1.5rem + 1.5rem + 12px);
   padding-bottom: 10px;
   background: #030507
     radial-gradient(at 12% 28%, rgba(14,85,128,0.18) 0, transparent 55%),
