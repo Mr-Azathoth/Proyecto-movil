@@ -39,21 +39,44 @@ foreach (($all['results'] ?? []) as $pa) {
     echo "</div>";
 }
 
-if ($eid) {
-    foreach (['1mes','3meses','6meses','12meses'] as $pk) {
-        $extRef = 'eid_' . $eid . '_plan_' . $pk;
-        $ch = curl_init('https://api.mercadopago.com/preapproval/search?external_reference=' . urlencode($extRef) . '&limit=5');
+// Cancelar preapprovals huérfanos pending (eid_7)
+if (isset($_GET['cancel'])) {
+    $ids = ['f1d81c7808bb475aad6c077cff668990', '77de6045f9a0425c8d0ddad7ef5a3769'];
+    echo "<h3>Cancelando preapprovals huérfanos</h3>";
+    foreach ($ids as $pid) {
+        $ch = curl_init('https://api.mercadopago.com/preapproval/' . $pid);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
+            CURLOPT_CUSTOMREQUEST  => 'PUT',
+            CURLOPT_POSTFIELDS     => json_encode(['status' => 'cancelled']),
+            CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN, 'Content-Type: application/json'],
             CURLOPT_TIMEOUT => 15,
         ]);
+        $r = curl_exec($ch);
+        $c = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $bd = json_decode($r, true);
+        $ok = ($bd['status'] ?? '') === 'cancelled';
+        echo "<p><b>{$pid}</b>: HTTP {$c} → " . ($ok ? '✅ Cancelado' : '❌ ' . ($bd['message'] ?? $r)) . "</p>";
+    }
+}
+
+// Buscar preapproval de eid_9 en todos los estados
+if ($eid) {
+    echo "<h3>Buscando preapprovals para eid={$eid} (todos los estados)</h3>";
+    foreach (['pending','authorized','cancelled'] as $st) {
+        $ch = curl_init('https://api.mercadopago.com/preapproval/search?status=' . $st . '&limit=20');
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . MP_ACCESS_TOKEN], CURLOPT_TIMEOUT => 15]);
         $resp = curl_exec($ch);
         curl_close($ch);
         $d = json_decode($resp, true);
-        $found = array_filter($d['results'] ?? [], fn($r) => ($r['external_reference'] ?? '') === $extRef);
-        if ($found) {
-            echo "<h3>Preapproval encontrado: {$extRef}</h3><pre>" . json_encode(array_values($found), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "</pre>";
+        foreach (['1mes','3meses','6meses','12meses'] as $pk) {
+            $extRef = 'eid_' . $eid . '_plan_' . $pk;
+            $found = array_filter($d['results'] ?? [], fn($r) => ($r['external_reference'] ?? '') === $extRef);
+            if ($found) {
+                echo "<p style='color:green'>Encontrado [{$st}]: {$extRef}</p><pre>" . json_encode(array_values($found), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "</pre>";
+            }
         }
     }
+    echo "<p><a href='?t=ct_diag_9xK2m&cancel=1&eid={$eid}' style='background:red;color:white;padding:8px 16px;text-decoration:none;border-radius:4px'>Cancelar preapprovals huérfanos (eid_7)</a></p>";
 }
