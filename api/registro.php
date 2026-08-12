@@ -228,38 +228,28 @@ if ($plan_key === 'trial') {
     json_ok(['redirect' => APP_URL . '/app.php?trial=1']);
 }
 
-// Plan de pago elegido al registrarse — crear suscripción vía API (vendedor la controla)
-$plan    = MP_PLANES[$plan_key];
-$backUrl = APP_URL . '/pago/retorno.php';
-$ch = curl_init('https://api.mercadopago.com/preapproval');
+// Plan de pago elegido al registrarse — redirigir al checkout del plan MP
+$plan   = MP_PLANES[$plan_key];
+$planId = $plan['id'];
+
+// Obtener init_point del plan (ya configurado con back_url correcto)
+$ch = curl_init('https://api.mercadopago.com/preapproval_plan/' . urlencode($planId));
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => json_encode([
-        'reason'             => $plan['nombre'] . ' — Centrotec',
-        'payer_email'        => $email_personal,
-        'back_url'           => $backUrl,
-        'notification_url'   => APP_URL . '/api/webhook_mp.php',
-        'external_reference' => 'eid_' . $id_empresa . '_plan_' . $plan_key,
-        'auto_recurring'     => [
-            'frequency'          => $plan['meses'],
-            'frequency_type'     => 'months',
-            'transaction_amount' => $plan['precio'],
-            'currency_id'        => 'CLP',
-        ],
-        'status'             => 'pending',
-    ]),
-    CURLOPT_HTTPHEADER => [
-        'Authorization: Bearer ' . MP_ACCESS_TOKEN,
-        'Content-Type: application/json',
-    ],
-    CURLOPT_TIMEOUT => 15,
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
+    CURLOPT_TIMEOUT        => 10,
 ]);
 $resp = curl_exec($ch);
 $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
-if ($code !== 200 && $code !== 201) json_err('Error al crear la suscripción. Intenta de nuevo.');
-$mpData    = json_decode($resp, true);
-$initPoint = $mpData['init_point'] ?? '';
-if (!$initPoint) json_err('No se pudo obtener el link de pago. Intenta de nuevo.');
+
+$initPoint = '';
+if ($code === 200) {
+    $planData  = json_decode($resp, true);
+    $initPoint = $planData['init_point'] ?? '';
+}
+if (!$initPoint) {
+    $initPoint = 'https://www.mercadopago.cl/subscriptions/checkout?preapproval_plan_id=' . urlencode($planId);
+}
+
 json_ok(['redirect' => $initPoint]);
