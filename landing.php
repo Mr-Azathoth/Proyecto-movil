@@ -83,6 +83,7 @@ $planes = [
       Seguir reparación
     </a></li>
     <li><a href="#precios" class="nav-ghost nav-cta">Precios</a></li>
+    <li><a href="<?= BASE ?>/" class="nav-ghost nav-cta">Ingresar</a></li>
     <li><a href="<?= BASE ?>/registro.php" class="nav-cta">Empezar gratis</a></li>
   </ul>
 </nav>
