@@ -195,8 +195,8 @@ document.getElementById('btn-guardar-pago')?.addEventListener('click', async fun
 
   let empresaNombre = '';
 
-  function showModal() { modal.style.display = 'flex'; }
-  function hideModal() { modal.style.display = 'none'; }
+  function showModal() { modal.classList.add('active'); }
+  function hideModal() { modal.classList.remove('active'); }
 
   btnBorrar.addEventListener('click', function () {
     empresaNombre = this.dataset.nombre || '';

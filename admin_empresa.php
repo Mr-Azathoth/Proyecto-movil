@@ -318,29 +318,28 @@ $iniciales = sadmin_iniciales($emp['nombre']);
 </main>
 
 <!-- Modal confirmación borrado -->
-<div id="modal-borrar" style="display:none;position:fixed;inset:0;z-index:900;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);">
-  <div style="background:var(--bg2);border:1px solid rgba(248,113,113,.35);border-radius:12px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.5);">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-      <span class="material-icons-round" style="font-size:28px;color:#f87171;">warning</span>
-      <div style="font-size:16px;font-weight:700;color:var(--txt);">Borrar empresa permanentemente</div>
+<div id="modal-borrar" class="modal-bg">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-hd">
+      <span class="material-icons-round" style="color:#f87171;margin-right:8px;">warning</span>
+      <h3>Borrar empresa permanentemente</h3>
     </div>
-    <p style="color:var(--txt2);font-size:13px;line-height:1.6;margin:0 0 12px;">
-      Estás a punto de eliminar <strong id="modal-empresa-nombre" style="color:var(--txt);"></strong>.
-      Esta acción <strong style="color:#f87171;">no se puede deshacer</strong> y eliminará:
-    </p>
-    <ul style="color:var(--txt2);font-size:13px;line-height:1.8;margin:0 0 16px;padding-left:20px;">
-      <li>Todos los usuarios de la empresa</li>
-      <li>Todos los servicios técnicos e historial</li>
-      <li>Todo el inventario</li>
-      <li>Historial de pagos</li>
-      <li>Suscripción en Mercado Pago (si existe)</li>
-    </ul>
-    <p style="color:var(--txt2);font-size:13px;margin:0 0 20px;">
-      Escribe el nombre de la empresa para confirmar:
-    </p>
-    <input id="modal-confirm-nombre" type="text" placeholder="Nombre exacto de la empresa"
-           style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--txt);font-size:13px;outline:none;margin-bottom:16px;">
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <div class="modal-body">
+      <p class="modal-msg">
+        Estás a punto de eliminar <strong id="modal-empresa-nombre"></strong>.
+        Esta acción <strong style="color:#f87171;">no se puede deshacer</strong> y eliminará:
+      </p>
+      <ul style="margin:10px 0 14px;padding-left:20px;font-size:13px;line-height:1.8;color:var(--txt2);">
+        <li>Todos los usuarios de la empresa</li>
+        <li>Todos los servicios técnicos e historial</li>
+        <li>Todo el inventario</li>
+        <li>Historial de pagos</li>
+        <li>Suscripción en Mercado Pago (si existe)</li>
+      </ul>
+      <p style="font-size:13px;color:var(--txt2);margin-bottom:8px;">Escribe el nombre de la empresa para confirmar:</p>
+      <input id="modal-confirm-nombre" type="text" placeholder="Nombre exacto de la empresa">
+    </div>
+    <div class="modal-ft">
       <button class="adm-btn adm-btn-ghost" id="btn-modal-cancelar">Cancelar</button>
       <button class="adm-btn adm-btn-danger" id="btn-modal-confirmar" disabled>
         <span class="material-icons-round">delete_forever</span>Borrar definitivamente
