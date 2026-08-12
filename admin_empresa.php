@@ -58,6 +58,10 @@ $iniciales = sadmin_iniciales($emp['nombre']);
       <a href="<?= BASE ?>/admin_clientes.php" class="adm-btn adm-btn-ghost">
         <span class="material-icons-round">arrow_back</span>Volver
       </a>
+      <button class="adm-btn adm-btn-danger" id="btn-borrar-empresa"
+              data-id="<?= $id ?>" data-nombre="<?= htmlspecialchars($emp['nombre'], ENT_QUOTES) ?>">
+        <span class="material-icons-round">delete_forever</span>Borrar empresa
+      </button>
       <button class="adm-btn <?= $emp['activa'] ? 'adm-btn-danger' : 'adm-btn-ghost' ?>"
               id="btn-toggle-empresa" data-id="<?= $id ?>" data-activa="<?= $emp['activa'] ?>">
         <span class="material-icons-round"><?= $emp['activa'] ? 'block' : 'check_circle' ?></span>
@@ -312,6 +316,38 @@ $iniciales = sadmin_iniciales($emp['nombre']);
   </div>
 
 </main>
+
+<!-- Modal confirmación borrado -->
+<div id="modal-borrar" style="display:none;position:fixed;inset:0;z-index:900;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);">
+  <div style="background:var(--bg2);border:1px solid rgba(248,113,113,.35);border-radius:12px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,.5);">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+      <span class="material-icons-round" style="font-size:28px;color:#f87171;">warning</span>
+      <div style="font-size:16px;font-weight:700;color:var(--txt);">Borrar empresa permanentemente</div>
+    </div>
+    <p style="color:var(--txt2);font-size:13px;line-height:1.6;margin:0 0 12px;">
+      Estás a punto de eliminar <strong id="modal-empresa-nombre" style="color:var(--txt);"></strong>.
+      Esta acción <strong style="color:#f87171;">no se puede deshacer</strong> y eliminará:
+    </p>
+    <ul style="color:var(--txt2);font-size:13px;line-height:1.8;margin:0 0 16px;padding-left:20px;">
+      <li>Todos los usuarios de la empresa</li>
+      <li>Todos los servicios técnicos e historial</li>
+      <li>Todo el inventario</li>
+      <li>Historial de pagos</li>
+      <li>Suscripción en Mercado Pago (si existe)</li>
+    </ul>
+    <p style="color:var(--txt2);font-size:13px;margin:0 0 20px;">
+      Escribe el nombre de la empresa para confirmar:
+    </p>
+    <input id="modal-confirm-nombre" type="text" placeholder="Nombre exacto de la empresa"
+           style="width:100%;box-sizing:border-box;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--txt);font-size:13px;outline:none;margin-bottom:16px;">
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="adm-btn adm-btn-ghost" id="btn-modal-cancelar">Cancelar</button>
+      <button class="adm-btn adm-btn-danger" id="btn-modal-confirmar" disabled>
+        <span class="material-icons-round">delete_forever</span>Borrar definitivamente
+      </button>
+    </div>
+  </div>
+</div>
 
 <div id="toast">
   <span class="material-icons-round" id="toast-icon">check_circle</span>

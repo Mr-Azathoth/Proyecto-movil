@@ -183,6 +183,64 @@ document.getElementById('btn-guardar-pago')?.addEventListener('click', async fun
   }
 });
 
+// ── Borrar empresa ────────────────────────────────────────────
+(function () {
+  const btnBorrar    = document.getElementById('btn-borrar-empresa');
+  const modal        = document.getElementById('modal-borrar');
+  const modalNombre  = document.getElementById('modal-empresa-nombre');
+  const inputConfirm = document.getElementById('modal-confirm-nombre');
+  const btnConfirmar = document.getElementById('btn-modal-confirmar');
+  const btnCancelar  = document.getElementById('btn-modal-cancelar');
+  if (!btnBorrar || !modal) return;
+
+  let empresaNombre = '';
+
+  function showModal() { modal.style.display = 'flex'; }
+  function hideModal() { modal.style.display = 'none'; }
+
+  btnBorrar.addEventListener('click', function () {
+    empresaNombre = this.dataset.nombre || '';
+    modalNombre.textContent = empresaNombre;
+    inputConfirm.value = '';
+    btnConfirmar.disabled = true;
+    showModal();
+    inputConfirm.focus();
+  });
+
+  inputConfirm.addEventListener('input', function () {
+    btnConfirmar.disabled = this.value.trim() !== empresaNombre;
+  });
+
+  btnCancelar.addEventListener('click', hideModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) hideModal(); });
+
+  btnConfirmar.addEventListener('click', async function () {
+    const id = btnBorrar.dataset.id;
+    this.disabled = true;
+    this.innerHTML = '<span class="material-icons-round">hourglass_empty</span>Borrando...';
+
+    const fd = new FormData();
+    fd.append('id_empresa', id);
+    try {
+      const r = await sadminFetch('/reparo/api/admin_borrar_empresa.php', fd);
+      const j = await r.json();
+      if (j.ok) {
+        hideModal();
+        showToast(j.msg || 'Empresa eliminada.');
+        setTimeout(() => { window.location.href = SADMIN_BASE + '/admin_clientes.php'; }, 1800);
+      } else {
+        showToast(j.msg || 'Error al borrar.', false);
+        this.disabled = false;
+        this.innerHTML = '<span class="material-icons-round">delete_forever</span>Borrar definitivamente';
+      }
+    } catch (e) {
+      showToast('Error de red al borrar.', false);
+      this.disabled = false;
+      this.innerHTML = '<span class="material-icons-round">delete_forever</span>Borrar definitivamente';
+    }
+  });
+})();
+
 // ── Guardar plan ──────────────────────────────────────────────
 document.getElementById('btn-save-plan')?.addEventListener('click', async function () {
   const fd = new FormData();
