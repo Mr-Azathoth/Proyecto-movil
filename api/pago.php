@@ -23,49 +23,31 @@ $db     = getDB();
 
 $returnUrl = APP_URL . '/pago/retorno.php';
 
-// ── MERCADO PAGO — Link de pago único (preference) ────────────
+// ── MERCADO PAGO — checkout del plan de suscripción ──────────
 if ($metodo === 'mercadopago') {
     $planKey = $input['plan'] ?? '';
     if (!isset(MP_PLANES[$planKey])) json_err('Plan no válido');
 
-    $plan = MP_PLANES[$planKey];
+    $planId = MP_PLANES[$planKey]['id'];
 
-    $ch = curl_init('https://api.mercadopago.com/checkout/preferences');
+    $ch = curl_init('https://api.mercadopago.com/preapproval_plan/' . urlencode($planId));
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode([
-            'items' => [[
-                'title'       => 'Centrotec — Plan ' . $plan['nombre'],
-                'quantity'    => 1,
-                'currency_id' => 'CLP',
-                'unit_price'  => (float)$plan['precio'],
-            ]],
-            'back_urls' => [
-                'success' => $returnUrl,
-                'failure' => $returnUrl,
-                'pending' => $returnUrl,
-            ],
-            'auto_return'        => 'approved',
-            'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
-            'notification_url'   => APP_URL . '/api/webhook_mp.php',
-        ]),
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . MP_ACCESS_TOKEN,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_TIMEOUT => 15,
+        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
+        CURLOPT_TIMEOUT        => 10,
     ]);
     $resp = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($code !== 200 && $code !== 201) json_err('Error al crear el link de pago. Intenta de nuevo.');
-    $mpData    = json_decode($resp, true);
-    $initPoint = MP_ENV === 'sandbox'
-        ? ($mpData['sandbox_init_point'] ?? '')
-        : ($mpData['init_point']         ?? '');
-    if (!$initPoint) json_err('No se pudo obtener el link de pago. Intenta de nuevo.');
+    $initPoint = '';
+    if ($code === 200) {
+        $planData  = json_decode($resp, true);
+        $initPoint = $planData['init_point'] ?? '';
+    }
+    if (!$initPoint) {
+        $initPoint = 'https://www.mercadopago.cl/subscriptions/checkout?preapproval_plan_id=' . urlencode($planId);
+    }
 
     json_ok(['url' => $initPoint]);
 }

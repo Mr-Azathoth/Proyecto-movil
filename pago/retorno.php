@@ -3,17 +3,11 @@ require_once __DIR__.'/../includes/config.php';
 require_once __DIR__.'/../includes/mailer.php';
 requireLogin();
 
-$gateway          = $_GET['gateway']          ?? '';
-$preapprovalId    = $_GET['preapproval_id']   ?? '';
-$collectionStatus = $_GET['collection_status'] ?? $_GET['status'] ?? '';
-$paymentId        = $_GET['payment_id']        ?? $_GET['collection_id'] ?? '';
-$extRef           = $_GET['external_reference'] ?? '';
-
-// Detectar gateway por parámetros que MP adjunta al back_url
+$gateway       = $_GET['gateway']        ?? '';
+$preapprovalId = $_GET['preapproval_id'] ?? '';
+// MP appends ?preapproval_id= to back_url — detect mp_sub by its presence
 if (!$gateway && $preapprovalId) {
     $gateway = 'mp_sub';
-} elseif (!$gateway && ($collectionStatus || $paymentId)) {
-    $gateway = 'mp_pay';
 }
 $eid = eid();
 $db  = getDB();
@@ -145,73 +139,6 @@ if ($gateway === 'mp_sub') {
 
     // authorized → plan activado; cualquier otro estado (pending, etc.) → aviso de procesamiento
     header('Location: '.BASE.'/app.php?pago=' . ($activado ? 'suscripcion' : 'procesando'));
-    exit;
-}
-
-// ── MERCADO PAGO — retorno de pago único ─────────────────────
-if ($gateway === 'mp_pay') {
-    $activado = false;
-    if (in_array($collectionStatus, ['approved', 'approved'], true) && $paymentId && $extRef) {
-        if (preg_match('/^eid_(\d+)_plan_([a-z0-9]+)$/', $extRef, $m) && isset(MP_PLANES[$m[2]])) {
-            $eid_ref  = (int)$m[1];
-            $planInfo = MP_PLANES[$m[2]];
-
-            // Verificar pago directamente con MP
-            $ch = curl_init('https://api.mercadopago.com/v1/payments/' . urlencode($paymentId));
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
-                CURLOPT_TIMEOUT        => 10,
-            ]);
-            $resp = curl_exec($ch);
-            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-
-            if ($code === 200) {
-                $payment = json_decode($resp, true);
-                if (($payment['status'] ?? '') === 'approved') {
-                    $target = $eid_ref ?: $eid;
-                    if ($target) {
-                        activar_plan($db, $target, $planInfo, 'Pagado', 'Mercado Pago');
-                        $activado = true;
-
-                        // Correo de confirmación
-                        try {
-                            $emp = $db->prepare("SELECT nombre, correo, plan_vencimiento FROM empresas WHERE id_empresa = ? LIMIT 1");
-                            $emp->execute([$target]);
-                            $empresa = $emp->fetch();
-                            if ($empresa && $empresa['correo']) {
-                                $nombre = htmlspecialchars($empresa['nombre'] ?? 'Cliente');
-                                $plan   = htmlspecialchars($planInfo['nombre']);
-                                $monto  = number_format($planInfo['precio'], 0, ',', '.');
-                                $fecha  = date('d/m/Y', strtotime($empresa['plan_vencimiento']));
-                                $html = "
-                                <div style='font-family:Inter,sans-serif;max-width:520px;margin:0 auto;background:#161b22;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;'>
-                                  <div style='background:linear-gradient(135deg,#1a3a2a,#1d9e75);padding:24px 28px;'>
-                                    <h2 style='color:#fff;margin:0;font-size:18px;'>Plan activado</h2>
-                                  </div>
-                                  <div style='padding:24px 28px;color:#e6edf3;line-height:1.6;'>
-                                    <p>Hola <strong>{$nombre}</strong>,</p>
-                                    <p>Tu pago fue procesado y tu plan en Centrotec ha sido activado.</p>
-                                    <div style='background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px 20px;margin:20px 0;'>
-                                      <table style='width:100%;border-collapse:collapse;font-size:13px;'>
-                                        <tr><td style='color:#8b949e;padding:4px 0;'>Plan</td><td style='text-align:right;color:#e6edf3;font-weight:600;'>{$plan}</td></tr>
-                                        <tr><td style='color:#8b949e;padding:4px 0;'>Monto</td><td style='text-align:right;color:#e6edf3;font-weight:600;'>\${$monto} CLP</td></tr>
-                                        <tr><td style='color:#8b949e;padding:4px 0;'>Acceso hasta</td><td style='text-align:right;color:#e6edf3;font-weight:600;'>{$fecha}</td></tr>
-                                      </table>
-                                    </div>
-                                    <p style='margin-top:24px;font-size:12px;color:#6e7681;'>Este es un correo automático, por favor no respondas a este mensaje.</p>
-                                  </div>
-                                </div>";
-                                send_email($empresa['correo'], $nombre, 'Tu plan ha sido activado — Centrotec', $html);
-                            }
-                        } catch(Throwable $e) {}
-                    }
-                }
-            }
-        }
-    }
-    header('Location: '.BASE.'/app.php?pago=' . ($activado ? 'exitoso' : 'procesando'));
     exit;
 }
 
