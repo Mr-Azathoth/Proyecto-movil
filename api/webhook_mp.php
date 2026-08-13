@@ -1,40 +1,48 @@
 <?php
 // Webhook de Mercado Pago — notificaciones de pago (Checkout Pro)
-// MP hace POST a esta URL cuando hay eventos de pago.
 // Documentación: https://www.mercadopago.cl/developers/es/docs/checkout-pro/payment-notifications
 require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/mailer.php';
 
-// Responder 200 de inmediato (MP reintenta si no responde rápido)
+// Responder 200 de inmediato (MP reintenta cada 15 min si no recibe respuesta)
 http_response_code(200);
 
-$body   = file_get_contents('php://input');
-$data   = json_decode($body, true) ?? [];
-$topic  = $_GET['topic'] ?? ($data['type'] ?? '');
-$id     = $_GET['id']    ?? ($data['data']['id'] ?? '');
+$body = file_get_contents('php://input');
+$data = json_decode($body, true) ?? [];
+
+// PHP convierte "data.id" → "data_id" en $_GET, por eso parseamos el query string crudo
+$rawQuery = $_SERVER['QUERY_STRING'] ?? '';
+preg_match('/(?:^|&)data\.id=([^&]*)/', $rawQuery, $mId);
+preg_match('/(?:^|&)type=([^&]*)/',     $rawQuery, $mType);
+
+$id    = isset($mId[1])   ? urldecode($mId[1])   : ($data['data']['id'] ?? '');
+$topic = isset($mType[1]) ? urldecode($mType[1]) : ($data['type']       ?? '');
 
 // Solo procesar notificaciones de pago
 if ($topic !== 'payment' || !$id) exit;
 
-// Verificar firma HMAC si está configurada
+// Verificar firma HMAC si está configurada (clave secreta del panel MP)
 if (MP_WEBHOOK_SECRET) {
-    $signature  = $_SERVER['HTTP_X_SIGNATURE']          ?? '';
-    $requestId  = $_SERVER['HTTP_X_REQUEST_ID']         ?? '';
-    $tsMatch    = [];
-    preg_match('/ts=(\d+)/', $signature, $tsMatch);
-    $ts         = $tsMatch[1] ?? '';
-    $v1Match    = [];
-    preg_match('/v1=([a-f0-9]+)/', $signature, $v1Match);
-    $v1         = $v1Match[1] ?? '';
-    $manifest   = 'id:' . $id . ';request-id:' . $requestId . ';ts:' . $ts . ';';
-    $expected   = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
+    $xSignature = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
+    $xRequestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
+
+    $ts = ''; $v1 = '';
+    foreach (explode(',', $xSignature) as $part) {
+        [$k, $v] = array_pad(explode('=', trim($part), 2), 2, '');
+        if (trim($k) === 'ts') $ts = trim($v);
+        if (trim($k) === 'v1') $v1 = trim($v);
+    }
+
+    // El manifest usa data.id en minúsculas según la doc de MP
+    $manifest = 'id:' . strtolower($id) . ';request-id:' . $xRequestId . ';ts:' . $ts . ';';
+    $expected = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
+
     if (!hash_equals($expected, $v1)) {
-        error_log('[webhook_mp] firma inválida');
+        error_log('[webhook_mp] firma HMAC inválida');
         exit;
     }
 }
 
-// Consultar el pago a MP para obtener detalles verificados
+// Verificar el pago directamente con la API de MP (nunca confiar solo en la notificación)
 $ch = curl_init('https://api.mercadopago.com/v1/payments/' . urlencode($id));
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
@@ -61,7 +69,6 @@ if (!isset(MP_PLANES[$planKey])) exit;
 
 $db = getDB();
 
-// Migración defensiva
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); } catch(PDOException $e) {}
 
 // Idempotencia: no activar dos veces el mismo pago
