@@ -18,16 +18,14 @@ $row->execute([$eid]);
 $empresa = $row->fetch();
 
 if (!$empresa) json_err('Empresa no encontrada', 404);
-if ($empresa['plan_estado'] !== 'Activo') json_err('No hay suscripción activa para cancelar');
+if ($empresa['plan_estado'] !== 'Activo') json_err('No hay plan activo para cancelar');
 
+// Intentar cancelar preapproval antiguo en MP si existe (compatibilidad con cuentas legacy)
+$mpCancelOk    = true;
 $preapprovalId = $empresa['mp_preapproval_id'] ?? '';
-if (!$preapprovalId) json_err('No se encontró el ID de suscripción. Cancela directamente desde tu cuenta de Mercado Pago.');
-
-// Intentar cancelar en Mercado Pago (hasta 3 intentos con backoff)
-$mpCancelOk  = false;
-$mpLastCode  = 0;
-$mpLastBody  = '';
 if ($preapprovalId) {
+    $mpCancelOk = false;
+    $mpLastCode = 0; $mpLastBody = '';
     $idempotencyKey = 'cancel-' . $eid . '-' . $preapprovalId;
     for ($attempt = 1; $attempt <= 3; $attempt++) {
         if ($attempt > 1) sleep(2);
@@ -46,18 +44,13 @@ if ($preapprovalId) {
         $mpLastBody = curl_exec($ch);
         $mpLastCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        // Verificar que el status en el body sea realmente "cancelled"
         if ($mpLastCode === 200 || $mpLastCode === 201) {
             $mpBody = json_decode($mpLastBody, true);
-            if (($mpBody['status'] ?? '') === 'cancelled') {
-                $mpCancelOk = true;
-                break;
-            }
+            if (($mpBody['status'] ?? '') === 'cancelled') { $mpCancelOk = true; break; }
         }
     }
-    // Log para diagnóstico en caso de fallo
     if (!$mpCancelOk) {
-        error_log("[cancelar_suscripcion] eid={$eid} preapproval={$preapprovalId} code={$mpLastCode} body=" . substr($mpLastBody, 0, 300));
+        error_log("[cancelar_suscripcion] eid={$eid} preapproval={$preapprovalId} code={$mpLastCode} body=" . substr($mpLastBody ?? '', 0, 300));
     }
 }
 
@@ -85,7 +78,7 @@ if ($correo) {
       <div style='padding:24px 28px;color:#e6edf3;line-height:1.6;'>
         <p>Hola <strong>{$nombre}</strong>,</p>
         <p>Tu suscripción a Centrotec ha sido cancelada en nuestro sistema. Tu acceso no se renovará automáticamente.</p>
-        <p style='background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:6px;padding:12px 14px;font-size:13px;color:#d4a72c;'>Para evitar cobros futuros, también cancela la suscripción directamente desde tu cuenta de Mercado Pago: <strong>mercadopago.cl → Tu actividad → Suscripciones</strong>.</p>
+        <p style='background:rgba(29,158,117,0.08);border:1px solid rgba(29,158,117,0.25);border-radius:6px;padding:12px 14px;font-size:13px;color:#1d9e75;'>Tu plan no se renovará automáticamente al vencer. No se realizarán cobros adicionales.</p>
         <div style='background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px 20px;margin:20px 0;'>
           <p style='margin:0 0 6px;font-size:13px;color:#8b949e;'>Acceso hasta</p>
           <p style='margin:0;font-size:20px;font-weight:700;color:#e6edf3;'>{$fecha}</p>

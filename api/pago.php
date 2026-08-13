@@ -23,37 +23,32 @@ $db     = getDB();
 
 $returnUrl = APP_URL . '/pago/retorno.php';
 
-// ── MERCADO PAGO — Suscripción recurrente ─────────────────────
-// Crea la suscripción vía API (el vendedor la controla → puede cancelar via PATCH).
+// ── MERCADO PAGO — Link de pago único (preference) ────────────
 if ($metodo === 'mercadopago') {
     $planKey = $input['plan'] ?? '';
-    $planes  = MP_PLANES;
-    if (!isset($planes[$planKey])) json_err('Plan no válido');
+    if (!isset(MP_PLANES[$planKey])) json_err('Plan no válido');
 
-    $plan = $planes[$planKey];
+    $plan = MP_PLANES[$planKey];
 
-    $empRow = $db->prepare("SELECT correo FROM empresas WHERE id_empresa = ? LIMIT 1");
-    $empRow->execute([$eid]);
-    $payerEmail = $empRow->fetchColumn() ?: '';
-    if (!$payerEmail) json_err('No se encontró el correo registrado. Actualiza tu correo en Configuración.');
-
-    $ch = curl_init('https://api.mercadopago.com/preapproval');
+    $ch = curl_init('https://api.mercadopago.com/checkout/preferences');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => json_encode([
-            'reason'             => $plan['nombre'] . ' — Centrotec',
-            'payer_email'        => $payerEmail,
-            'back_url'           => $returnUrl,
-            'notification_url'   => APP_URL . '/api/webhook_mp.php',
-            'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
-            'auto_recurring'     => [
-                'frequency'          => $plan['meses'],
-                'frequency_type'     => 'months',
-                'transaction_amount' => $plan['precio'],
-                'currency_id'        => 'CLP',
+            'items' => [[
+                'title'       => 'Centrotec — Plan ' . $plan['nombre'],
+                'quantity'    => 1,
+                'currency_id' => 'CLP',
+                'unit_price'  => (float)$plan['precio'],
+            ]],
+            'back_urls' => [
+                'success' => $returnUrl,
+                'failure' => $returnUrl,
+                'pending' => $returnUrl,
             ],
-            'status'             => 'pending',
+            'auto_return'        => 'approved',
+            'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
+            'notification_url'   => APP_URL . '/api/webhook_mp.php',
         ]),
         CURLOPT_HTTPHEADER => [
             'Authorization: Bearer ' . MP_ACCESS_TOKEN,
@@ -65,10 +60,11 @@ if ($metodo === 'mercadopago') {
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
-    if ($code !== 200 && $code !== 201) json_err('Error al crear la suscripción en Mercado Pago. Intenta de nuevo.');
-
-    $data      = json_decode($resp, true);
-    $initPoint = $data['init_point'] ?? '';
+    if ($code !== 200 && $code !== 201) json_err('Error al crear el link de pago. Intenta de nuevo.');
+    $mpData    = json_decode($resp, true);
+    $initPoint = MP_ENV === 'sandbox'
+        ? ($mpData['sandbox_init_point'] ?? '')
+        : ($mpData['init_point']         ?? '');
     if (!$initPoint) json_err('No se pudo obtener el link de pago. Intenta de nuevo.');
 
     json_ok(['url' => $initPoint]);
