@@ -1,92 +1,41 @@
-﻿<?php
-/**
- * Webhook de Mercado Pago — recibe notificaciones de pagos de suscripciones.
- * Configura esta URL en tu dashboard de MP:
- *   https://tu-dominio.com/centrotec/api/webhook_mp.php
- *
- * Para pruebas en local: usa ngrok y configura https://abc.ngrok.io/centrotec/api/webhook_mp.php
- */
-require_once __DIR__.'/../includes/config.php';
+<?php
+// Webhook de Mercado Pago — notificaciones de pago (Checkout Pro)
+// MP hace POST a esta URL cuando hay eventos de pago.
+// Documentación: https://www.mercadopago.cl/developers/es/docs/checkout-pro/payment-notifications
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/mailer.php';
 
-http_response_code(200); // MP espera 200 inmediato
+// Responder 200 de inmediato (MP reintenta si no responde rápido)
+http_response_code(200);
 
-$payload = file_get_contents('php://input');
+$body   = file_get_contents('php://input');
+$data   = json_decode($body, true) ?? [];
+$topic  = $_GET['topic'] ?? ($data['type'] ?? '');
+$id     = $_GET['id']    ?? ($data['data']['id'] ?? '');
 
-// Verificar firma HMAC de Mercado Pago (X-Signature: ts=...;v1=...)
-// Configurar MP_WEBHOOK_SECRET en .env con el valor que aparece en
-// MP Dashboard → Tus integraciones → Webhooks → "Clave secreta"
-// Documentación: https://www.mercadopago.cl/developers/es/docs/your-integrations/notifications/webhooks
-$xSig        = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
-$xReqId      = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
-$webhookSecret = $_ENV['MP_WEBHOOK_SECRET'] ?? '';
-if ($xSig && $webhookSecret) {
-    $parts = [];
-    foreach (explode(';', $xSig) as $part) {
-        [$k, $v] = explode('=', $part, 2) + ['', ''];
-        $parts[trim($k)] = trim($v);
-    }
-    $ts         = $parts['ts'] ?? '';
-    $v1         = $parts['v1'] ?? '';
-    $dataId_raw = $_GET['data.id'] ?? ($_GET['data_id'] ?? '');
-    $manifest   = "id:{$dataId_raw};request-id:{$xReqId};ts:{$ts};";
-    $expected   = hash_hmac('sha256', $manifest, $webhookSecret);
+// Solo procesar notificaciones de pago
+if ($topic !== 'payment' || !$id) exit;
+
+// Verificar firma HMAC si está configurada
+if (MP_WEBHOOK_SECRET) {
+    $signature  = $_SERVER['HTTP_X_SIGNATURE']          ?? '';
+    $requestId  = $_SERVER['HTTP_X_REQUEST_ID']         ?? '';
+    $tsMatch    = [];
+    preg_match('/ts=(\d+)/', $signature, $tsMatch);
+    $ts         = $tsMatch[1] ?? '';
+    $v1Match    = [];
+    preg_match('/v1=([a-f0-9]+)/', $signature, $v1Match);
+    $v1         = $v1Match[1] ?? '';
+    $manifest   = 'id:' . $id . ';request-id:' . $requestId . ';ts:' . $ts . ';';
+    $expected   = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
     if (!hash_equals($expected, $v1)) {
-        exit; // Firma inválida — ignorar silenciosamente
+        error_log('[webhook_mp] firma inválida');
+        exit;
     }
 }
 
-$data   = json_decode($payload, true) ?? [];
-$type   = $data['type']       ?? ($_GET['type']    ?? '');
-$dataId = $data['data']['id'] ?? ($_GET['data_id'] ?? ($_GET['id'] ?? ''));
-
-if (!$type || !$dataId) exit;
-
-// ── SUSCRIPCIÓN CANCELADA DESDE MERCADO PAGO ─────────────────────────────────
-// MP envía type="subscription_preapproval" cuando el estado del preapproval cambia.
-// Verificamos el estado real en la API antes de actualizar la DB.
-if ($type === 'subscription_preapproval') {
-    $ch = curl_init('https://api.mercadopago.com/preapproval/' . urlencode($dataId));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
-        CURLOPT_TIMEOUT        => 10,
-    ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($code === 200) {
-        $sub    = json_decode($resp, true);
-        $status = $sub['status'] ?? '';
-
-        if ($status === 'cancelled') {
-            $db  = getDB();
-            $row = $db->prepare(
-                "SELECT id_empresa, plan_estado FROM empresas WHERE mp_preapproval_id = ? LIMIT 1"
-            );
-            $row->execute([$dataId]);
-            $empresa = $row->fetch();
-
-            if ($empresa && $empresa['plan_estado'] === 'Activo') {
-                $eid = (int) $empresa['id_empresa'];
-                $db->prepare(
-                    "UPDATE empresas SET plan_estado='Cancelado', mp_preapproval_id=NULL WHERE id_empresa=?"
-                )->execute([$eid]);
-                $db->prepare(
-                    "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
-                     VALUES (?, ?, 0, 'Cancelación de suscripción (notificación Mercado Pago)', 'Cancelado')"
-                )->execute([$eid, date('Y-m-d')]);
-            }
-        }
-    }
-    exit;
-}
-
-// Solo procesar pagos (las suscripciones envían type="payment")
-if ($type !== 'payment') exit;
-
-// Consultar el pago a la API de MP
-$ch = curl_init('https://api.mercadopago.com/v1/payments/' . urlencode($dataId));
+// Consultar el pago a MP para obtener detalles verificados
+$ch = curl_init('https://api.mercadopago.com/v1/payments/' . urlencode($id));
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
@@ -98,59 +47,47 @@ curl_close($ch);
 
 if ($code !== 200) exit;
 
-$pago = json_decode($resp, true);
-if (!$pago || ($pago['status'] ?? '') !== 'approved') exit;
+$payment = json_decode($resp, true);
+$status  = $payment['status']             ?? '';
+$extRef  = $payment['external_reference'] ?? '';
 
-// Extraer empresa del external_reference (formato: "eid_{id}")
-$extRef = $pago['external_reference'] ?? '';
-if (!preg_match('/^eid_(\d+)$/', $extRef, $m)) exit;
-$eid = (int) $m[1];
+if ($status !== 'approved' || !$extRef) exit;
 
-// Determinar meses según el monto pagado — rechazar montos no reconocidos
-$monto  = (int)($pago['transaction_amount'] ?? 0);
-$planes = MP_PLANES;
-$meses  = null;
-foreach ($planes as $plan) {
-    if ((int)$plan['precio'] === $monto) { $meses = $plan['meses']; break; }
-}
-if ($meses === null) exit; // Monto desconocido — no extender plan
+// Parsear external_reference: eid_{id}_plan_{key}
+if (!preg_match('/^eid_(\d+)_plan_([a-z0-9]+)$/', $extRef, $m)) exit;
+$eid     = (int)$m[1];
+$planKey = $m[2];
+if (!isset(MP_PLANES[$planKey])) exit;
 
-// Verificar idempotencia: si este payment_id ya fue procesado, ignorar reintento
-$db  = getDB();
-$ya  = $db->prepare("SELECT id FROM historial_pagos WHERE descripcion LIKE ? LIMIT 1");
-$ya->execute(['%#' . $dataId . '%']);
-if ($ya->fetchColumn()) exit;
+$db = getDB();
 
-$row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa = ?");
-$row->execute([$eid]);
-$actual = $row->fetchColumn();
+// Migración defensiva
+try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); } catch(PDOException $e) {}
 
-$base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
-$nuevaFecha = date('Y-m-d', strtotime($base . " +{$meses} month"));
+// Idempotencia: no activar dos veces el mismo pago
+$already = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1");
+$already->execute([$eid]);
+if ($already->fetchColumn() === (string)$id) exit;
 
-$db->prepare("UPDATE empresas SET activa=1, plan_estado='Activo', plan_vencimiento=? WHERE id_empresa=?")
-   ->execute([$nuevaFecha, $eid]);
+// Activar plan
+function activar_plan_webhook(PDO $db, int $eid, array $planInfo, string $estado, string $paymentId): void {
+    $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa=?");
+    $row->execute([$eid]);
+    $actual = $row->fetchColumn();
+    $base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
+    $nuevaFecha = date('Y-m-d', strtotime($base . " +{$planInfo['meses']} month"));
 
-// Si ya existe una entrada Pendiente de hoy (creada en retorno.php), confirmarla.
-// Si no, insertar una nueva (cobros recurrentes posteriores).
-$upd = $db->prepare(
-    "UPDATE historial_pagos SET estado='Pagado',
-            descripcion=CONCAT(descripcion, ' #', ?)
-     WHERE id_empresa=? AND estado='Pendiente' AND monto=? AND fecha=?
-     LIMIT 1"
-);
-$upd->execute([$dataId, $eid, $monto, date('Y-m-d')]);
+    $db->beginTransaction();
+    try {
+        $db->prepare(
+            "UPDATE empresas SET activa=1, plan_estado='Activo', plan_tipo=?, plan_vencimiento=?, mp_preapproval_id=? WHERE id_empresa=?"
+        )->execute([$planInfo['nombre'], $nuevaFecha, $paymentId, $eid]);
 
-if ($upd->rowCount() === 0) {
-    $db->prepare(
-        "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
-         VALUES (?, ?, ?, ?, 'Pagado')"
-    )->execute([
-        $eid,
-        date('Y-m-d'),
-        $monto,
-        'Suscripción Centrotec – Mercado Pago #' . $dataId,
-    ]);
+        $db->prepare(
+            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado) VALUES (?,?,?,?,?)"
+        )->execute([$eid, date('Y-m-d'), $planInfo['precio'], 'Pago Centrotec — Plan ' . $planInfo['nombre'] . ' — Mercado Pago', $estado]);
+        $db->commit();
+    } catch(Throwable $e) { $db->rollBack(); }
 }
 
-exit;
+activar_plan_webhook($db, $eid, MP_PLANES[$planKey], 'Pagado', $id);

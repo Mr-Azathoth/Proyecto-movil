@@ -228,27 +228,8 @@ if ($plan_key === 'trial') {
     json_ok(['redirect' => APP_URL . '/app.php?trial=1']);
 }
 
-// Plan de pago — redirigir al checkout del plan de suscripción MP
-$plan   = MP_PLANES[$plan_key];
-$planId = $plan['id'];
+// Plan de pago — Checkout Pro (pago único)
+$url = mp_crear_preferencia($id_empresa, $plan_key, MP_PLANES[$plan_key]);
+if (!$url) json_err('No se pudo generar el enlace de pago. Intenta nuevamente.');
 
-$ch = curl_init('https://api.mercadopago.com/preapproval_plan/' . urlencode($planId));
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
-    CURLOPT_TIMEOUT        => 10,
-]);
-$resp = curl_exec($ch);
-$code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-$initPoint = '';
-if ($code === 200) {
-    $planData  = json_decode($resp, true);
-    $initPoint = $planData['init_point'] ?? '';
-}
-if (!$initPoint) {
-    $initPoint = 'https://www.mercadopago.cl/subscriptions/checkout?preapproval_plan_id=' . urlencode($planId);
-}
-
-json_ok(['redirect' => $initPoint]);
+json_ok(['redirect' => $url]);

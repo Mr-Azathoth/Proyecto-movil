@@ -235,24 +235,63 @@ define('SMTP_NAME', $_ENV['SMTP_NAME'] ?? 'Centrotec - Servicios Técnicos');
 
 // ── SUSCRIPCIÓN / PAGOS ──────────────────────────────────────
 // Mercado Pago — https://www.mercadopago.cl/developers/
-define('MP_ACCESS_TOKEN', $_ENV['MP_ACCESS_TOKEN'] ?? '');
-define('MP_PUBLIC_KEY',   $_ENV['MP_PUBLIC_KEY']   ?? '');
-define('MP_ENV',          $_ENV['MP_ENV']          ?? 'sandbox');   // 'sandbox' | 'production'
+define('MP_ACCESS_TOKEN',    $_ENV['MP_ACCESS_TOKEN']    ?? '');
+define('MP_PUBLIC_KEY',      $_ENV['MP_PUBLIC_KEY']      ?? '');
+define('MP_ENV',             $_ENV['MP_ENV']             ?? 'sandbox');   // 'sandbox' | 'production'
+define('MP_WEBHOOK_SECRET',  $_ENV['MP_WEBHOOK_SECRET']  ?? '');  // firma HMAC — opcional en sandbox
 
-// Planes de suscripción (IDs de preapproval_plan de Mercado Pago)
-// Los IDs cambian según el entorno (sandbox vs production)
-define('MP_PLANES', MP_ENV === 'production' ? [
-    '1mes'    => ['id' => '9ff62047640046eea92e392dc14fb459', 'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
-    '3meses'  => ['id' => '4108c57b01b7402d8e6966f40164f836', 'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
-    '6meses'  => ['id' => 'c6e46ec28cb44765951bb96aa86e4aaa', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
-    '12meses' => ['id' => 'db9a46e00a7a44d4bca5dcc852ea584f', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
-] : [
-    // Sandbox — planes TEST (prefijo CentroTec-Test-)
-    '1mes'    => ['id' => '7f4716ddea66470c82157a5aa93a335f', 'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
-    '3meses'  => ['id' => 'c13687e85c6b48ae9b85422d51572af6', 'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
-    '6meses'  => ['id' => '53d38166c804478987d05bbb46c2f6bf', 'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
-    '12meses' => ['id' => '1e77c1a755aa445b9ff7607875a0b6c0', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
+// Planes de pago único (Checkout Pro — un solo cobro por período)
+define('MP_PLANES', [
+    '1mes'    => ['nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
+    '3meses'  => ['nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
+    '6meses'  => ['nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
+    '12meses' => ['nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
 ]);
+
+// Crea una preference de Checkout Pro y devuelve la URL de pago correcta según entorno.
+// Retorna '' si la API falla.
+function mp_crear_preferencia(int $eid, string $planKey, array $plan): string {
+    $body = [
+        'items' => [[
+            'title'       => 'Centrotec — Plan ' . $plan['nombre'],
+            'quantity'    => 1,
+            'unit_price'  => (float)$plan['precio'],
+            'currency_id' => 'CLP',
+        ]],
+        'back_urls' => [
+            'success' => APP_URL . '/pago/retorno.php',
+            'failure' => APP_URL . '/pago/retorno.php?mp_result=failure',
+            'pending' => APP_URL . '/pago/retorno.php?mp_result=pending',
+        ],
+        'auto_return'        => 'approved',
+        'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
+        'notification_url'   => APP_URL . '/api/webhook_mp.php',
+    ];
+
+    $ch = curl_init('https://api.mercadopago.com/checkout/preferences');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($body),
+        CURLOPT_HTTPHEADER     => [
+            'Authorization: Bearer ' . MP_ACCESS_TOKEN,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_TIMEOUT => 15,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code !== 201) {
+        error_log('[mp_crear_preferencia] HTTP ' . $code . ' body=' . substr($resp ?? '', 0, 300));
+        return '';
+    }
+    $pref = json_decode($resp, true);
+    return MP_ENV === 'sandbox'
+        ? ($pref['sandbox_init_point'] ?? '')
+        : ($pref['init_point'] ?? '');
+}
 
 // Webpay Plus (Transbank)
 // Credenciales de integración pública (funcionan sin registro para pruebas)

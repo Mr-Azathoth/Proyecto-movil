@@ -23,33 +23,15 @@ $db     = getDB();
 
 $returnUrl = APP_URL . '/pago/retorno.php';
 
-// ── MERCADO PAGO — checkout del plan de suscripción ──────────
+// ── MERCADO PAGO — Checkout Pro (pago único por período) ─────
 if ($metodo === 'mercadopago') {
     $planKey = $input['plan'] ?? '';
     if (!isset(MP_PLANES[$planKey])) json_err('Plan no válido');
 
-    $planId = MP_PLANES[$planKey]['id'];
+    $url = mp_crear_preferencia($eid, $planKey, MP_PLANES[$planKey]);
+    if (!$url) json_err('No se pudo generar el enlace de pago. Intenta nuevamente.');
 
-    $ch = curl_init('https://api.mercadopago.com/preapproval_plan/' . urlencode($planId));
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . MP_ACCESS_TOKEN],
-        CURLOPT_TIMEOUT        => 10,
-    ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    $initPoint = '';
-    if ($code === 200) {
-        $planData  = json_decode($resp, true);
-        $initPoint = $planData['init_point'] ?? '';
-    }
-    if (!$initPoint) {
-        $initPoint = 'https://www.mercadopago.cl/subscriptions/checkout?preapproval_plan_id=' . urlencode($planId);
-    }
-
-    json_ok(['url' => $initPoint]);
+    json_ok(['url' => $url]);
 }
 
 json_err('Método de pago no válido');
