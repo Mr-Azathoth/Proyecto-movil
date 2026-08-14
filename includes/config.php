@@ -38,7 +38,7 @@ define('VALID_STATUS', ['Ingresado', 'En Reparacion', 'Reparado', 'Entregado', '
 
 // Configuración segura de sesión — debe ir ANTES de session_start()
 ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Strict');
+ini_set('session.cookie_samesite', 'Lax');
 ini_set('session.use_strict_mode', '1');
 
 // Producción: ocultar errores; cookie segura solo si la conexión es realmente HTTPS
