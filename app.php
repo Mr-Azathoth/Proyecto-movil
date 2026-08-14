@@ -933,7 +933,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </div>
           <p class="hint-txt" id="hint-entregado">
             <span class="material-icons-round ic-xs">info</span>
-            Al guardar como Entregado se descontarán los repuestos del stock
+            Al guardar se descontarán los repuestos del stock
           </p>
           <div class="fg">
             <label>Nota técnica</label>

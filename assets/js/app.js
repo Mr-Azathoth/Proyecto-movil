@@ -604,7 +604,7 @@ function _renderRepuestosList(inicial, adicionales, status) {
 
 function _updateHintEntregado(status) {
   const hint = document.getElementById('hint-entregado');
-  if (hint) hint.style.display = status === 'Entregado' ? '' : 'none';
+  if (hint) hint.style.display = ['Reparado', 'Entregado'].includes(status) ? '' : 'none';
 }
 
 function _tlChip(icon, label, content) {

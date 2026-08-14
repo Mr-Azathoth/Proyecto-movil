@@ -244,15 +244,15 @@ if ($method === 'PUT') {
             }
         }
 
-        // Descuento de stock cuando el servicio pasa a Reparado (el repuesto ya fue usado)
-        if ($nuevo_status === 'Reparado') {
+        // Descuento de stock al pasar a Reparado o Entregado.
+        // !$ya_descontado garantiza que nunca se rebaje dos veces (ej: Reparado → Entregado).
+        if (in_array($nuevo_status, ['Reparado', 'Entregado'], true)) {
             // Descontar repuesto inicial
             if ($id_repuesto_nuevo && !$ya_descontado) {
                 $chk = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0");
                 $chk->execute([$id_repuesto_nuevo, $eid]);
                 $rep_row = $chk->fetch();
                 if ($rep_row) {
-                    // Solo decrementar cantidad_reservada si este trabajo tenía una reserva activa
                     $sql_desc = $repuesto_ini_reservado
                         ? "UPDATE inventario SET cantidad = cantidad - 1, cantidad_reservada = GREATEST(0, cantidad_reservada - 1) WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0"
                         : "UPDATE inventario SET cantidad = cantidad - 1 WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0";
@@ -264,22 +264,25 @@ if ($method === 'PUT') {
                     $stock_dec = 1;
                 }
             }
-            // Descontar repuestos adicionales (reparacion_repuestos)
+            // Descontar repuestos adicionales (reparacion_repuestos) — solo los no descontados aún
             $adicionales = $db->prepare(
                 "SELECT * FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0"
             );
             $adicionales->execute([$id, $eid]);
             foreach ($adicionales->fetchAll() as $ar) {
-                $db->prepare("UPDATE inventario
+                $upd = $db->prepare("UPDATE inventario
                                 SET cantidad = GREATEST(0, cantidad - ?),
                                     cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
-                              WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0")
-                   ->execute([(int)$ar['cantidad'], (int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid]);
-                $db->prepare("UPDATE reparacion_repuestos SET stock_desc = 1 WHERE id = ?")
-                   ->execute([(int)$ar['id']]);
-                $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
-                   ->execute([$eid, $id, "Repuesto descontado: {$ar['nombre_snap']} x{$ar['cantidad']}", uname()]);
-                $stock_dec = 1;
+                              WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0");
+                $upd->execute([(int)$ar['cantidad'], (int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid]);
+                // Solo marcar como descontado si la UPDATE afectó filas (había stock)
+                if ($upd->rowCount() > 0) {
+                    $db->prepare("UPDATE reparacion_repuestos SET stock_desc = 1 WHERE id = ?")
+                       ->execute([(int)$ar['id']]);
+                    $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
+                       ->execute([$eid, $id, "Repuesto descontado: {$ar['nombre_snap']} x{$ar['cantidad']}", uname()]);
+                    $stock_dec = 1;
+                }
             }
         }
 
