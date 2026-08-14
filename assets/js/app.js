@@ -2087,11 +2087,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Retorno desde pasarela de pago ──────────────────────────
   const urlParams = new URLSearchParams(window.location.search);
   const pagoParam = urlParams.get('pago');
-  if (pagoParam === 'ok' || pagoParam === 'suscripcion') {
+  if (pagoParam === 'ok' || pagoParam === 'suscripcion' || pagoParam === 'exitoso' || pagoParam === 'procesando') {
     history.replaceState({}, '', BASE_PATH + '/app.php');
-    const msg = pagoParam === 'suscripcion'
-      ? '✔ Suscripción activada. El pago se confirmará en breve.'
-      : '✔ Pago exitoso. Suscripción actualizada.';
+    const msg = pagoParam === 'procesando'
+      ? '✔ Pago recibido. El plan se activará en breve.'
+      : '✔ Pago exitoso. Tu plan ha sido activado.';
     toast(msg, 'ok');
     const cfgLink = document.querySelector('[data-view="config"]');
     if (cfgLink) switchView('config', cfgLink);
