@@ -288,9 +288,8 @@ function mp_crear_preferencia(int $eid, string $planKey, array $plan): string {
         return '';
     }
     $pref = json_decode($resp, true);
-    return MP_ENV === 'sandbox'
-        ? ($pref['sandbox_init_point'] ?? '')
-        : ($pref['init_point'] ?? '');
+    // Siempre usar init_point — sandbox_init_point causa pantallas de error aunque el pago quede aprobado
+    return $pref['init_point'] ?? '';
 }
 
 // Webpay Plus (Transbank)
