@@ -1,7 +1,17 @@
 ﻿<?php
 require_once __DIR__.'/../includes/config.php';
 require_once __DIR__.'/../includes/mailer.php';
-requireLogin();
+
+// Si la sesión expiró durante el pago, guardar URL de retorno y redirigir al login con aviso
+remember_check();
+if (!logueado()) {
+    $here = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+          . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    $_SESSION['redirect_after_login'] = $here;
+    header('Location: ' . BASE . '/index.php?pago_pendiente=1'); exit;
+}
+session_check_timeout();
+$_SESSION['last_activity'] = time();
 
 $gateway       = $_GET['gateway']        ?? '';
 $preapprovalId = $_GET['preapproval_id'] ?? '';

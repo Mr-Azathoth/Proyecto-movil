@@ -123,7 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="brand-sub">Servicios técnicos</div>
       </div>
     </div>
-    <?php if ($expired && !$err): ?>
+    <?php if (!empty($_GET['pago_pendiente'])): ?>
+      <div class="alert-ok">Tu pago fue recibido. Inicia sesión para ver tu plan activado.</div>
+    <?php elseif ($expired && !$err): ?>
       <div class="alert-warn">Tu sesión expiró por inactividad. Vuelve a ingresar.</div>
     <?php endif; ?>
     <?php if (isset($_GET['reset']) && !$err): ?>
