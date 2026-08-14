@@ -75,16 +75,18 @@ if ($gateway === 'mp_checkout') {
             }
 
             if (isset(MP_PLANES[$planKey])) {
-                // Idempotencia: no activar dos veces el mismo pago
+                // Idempotencia: si este payment_id ya fue procesado, solo navegar al dashboard
+                $ya_procesado = false;
                 try {
                     $already = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1");
                     $already->execute([$refEid]);
                     if ($already->fetchColumn() === $paymentId) {
-                        $activado = true; // ya activado (por webhook u otra visita)
+                        $ya_procesado = true;
+                        $activado     = true;
                     }
                 } catch(PDOException $e) {}
 
-                if (!$activado) {
+                if (!$ya_procesado) {
                     // Verificar el pago directamente con la API de MP
                     $ch = curl_init('https://api.mercadopago.com/v1/payments/' . urlencode($paymentId));
                     curl_setopt_array($ch, [
@@ -100,14 +102,20 @@ if ($gateway === 'mp_checkout') {
                         $payment = json_decode($resp, true);
                         if (($payment['status'] ?? '') === 'approved') {
                             $planInfo = MP_PLANES[$planKey];
-                            activar_plan($db, $refEid, $planInfo, 'Pagado', 'Mercado Pago');
 
+                            // Activar plan y guardar payment_id en la misma transacción (evita race con webhook)
+                            $db->beginTransaction();
                             try {
+                                activar_plan($db, $refEid, $planInfo, 'Pagado', 'Mercado Pago');
                                 $db->prepare("UPDATE empresas SET mp_preapproval_id=? WHERE id_empresa=?")
                                    ->execute([$paymentId, $refEid]);
-                            } catch(PDOException $e) {}
+                                $db->commit();
+                            } catch(Throwable $e) {
+                                $db->rollBack();
+                            }
 
-                            $activado = true;
+                            $activado     = true;
+                            $pago_via_api = true; // auto-login solo si la API confirmó en esta request
 
                             // Correo de confirmación
                             try {
@@ -148,8 +156,8 @@ if ($gateway === 'mp_checkout') {
         }
     }
 
-    // Si la sesión expiró pero el pago fue activado, auto-login con los datos de la empresa
-    if (!logueado() && $activado && isset($refEid)) {
+    // Auto-login solo cuando la API de MP confirmó el pago en esta request (no por idempotencia)
+    if (!logueado() && ($pago_via_api ?? false) && isset($refEid)) {
         $row = $db->prepare(
             "SELECT u.id_usuario, u.user, u.nombre, u.cargo
              FROM usuarios u
@@ -176,6 +184,13 @@ if ($gateway === 'mp_checkout') {
 
 // ── MERCADO PAGO — retorno de suscripción recurrente (legacy) ─
 if ($gateway === 'mp_sub') {
+    // Este flujo legacy depende de la sesión para identificar la empresa
+    if (!logueado()) {
+        $here = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+              . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $_SESSION['redirect_after_login'] = $here;
+        header('Location: ' . BASE . '/index.php?pago_pendiente=1'); exit;
+    }
     if ($preapprovalId) {
         // Evitar activar dos veces el mismo preapproval
         try {
