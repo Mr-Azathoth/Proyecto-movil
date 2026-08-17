@@ -1097,22 +1097,18 @@ input.hidden           { display:none !important; }
   .tbl { min-width:480px; }
 
   /* Ocultar columnas secundarias en tabla de reparaciones */
-  /* Columnas: 1=# 2=Cliente 3=Equipo 4=Falla 5=Valor 6=Ingresado 7=Fecha 8=Estado 9=Acciones */
+  /* Columnas: 1=Cliente 2=Equipo 3=Valor 4=Ingresado 5=Fecha 6=Estado 7=Acciones */
   #view-servicios .tbl th:nth-child(4),
   #view-servicios .tbl td:nth-child(4),
   #view-servicios .tbl th:nth-child(5),
-  #view-servicios .tbl td:nth-child(5),
-  #view-servicios .tbl th:nth-child(6),
-  #view-servicios .tbl td:nth-child(6),
-  #view-servicios .tbl th:nth-child(7),
-  #view-servicios .tbl td:nth-child(7) { display:none; }
+  #view-servicios .tbl td:nth-child(5) { display:none; }
 
   /* Ocultar columnas secundarias en tabla de inventario */
-  /* Columnas: 1=Repuesto 2=Marca 3=Modelo 4=Precio 5=Stock 6=Acciones */
-  #view-inventario .tbl th:nth-child(2),
-  #view-inventario .tbl td:nth-child(2),
+  /* Columnas: 1=ID 2=Repuesto 3=Marca 4=Modelo 5=Precio 6=Stock 7=Acciones */
   #view-inventario .tbl th:nth-child(3),
-  #view-inventario .tbl td:nth-child(3) { display:none; }
+  #view-inventario .tbl td:nth-child(3),
+  #view-inventario .tbl th:nth-child(4),
+  #view-inventario .tbl td:nth-child(4) { display:none; }
 
   /* Modales a pantalla completa */
   .modal-box {
