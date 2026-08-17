@@ -1092,9 +1092,12 @@ input.hidden           { display:none !important; }
   /* Main ocupa todo el ancho */
   .main { margin-left:0 !important; }
 
-  /* Tablas: scroll horizontal en vez de desbordarse */
-  .tbl-wrap, .table-wrap, .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .tbl { min-width:480px; }
+  /* Impedir que .main (flex:1) expanda más allá del viewport */
+  .main { min-width:0; }
+
+  /* Tablas: scroll horizontal contenido dentro del wrapper, no expande la página */
+  .tbl-wrap, .table-wrap, .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; width:100%; }
+  .tbl { min-width:380px; }
 
   /* Ocultar columnas secundarias en tabla de reparaciones */
   /* Columnas: 1=Cliente 2=Equipo 3=Valor 4=Ingresado 5=Fecha 6=Estado 7=Acciones */
