@@ -1073,6 +1073,9 @@ input.hidden           { display:none !important; }
 .sidebar-overlay.active { display:block; }
 
 @media (max-width:640px) {
+  /* Impedir scroll horizontal de página en móvil */
+  html { overflow-x:hidden; }
+
   /* Mostrar barra móvil */
   .mobile-topbar { display:flex; }
 
@@ -1147,7 +1150,7 @@ input.hidden           { display:none !important; }
   /* Topbar acciones apiladas — botones ocupan el ancho completo */
   .topbar { flex-wrap:wrap; gap:8px; }
   .topbar-actions { flex-wrap:wrap; gap:6px; width:100%; }
-  .topbar-actions .btn, .topbar-actions .split-btn { flex:1; min-width:0; justify-content:center; }
+  .topbar-actions .btn, .topbar-actions .split-btn { flex:1; min-width:0; justify-content:center; overflow:hidden; }
 
   /* Barra de controles: buscador y selector de página en columna */
   .controls { flex-direction:column; gap:8px; }
