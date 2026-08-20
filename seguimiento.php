@@ -292,9 +292,7 @@ function fmt_fecha(string $fecha): string {
                     <div class="seg-foto-strip">
                       <img src="<?= htmlspecialchars($item['url']) ?>"
                            alt="Foto <?= htmlspecialchars($item['etiqueta'] ?? '') ?>"
-                           loading="lazy"
-                           onclick="segOpenLightbox(this.src)"
-                           style="cursor:zoom-in">
+                           loading="lazy">
                     </div>
                     <span class="seg-foto-label">Foto · <?= htmlspecialchars($item['etiqueta'] ?? 'Reparación') ?></span>
                   </div>
