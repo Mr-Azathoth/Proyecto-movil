@@ -329,12 +329,12 @@ function fmt_fecha(string $fecha): string {
 </footer>
 
 
-<div id="_seg-lb" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
-  <div id="_seg-lb-bg" style="position:absolute;inset:0;background:rgba(0,0,0,.85)"></div>
-  <div style="position:relative;z-index:1;max-width:90vw;max-height:90vh;display:flex">
-    <img id="_seg-lb-img" src="" alt="Foto" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);display:block">
-    <button id="_seg-lb-close" aria-label="Cerrar" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:#1e2330;border:1px solid rgba(255,255,255,.15);color:#e2e8f0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1">
-      <span class="material-icons-round" style="font-size:18px">close</span>
+<div id="_seg-lb">
+  <div id="_seg-lb-bg"></div>
+  <div id="_seg-lb-inner">
+    <img id="_seg-lb-img" src="" alt="">
+    <button id="_seg-lb-close" aria-label="Cerrar">
+      <span class="material-icons-round">close</span>
     </button>
   </div>
 </div>
