@@ -678,8 +678,7 @@ async function loadTimeline(id) {
             <div class="tl-card">
               <p class="tl-txt">Foto agregada · ${esc(item.etiqueta)}</p>
               <div class="tl-foto-strip">
-                <img src="${esc(item.url)}" alt="Foto ${esc(item.etiqueta)}" loading="lazy"
-                     onclick="openLightbox(this.src)" style="cursor:zoom-in">
+                <img src="${esc(item.url)}" alt="Foto ${esc(item.etiqueta)}" loading="lazy" class="tl-foto-img">
               </div>
             </div>
           </div>
@@ -1726,6 +1725,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (typeof initNuevoFotos === 'function')       initNuevoFotos();
   if (typeof initDetalleFotoInput === 'function')  initDetalleFotoInput();
+
+  // Delegated click para lightbox de fotos en timeline
+  document.addEventListener('click', e => {
+    const img = e.target.closest('.tl-foto-img');
+    if (img) openLightbox(img.src);
+  });
 
   document.getElementById('det-cancelar')?.addEventListener('click', async () => {
     const hasPending = _pendingUndo.length > 0;
