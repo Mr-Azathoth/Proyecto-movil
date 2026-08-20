@@ -679,7 +679,7 @@ async function loadTimeline(id) {
               <p class="tl-txt">Foto agregada · ${esc(item.etiqueta)}</p>
               <div class="tl-foto-strip">
                 <img src="${esc(item.url)}" alt="Foto ${esc(item.etiqueta)}" loading="lazy"
-                     onclick="window.open(this.src,'_blank')">
+                     onclick="openLightbox(this.src)" style="cursor:zoom-in">
               </div>
             </div>
           </div>
@@ -2889,3 +2889,29 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     toast('Pago recibido, verificando con Mercado Pago… Tu plan se activará en unos minutos.', 'info');
   }
 }());
+
+// ─── Lightbox ────────────────────────────────────────────────────────────────
+function openLightbox(src) {
+  let lb = document.getElementById('_lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = '_lightbox';
+    lb.innerHTML = `
+      <div id="_lb-backdrop"></div>
+      <div id="_lb-box">
+        <button id="_lb-close" aria-label="Cerrar"><span class="material-icons-round">close</span></button>
+        <img id="_lb-img" src="" alt="Foto">
+      </div>`;
+    document.body.appendChild(lb);
+    document.getElementById('_lb-backdrop').addEventListener('click', closeLightbox);
+    document.getElementById('_lb-close').addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+  }
+  document.getElementById('_lb-img').src = src;
+  lb.classList.add('_lb-open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLightbox() {
+  const lb = document.getElementById('_lightbox');
+  if (lb) { lb.classList.remove('_lb-open'); document.body.style.overflow = ''; }
+}

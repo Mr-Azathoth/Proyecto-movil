@@ -290,11 +290,11 @@ function fmt_fecha(string $fecha): string {
                   </div>
                   <div class="seg-tl-contenido seg-tl-contenido-foto">
                     <div class="seg-foto-strip">
-                      <a href="<?= htmlspecialchars($item['url']) ?>" target="_blank" rel="noopener">
-                        <img src="<?= htmlspecialchars($item['url']) ?>"
-                             alt="Foto <?= htmlspecialchars($item['etiqueta'] ?? '') ?>"
-                             loading="lazy">
-                      </a>
+                      <img src="<?= htmlspecialchars($item['url']) ?>"
+                           alt="Foto <?= htmlspecialchars($item['etiqueta'] ?? '') ?>"
+                           loading="lazy"
+                           onclick="segOpenLightbox(this.src)"
+                           style="cursor:zoom-in">
                     </div>
                     <span class="seg-foto-label">Foto · <?= htmlspecialchars($item['etiqueta'] ?? 'Reparación') ?></span>
                   </div>
@@ -328,5 +328,29 @@ function fmt_fecha(string $fecha): string {
   <a href="<?= BASE ?>/landing.php">Centrotec</a> — Software para servicios técnicos
 </footer>
 
+
+<div id="_seg-lb" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
+  <div id="_seg-lb-bg" style="position:absolute;inset:0;background:rgba(0,0,0,.85)"></div>
+  <div style="position:relative;z-index:1;max-width:90vw;max-height:90vh;display:flex">
+    <img id="_seg-lb-img" src="" alt="Foto" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6);display:block">
+    <button onclick="segCloseLightbox()" aria-label="Cerrar" style="position:absolute;top:-14px;right:-14px;width:32px;height:32px;border-radius:50%;background:#1e2330;border:1px solid rgba(255,255,255,.15);color:#e2e8f0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1">
+      <span class="material-icons-round" style="font-size:18px">close</span>
+    </button>
+  </div>
+</div>
+<script>
+function segOpenLightbox(src){
+  var lb=document.getElementById('_seg-lb');
+  document.getElementById('_seg-lb-img').src=src;
+  lb.style.display='flex';
+  document.body.style.overflow='hidden';
+}
+function segCloseLightbox(){
+  document.getElementById('_seg-lb').style.display='none';
+  document.body.style.overflow='';
+}
+document.getElementById('_seg-lb-bg').addEventListener('click',segCloseLightbox);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')segCloseLightbox();});
+</script>
 </body>
 </html>
