@@ -535,6 +535,7 @@ function openDetalle(rep) {
   _loadRepuestosEditor(rep.id_ingreso);
 
   loadTimeline(rep.id_ingreso);
+  if (typeof loadDetalleFotos === 'function') loadDetalleFotos(rep.id_ingreso);
   // Resaltar fila activa en la tabla
   document.querySelector('.tbl-row.row-active')?.classList.remove('row-active');
   document.querySelector(`.tbl-row[data-id="${rep.id_ingreso}"]`)?.classList.add('row-active');
@@ -669,6 +670,21 @@ async function loadTimeline(id) {
     const json = await r.json();
     if (!json.ok || !json.data.length) { box.innerHTML='<p class="tl-empty">Sin registros aún.</p>'; return; }
     box.innerHTML = json.data.map(item => {
+      if (item.tipo === 'foto') {
+        return `<div class="tl-item tl-foto">
+          <div class="tl-dot"><span class="material-icons-round">photo_camera</span></div>
+          <div class="tl-body">
+            <div class="tl-meta"><strong>${esc(item.user)}</strong> · ${fmtDateTime(item.fecha)}</div>
+            <div class="tl-card">
+              <p class="tl-txt">Foto agregada · ${esc(item.etiqueta)}</p>
+              <div class="tl-foto-strip">
+                <img src="${esc(item.url)}" alt="Foto ${esc(item.etiqueta)}" loading="lazy"
+                     onclick="window.open(this.src,'_blank')">
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }
       const icon = item.tipo==='hist' ? 'swap_horiz' : 'notes';
       const cls  = item.tipo==='hist' ? 'tl-hist' : 'tl-obs';
       return `<div class="tl-item ${cls}">
@@ -739,6 +755,7 @@ async function submitNuevo(e) {
 
     if (j.ok) {
       _lastNuevoId = j.data.id ?? null;
+      if (_lastNuevoId && typeof uploadNuevoFoto === 'function') await uploadNuevoFoto(_lastNuevoId);
       loadServicios();
       document.getElementById('nuevo-post-save').classList.remove('hidden');
       document.getElementById('form-nuevo').classList.add('hidden');
@@ -1283,6 +1300,9 @@ function _resetModalNuevo() {
   // Restaurar botón submit
   const btn = document.getElementById('btn-submit-nuevo');
   if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-icons-round">save</span> Registrar ingreso'; }
+
+  // Limpiar fotos pendientes
+  if (typeof resetNuevoFotos === 'function') resetNuevoFotos();
 }
 
 // ── Split button ─────────────────────────────────────────────
@@ -1703,6 +1723,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('form-nuevo')?.addEventListener('submit', submitNuevo);
   document.getElementById('form-actualizar')?.addEventListener('submit', submitActualizar);
   document.getElementById('form-repuesto')?.addEventListener('submit', submitRepuesto);
+
+  if (typeof initNuevoFotos === 'function')       initNuevoFotos();
+  if (typeof initDetalleFotoInput === 'function')  initDetalleFotoInput();
 
   document.getElementById('det-cancelar')?.addEventListener('click', async () => {
     const hasPending = _pendingUndo.length > 0;

@@ -848,6 +848,23 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <input type="hidden" id="hid-rep-nuevo">
           </div>
         </div>
+        <!-- Foto de ingreso -->
+        <div class="foto-section" style="margin-top:12px">
+          <p class="section-label">Foto del equipo al ingreso <span class="lbl-opt">(opcional)</span></p>
+          <div class="foto-label-row">
+            <span class="foto-section-hint">Documenta el estado físico del equipo al recibirlo</span>
+            <span class="foto-counter" id="nuevo-foto-counter">0 / 1</span>
+          </div>
+          <div class="foto-dropzone" id="nuevo-foto-drop" role="button" tabindex="0" aria-label="Agregar foto de ingreso">
+            <span class="material-icons-round">add_a_photo</span>
+            <div>
+              <strong>Toca para tomar foto o elegir de galería</strong>
+              <span>En escritorio puedes arrastrar aquí · JPG / PNG / WebP</span>
+            </div>
+          </div>
+          <input type="file" id="nuevo-foto-input" accept="image/*" capture="environment" class="foto-hidden-input">
+          <div id="nuevo-foto-thumbs" class="foto-thumbs-grid hidden"></div>
+        </div>
       </div>
       <div class="modal-ft">
         <button type="button" class="btn-sec" data-modal="modal-nuevo">Cancelar</button>
@@ -925,6 +942,19 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="fg">
             <label>Nota técnica</label>
             <textarea id="det-obs" rows="3" placeholder="Avance, resultado, observación..." class="textarea-fixed"></textarea>
+          </div>
+          <!-- Fotos del servicio -->
+          <div class="foto-section" style="margin-top:4px">
+            <div class="foto-label-row">
+              <label style="font-size:11px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em">Fotos del servicio</label>
+              <span class="foto-counter" id="det-foto-counter">0 / 3</span>
+            </div>
+            <div class="foto-thumbs-grid" id="det-foto-thumbs">
+              <button type="button" class="foto-thumb-add" id="det-foto-add-init" aria-label="Agregar foto">
+                <span class="material-icons-round">add_a_photo</span>
+              </button>
+            </div>
+            <input type="file" id="det-foto-input" accept="image/*" capture="environment" class="foto-hidden-input" multiple>
           </div>
         </div>
 
@@ -1269,6 +1299,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
 <script src="<?= BASE ?>/assets/js/xlsx.mini.min.js"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/rep_fotos.js?v=<?= filemtime(__DIR__.'/assets/js/rep_fotos.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/ticket_img.js?v=<?= filemtime(__DIR__.'/assets/js/ticket_img.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/soporte.js?v=<?= filemtime(__DIR__.'/assets/js/soporte.js') ?>"></script>
 </body>

@@ -15,6 +15,16 @@ try { $db->exec("ALTER TABLE reparaciones ADD COLUMN codigo_seguimiento VARCHAR(
 try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (codigo_seguimiento)"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE historial ADD COLUMN detalle TEXT NULL DEFAULT NULL"); } catch(PDOException $e) {}
+try { $db->exec("CREATE TABLE IF NOT EXISTS reparacion_fotos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  id_reparacion INT NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  etiqueta VARCHAR(50) NOT NULL DEFAULT 'Reparación',
+  subida_por VARCHAR(100) NOT NULL DEFAULT '',
+  fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_rrf (id_reparacion, id_empresa)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"); } catch(PDOException $e) {}
 
 // Backfill: sincronizar cantidad_reservada para trabajos activos creados antes del sistema de reservas.
 // Calcula el total correcto (inicial + adicionales) y hace SET solo donde cantidad_reservada = 0.

@@ -94,8 +94,19 @@ if ($codigo !== '') {
             // ── obs heredada del campo reparaciones (sin timestamp) ──────
             $obs_legacy = trim($orden['obs'] ?? '');
 
+            // Fotos del servicio
+            $fotos_seg = [];
+            try {
+                $fq = $db->prepare(
+                    "SELECT 'foto' AS tipo, fecha, url, etiqueta, subida_por AS user
+                       FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ? ORDER BY fecha ASC"
+                );
+                $fq->execute([$id, $id_empresa]);
+                $fotos_seg = $fq->fetchAll();
+            } catch(PDOException $e) {}
+
             // Mezclar y ordenar por fecha
-            $historial_items = array_merge($estados, $obs_rows);
+            $historial_items = array_merge($estados, $obs_rows, $fotos_seg);
             usort($historial_items, fn($a, $b) => strcmp($a['fecha'], $b['fecha']));
         }
     }
@@ -269,6 +280,26 @@ function fmt_fecha(string $fecha): string {
                 </div>
               </div>
 
+              <?php elseif ($item['tipo'] === 'foto'): ?>
+              <div class="seg-tl-item seg-tl-foto">
+                <div class="seg-tl-dot"><span class="material-icons-round">photo_camera</span></div>
+                <div class="seg-tl-body">
+                  <div class="seg-tl-meta">
+                    <span class="seg-tl-fecha"><?= fmt_fecha($item['fecha']) ?></span>
+                    <span class="seg-tl-user"><?= htmlspecialchars($item['user']) ?></span>
+                  </div>
+                  <div class="seg-tl-contenido seg-tl-contenido-foto">
+                    <div class="seg-foto-strip">
+                      <a href="<?= htmlspecialchars($item['url']) ?>" target="_blank" rel="noopener">
+                        <img src="<?= htmlspecialchars($item['url']) ?>"
+                             alt="Foto <?= htmlspecialchars($item['etiqueta'] ?? '') ?>"
+                             loading="lazy">
+                      </a>
+                    </div>
+                    <span class="seg-foto-label">Foto · <?= htmlspecialchars($item['etiqueta'] ?? 'Reparación') ?></span>
+                  </div>
+                </div>
+              </div>
               <?php else: ?>
               <div class="seg-tl-item seg-tl-obs">
                 <div class="seg-tl-dot"><span class="material-icons-round">chat</span></div>

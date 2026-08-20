@@ -18,6 +18,16 @@ try { $db->exec("ALTER TABLE historial ADD COLUMN detalle TEXT NULL DEFAULT NULL
 $hist = $db->prepare("SELECT 'hist' AS tipo, CONCAT('Estado: ',status_anterior,' → ',status_cambio, IF(detalle IS NOT NULL AND detalle<>'', CONCAT('\n',detalle),'')) AS texto, user, fecha_cambio AS fecha FROM historial WHERE id_reparacion=? AND id_empresa=? ORDER BY fecha_cambio DESC");
 $hist->execute([$id,$eid]);
 
-$items = array_merge($obs->fetchAll(), $hist->fetchAll());
+$fotos = [];
+try {
+    $f = $db->prepare(
+        "SELECT 'foto' AS tipo, CONCAT('Foto · ', etiqueta) AS texto, subida_por AS user, fecha, url, etiqueta
+           FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ? ORDER BY fecha DESC"
+    );
+    $f->execute([$id, $eid]);
+    $fotos = $f->fetchAll();
+} catch(PDOException $e) {}
+
+$items = array_merge($obs->fetchAll(), $hist->fetchAll(), $fotos);
 usort($items, fn($a,$b) => strtotime($b['fecha']) - strtotime($a['fecha']));
 json_ok($items);
