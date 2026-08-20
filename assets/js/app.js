@@ -669,28 +669,40 @@ async function loadTimeline(id) {
     const r = await apiFetch(`/reparo/api/timeline.php?id=${id}`);
     const json = await r.json();
     if (!json.ok || !json.data.length) { box.innerHTML='<p class="tl-empty">Sin registros aún.</p>'; return; }
-    box.innerHTML = json.data.map(item => {
-      if (item.tipo === 'foto') {
-        return `<div class="tl-item tl-foto">
-          <div class="tl-dot"><span class="material-icons-round">photo_camera</span></div>
-          <div class="tl-body">
-            <div class="tl-meta"><strong>${esc(item.user)}</strong> · ${fmtDateTime(item.fecha)}</div>
-            <div class="tl-card">
-              <p class="tl-txt">Foto agregada · ${esc(item.etiqueta)}</p>
-              <div class="tl-foto-strip">
-                <img src="${esc(item.url)}" alt="Foto ${esc(item.etiqueta)}" loading="lazy" class="tl-foto-img">
-              </div>
-            </div>
-          </div>
-        </div>`;
+    // Agrupar ítems del mismo usuario dentro de una ventana de 60 segundos
+    const groups = [];
+    for (const item of json.data) {
+      const t = new Date(item.fecha).getTime();
+      const last = groups[groups.length - 1];
+      if (last && last.user === item.user && Math.abs(t - last.t) <= 60000) {
+        last.items.push(item);
+        last.t = Math.max(last.t, t);
+      } else {
+        groups.push({ user: item.user, t, fecha: item.fecha, items: [item] });
       }
-      const icon = item.tipo==='hist' ? 'swap_horiz' : 'notes';
-      const cls  = item.tipo==='hist' ? 'tl-hist' : 'tl-obs';
-      return `<div class="tl-item ${cls}">
-        <div class="tl-dot"><span class="material-icons-round">${icon}</span></div>
+    }
+
+    box.innerHTML = groups.map(g => {
+      const hasHist  = g.items.some(i => i.tipo === 'hist');
+      const hasObs   = g.items.some(i => i.tipo === 'obs');
+      const hasFoto  = g.items.some(i => i.tipo === 'foto');
+      const mainCls  = hasHist ? 'tl-hist' : hasFoto ? 'tl-foto' : 'tl-obs';
+      const mainIcon = hasHist ? 'swap_horiz' : hasFoto ? 'photo_camera' : 'notes';
+
+      const bodyParts = g.items.map(item => {
+        if (item.tipo === 'foto') {
+          return `<div class="tl-foto-strip">
+            <img src="${esc(item.url)}" alt="Foto ${esc(item.etiqueta)}" loading="lazy" class="tl-foto-img">
+          </div>`;
+        }
+        return _tlParseTexto(item.texto);
+      }).join('');
+
+      return `<div class="tl-item ${mainCls}">
+        <div class="tl-dot"><span class="material-icons-round">${mainIcon}</span></div>
         <div class="tl-body">
-          <div class="tl-meta"><strong>${esc(item.user)}</strong> · ${fmtDateTime(item.fecha)}</div>
-          <div class="tl-card">${_tlParseTexto(item.texto)}</div>
+          <div class="tl-meta"><strong>${esc(g.user)}</strong> · ${fmtDateTime(g.fecha)}</div>
+          <div class="tl-card">${bodyParts}</div>
         </div>
       </div>`;
     }).join('');
