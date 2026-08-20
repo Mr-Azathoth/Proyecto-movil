@@ -110,13 +110,16 @@ async function uploadNuevoFoto(id_reparacion) {
   }
 }
 
-// ─── Modal DETALLE: hasta 3 fotos, carga y sube inmediato ────────────────────
-let _detFotos = [];
-let _detRepId = 0;
+// ─── Modal DETALLE: hasta 3 fotos, sube al guardar ───────────────────────────
+let _detFotos        = [];   // fotos ya subidas al servidor
+let _pendingDetFotos = [];   // { file, previewUrl } esperando Guardar
+let _detRepId        = 0;
 
 async function loadDetalleFotos(idReparacion) {
   _detRepId  = idReparacion;
   _detFotos  = [];
+  _pendingDetFotos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+  _pendingDetFotos = [];
   _renderDetalleFotos();
   try {
     const r = await apiFetch(`/reparo/api/rep_fotos.php?id=${idReparacion}`);
@@ -131,7 +134,7 @@ function _renderDetalleFotos() {
   if (!grid) return;
 
   const TOTAL = 3;
-  const count = _detFotos.length;
+  const count = _detFotos.length + _pendingDetFotos.length;
   if (counter) {
     counter.textContent = `${count} / ${TOTAL}`;
     counter.className   = 'foto-counter' + (count >= TOTAL ? ' counter-full' : '');
@@ -147,6 +150,15 @@ function _renderDetalleFotos() {
       </button>
     </div>`;
   }
+  for (let i = 0; i < _pendingDetFotos.length; i++) {
+    html += `<div class="foto-thumb foto-thumb-pending">
+      <img src="${_pendingDetFotos[i].previewUrl}" alt="Foto pendiente">
+      <div class="foto-thumb-lbl">Reparación</div>
+      <button type="button" class="foto-thumb-del" data-pending-del="${i}" title="Quitar foto">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>`;
+  }
   for (let i = count; i < TOTAL; i++) {
     html += `<button type="button" class="foto-thumb-add" data-foto-add="1" title="Agregar foto">
       <span class="material-icons-round">add_a_photo</span>
@@ -156,6 +168,14 @@ function _renderDetalleFotos() {
 
   grid.querySelectorAll('[data-foto-del]').forEach(btn => {
     btn.addEventListener('click', () => _deleteFoto(parseInt(btn.dataset.fotoDel)));
+  });
+  grid.querySelectorAll('[data-pending-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.pendingDel);
+      URL.revokeObjectURL(_pendingDetFotos[idx].previewUrl);
+      _pendingDetFotos.splice(idx, 1);
+      _renderDetalleFotos();
+    });
   });
   grid.querySelectorAll('[data-foto-add]').forEach(btn => {
     btn.addEventListener('click', () => document.getElementById('det-foto-input')?.click());
@@ -189,17 +209,37 @@ function initDetalleFotoInput() {
     const files = Array.from(input.files || []);
     input.value = '';
     if (!files.length) return;
-    const slots = 3 - _detFotos.length;
+    const slots = 3 - (_detFotos.length + _pendingDetFotos.length);
     if (slots <= 0) { toast('Ya tienes el máximo de 3 fotos.', 'err'); return; }
     for (const file of files.slice(0, slots)) {
       if (!file.type.startsWith('image/')) continue;
       try {
         const compressed = await compressImage(file);
-        await _uploadDetalleFoto(compressed);
+        _pendingDetFotos.push({ file: compressed, previewUrl: URL.createObjectURL(compressed) });
       } catch(e) { toast('Error al procesar imagen.', 'err'); }
     }
-    if (_detRepId) loadTimeline(_detRepId);
+    _renderDetalleFotos();
   });
+}
+
+async function uploadPendingDetFotos(idReparacion) {
+  if (!_pendingDetFotos.length) return;
+  const pending = _pendingDetFotos.slice();
+  _pendingDetFotos = [];
+  for (const p of pending) {
+    URL.revokeObjectURL(p.previewUrl);
+    const fd = new FormData();
+    fd.append('imagen',        p.file);
+    fd.append('id_reparacion', idReparacion);
+    fd.append('etiqueta',      'Reparación');
+    try {
+      const r = await apiFetch('/reparo/api/upload_rep_img.php', { method: 'POST', body: fd });
+      const j = await r.json();
+      if (!j.ok) toast(j.msg || 'Error al subir foto.', 'err');
+    } catch(e) {
+      toast('Error al subir foto.', 'err');
+    }
+  }
 }
 
 async function _uploadDetalleFoto(file) {

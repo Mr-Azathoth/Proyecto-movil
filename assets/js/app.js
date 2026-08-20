@@ -842,6 +842,7 @@ async function submitActualizar(e) {
     });
     const j = await r.json();
     if (j.ok) {
+      await uploadPendingDetFotos(payload.id);
       const msg = j.data.stock_descontado
         ? '✔ Guardado · Repuestos descontados del inventario'
         : '✔ Guardado.';
