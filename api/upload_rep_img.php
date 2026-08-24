@@ -19,11 +19,6 @@ $chk = $db->prepare("SELECT id_ingreso FROM reparaciones WHERE id_ingreso = ? AN
 $chk->execute([$id_reparacion, $eid]);
 if (!$chk->fetch()) json_err('Servicio no encontrado.', 404);
 
-// Límite de 3 fotos
-$cnt = $db->prepare("SELECT COUNT(*) FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ?");
-$cnt->execute([$id_reparacion, $eid]);
-if ((int) $cnt->fetchColumn() >= 3) json_err('Máximo 3 fotos por servicio.');
-
 $file = $_FILES['imagen'] ?? null;
 if (!$file || $file['error'] !== UPLOAD_ERR_OK) json_err('Error al recibir imagen.');
 if ($file['size'] > 5 * 1024 * 1024) json_err('La imagen supera el límite de 5 MB.');
@@ -43,11 +38,27 @@ if (!move_uploaded_file($file['tmp_name'], $dir . $fname)) json_err('Error al gu
 
 $url = BASE . '/assets/uploads/reparaciones/' . $fname;
 
-$ins = $db->prepare(
-    "INSERT INTO reparacion_fotos (id_empresa, id_reparacion, url, etiqueta, subida_por)
-     VALUES (?, ?, ?, ?, ?)"
-);
-$ins->execute([$eid, $id_reparacion, $url, $etiqueta, uname()]);
-$foto_id = (int) $db->lastInsertId();
+try {
+    $db->beginTransaction();
+    // Límite de 3 fotos con lock para prevenir race condition en uploads paralelos
+    $cnt = $db->prepare("SELECT COUNT(*) FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ? FOR UPDATE");
+    $cnt->execute([$id_reparacion, $eid]);
+    if ((int) $cnt->fetchColumn() >= 3) {
+        $db->rollBack();
+        @unlink($dir . $fname);
+        json_err('Máximo 3 fotos por servicio.');
+    }
+    $ins = $db->prepare(
+        "INSERT INTO reparacion_fotos (id_empresa, id_reparacion, url, etiqueta, subida_por)
+         VALUES (?, ?, ?, ?, ?)"
+    );
+    $ins->execute([$eid, $id_reparacion, $url, $etiqueta, uname()]);
+    $foto_id = (int) $db->lastInsertId();
+    $db->commit();
+} catch (PDOException $e) {
+    $db->rollBack();
+    @unlink($dir . $fname);
+    json_err('Error al registrar la foto.');
+}
 
 json_ok(['id' => $foto_id, 'url' => $url, 'etiqueta' => $etiqueta]);

@@ -104,9 +104,11 @@ async function uploadNuevoFoto(id_reparacion) {
     fd.append('etiqueta', 'Ingreso');
     const r = await apiFetch('/reparo/api/upload_rep_img.php', { method: 'POST', body: fd });
     const j = await r.json();
-    if (!j.ok) console.warn('Error subiendo foto de ingreso:', j.msg);
+    if (!j.ok) toast(j.msg || 'Error al subir la foto de ingreso.', 'err');
   } catch(e) {
-    console.warn('Error subiendo foto:', e);
+    if (e?.message !== 'session_expired' && e?.message !== 'trial_expired') {
+      toast('Error al subir la foto de ingreso.', 'err');
+    }
   }
 }
 
@@ -115,11 +117,13 @@ let _detFotos        = [];   // fotos ya subidas al servidor
 let _pendingDetFotos = [];   // { file, previewUrl } esperando Guardar
 let _detRepId        = 0;
 
-async function loadDetalleFotos(idReparacion) {
-  _detRepId  = idReparacion;
-  _detFotos  = [];
-  _pendingDetFotos.forEach(p => URL.revokeObjectURL(p.previewUrl));
-  _pendingDetFotos = [];
+async function loadDetalleFotos(idReparacion, preservePending = false) {
+  _detRepId = idReparacion;
+  _detFotos = [];
+  if (!preservePending) {
+    _pendingDetFotos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+    _pendingDetFotos = [];
+  }
   _renderDetalleFotos();
   try {
     const r = await apiFetch(`/reparo/api/rep_fotos.php?id=${idReparacion}`);
@@ -226,8 +230,7 @@ async function uploadPendingDetFotos(idReparacion) {
   if (!_pendingDetFotos.length) return;
   const pending = _pendingDetFotos.slice();
   _pendingDetFotos = [];
-  for (const p of pending) {
-    URL.revokeObjectURL(p.previewUrl);
+  const results = await Promise.all(pending.map(async p => {
     const fd = new FormData();
     fd.append('imagen',        p.file);
     fd.append('id_reparacion', idReparacion);
@@ -235,29 +238,14 @@ async function uploadPendingDetFotos(idReparacion) {
     try {
       const r = await apiFetch('/reparo/api/upload_rep_img.php', { method: 'POST', body: fd });
       const j = await r.json();
-      if (!j.ok) toast(j.msg || 'Error al subir foto.', 'err');
+      if (j.ok) { URL.revokeObjectURL(p.previewUrl); return true; }
+      toast(j.msg || 'Error al subir foto.', 'err');
     } catch(e) {
       toast('Error al subir foto.', 'err');
     }
-  }
+    return false;
+  }));
+  // Restaurar al pending las que fallaron para que el usuario pueda reintentar
+  pending.forEach((p, i) => { if (!results[i]) _pendingDetFotos.push(p); });
 }
 
-async function _uploadDetalleFoto(file) {
-  if (_detFotos.length >= 3) { toast('Máximo 3 fotos por servicio.', 'err'); return; }
-  const fd = new FormData();
-  fd.append('imagen',         file);
-  fd.append('id_reparacion',  _detRepId);
-  fd.append('etiqueta',       'Reparación');
-  try {
-    const r = await apiFetch('/reparo/api/upload_rep_img.php', { method: 'POST', body: fd });
-    const j = await r.json();
-    if (j.ok) {
-      _detFotos.push({ id: j.data.id, url: j.data.url, etiqueta: j.data.etiqueta });
-      _renderDetalleFotos();
-    } else {
-      toast(j.msg || 'Error al subir foto.', 'err');
-    }
-  } catch(e) {
-    toast('Error al subir foto.', 'err');
-  }
-}

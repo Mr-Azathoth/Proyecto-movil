@@ -227,11 +227,14 @@ class SearchableSelect {
 }
 
 // ─── VISTA ACTIVA ──────────────────────────────────────────
+const _viewLabels = { servicios:'Servicios', inventario:'Inventario', estadisticas:'Estadísticas', config:'Configuración', soporte:'Soporte' };
 function switchView(name, el) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   document.getElementById('view-'+name).classList.add('active');
   if (el) el.classList.add('active');
+  const mbn = document.querySelector('.mobile-app-name');
+  if (mbn) mbn.textContent = _viewLabels[name] || 'Centrotec';
   if (name === 'servicios')    loadServicios();
   if (name === 'inventario')   loadInventario();
   if (name === 'config')       loadConfigData();
@@ -664,7 +667,19 @@ function _tlParseTexto(texto) {
 
 async function loadTimeline(id) {
   const box = document.getElementById('timeline');
-  box.innerHTML = '<p class="tl-loading">Cargando...</p>';
+  box.innerHTML = [1,2,3].map(() => `<div class="tl-skel-item">
+    <div class="tl-skel-dot tl-skel" style="height:20px"></div>
+    <div class="tl-skel-body">
+      <div class="tl-skel-meta">
+        <div class="tl-skel" style="height:10px;width:70px;border-radius:4px"></div>
+        <div class="tl-skel" style="height:10px;width:45px;border-radius:4px"></div>
+      </div>
+      <div class="tl-skel-card">
+        <div class="tl-skel" style="height:10px;width:100%;border-radius:4px"></div>
+        <div class="tl-skel" style="height:10px;width:60%;border-radius:4px"></div>
+      </div>
+    </div>
+  </div>`).join('');
   try {
     const r = await apiFetch(`/reparo/api/timeline.php?id=${id}`);
     const json = await r.json();
@@ -836,6 +851,8 @@ async function submitActualizar(e) {
     obs:            document.getElementById('det-obs').value.trim(),
     rep_cambios:    _repCambios,
   };
+  const btnGuardar = document.querySelector('#form-actualizar button[type="submit"]');
+  if (btnGuardar) { btnGuardar.disabled = true; }
   try {
     const r = await apiFetch('/reparo/api/reparaciones.php', {
       method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
@@ -849,11 +866,16 @@ async function submitActualizar(e) {
       toast(msg, 'ok');
       if (j.data.stock_descontado) _repuestosCache = null;
       _pendingUndo = [];
-      closeModal('modal-detalle');
+      _repCambios  = [];
+      document.getElementById('det-obs').value = '';
+      loadTimeline(payload.id);
+      loadDetalleFotos(payload.id, true);
       loadServicios();
     } else toast(j.msg, 'err');
   } catch(err) {
     _handleErr('apicall', err);
+  } finally {
+    if (btnGuardar) { btnGuardar.disabled = false; }
   }
 }
 
@@ -873,9 +895,9 @@ function _buildInventarioRow(rep) {
       </button>
       <button type="button" class="btn-row-action btn-inv-del" data-id="${rep.id_repuesto}" data-nombre="${esc(rep.nombre)}" title="Eliminar repuesto" style="color:#f87171">
         <span class="material-icons-round">delete</span>
-      </button>` : ''}
+      </button>
       <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${parseInt(rep.cantidad)+1}" title="Aumentar">+</button>
-      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${Math.max(0,parseInt(rep.cantidad)-1)}" title="Disminuir">−</button>
+      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${Math.max(0,parseInt(rep.cantidad)-1)}" title="Disminuir">−</button>` : ''}
     </div>
   </td>`;
   return `<tr data-inv-id="${rep.id_repuesto}">

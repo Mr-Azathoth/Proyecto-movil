@@ -37,11 +37,17 @@ if ($method === 'DELETE') {
     if (!$foto) json_err('Foto no encontrada.', 404);
 
     // Eliminar archivo físico
-    $url_path  = parse_url($foto['url'], PHP_URL_PATH);
-    $base_path = parse_url(BASE, PHP_URL_PATH);
-    $rel = $base_path ? str_replace($base_path, '', $url_path) : $url_path;
-    $file_path = realpath(__DIR__ . '/..') . $rel;
-    if ($file_path && file_exists($file_path)) @unlink($file_path);
+    $upload_dir = realpath(__DIR__ . '/../assets/uploads/reparaciones');
+    $url_path   = parse_url($foto['url'], PHP_URL_PATH);
+    $base_path  = parse_url(BASE, PHP_URL_PATH);
+    $rel        = ($base_path && strncmp($url_path, $base_path, strlen($base_path)) === 0)
+                    ? substr($url_path, strlen($base_path))
+                    : $url_path;
+    $file_path  = realpath(__DIR__ . '/..') . $rel;
+    $real_path  = $file_path ? realpath($file_path) : false;
+    if ($real_path && $upload_dir && strncmp($real_path, $upload_dir, strlen($upload_dir)) === 0) {
+        @unlink($real_path);
+    }
 
     $db->prepare("DELETE FROM reparacion_fotos WHERE id = ? AND id_empresa = ?")->execute([$foto_id, $eid]);
     json_ok(['msg' => 'Foto eliminada.']);

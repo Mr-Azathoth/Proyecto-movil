@@ -50,7 +50,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Centrotec</title>
 <style nonce="<?= CSP_NONCE ?>">html,body{background:#0d1117;margin:0}</style>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -163,6 +163,9 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <span class="user-role"><?=ucargo()?></span>
         </div>
       </div>
+      <button class="btn-theme-toggle" id="btn-theme-toggle" title="Cambiar tema">
+        <span class="material-icons-round" id="theme-icon">dark_mode</span>
+      </button>
       <a href="<?= BASE ?>/logout.php" class="btn-logout" title="Salir">
         <span class="material-icons-round">logout</span>
       </a>
@@ -862,7 +865,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
               <span>En escritorio puedes arrastrar aquí · JPG / PNG / WebP</span>
             </div>
           </div>
-          <input type="file" id="nuevo-foto-input" accept="image/*" capture="environment" class="foto-hidden-input">
+          <input type="file" id="nuevo-foto-input" accept="image/*" class="foto-hidden-input">
           <div id="nuevo-foto-thumbs" class="foto-thumbs-grid hidden"></div>
         </div>
       </div>
@@ -954,7 +957,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
                 <span class="material-icons-round">add_a_photo</span>
               </button>
             </div>
-            <input type="file" id="det-foto-input" accept="image/*" capture="environment" class="foto-hidden-input" multiple>
+            <input type="file" id="det-foto-input" accept="image/*" class="foto-hidden-input" multiple>
           </div>
         </div>
 
@@ -967,7 +970,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
         <button type="button" class="btn-sec" id="det-boleta-btn" title="Imprimir orden de servicio técnico">
           <span class="material-icons-round">print</span> Orden de servicio
         </button>
-        <button type="button" class="btn-sec" id="det-cancelar">Cancelar</button>
+        <button type="button" class="btn-sec" id="det-cancelar">Cerrar</button>
         <button type="submit" class="btn-primary"><span class="material-icons-round">save</span> Guardar</button>
       </div>
     </form>
@@ -1302,5 +1305,6 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <script src="<?= BASE ?>/assets/js/rep_fotos.js?v=<?= filemtime(__DIR__.'/assets/js/rep_fotos.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/ticket_img.js?v=<?= filemtime(__DIR__.'/assets/js/ticket_img.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/soporte.js?v=<?= filemtime(__DIR__.'/assets/js/soporte.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/theme.js?v=<?= filemtime(__DIR__.'/assets/js/theme.js') ?>"></script>
 </body>
 </html>
