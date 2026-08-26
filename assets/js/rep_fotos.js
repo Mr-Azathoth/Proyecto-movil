@@ -2,22 +2,25 @@
 // ─── Compresión de imagen vía Canvas ─────────────────────────────────────────
 async function compressImage(file, maxW = 1280, quality = 0.82) {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    const blobUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(blobUrl);
-      let { width, height } = img;
-      if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; }
-      const canvas = document.createElement('canvas');
-      canvas.width = width; canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      canvas.toBlob(blob => {
-        if (!blob) { reject(new Error('Compresión fallida')); return; }
-        resolve(new File([blob], 'foto.jpg', { type: 'image/jpeg' }));
-      }, 'image/jpeg', quality);
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('No se pudo cargar la imagen'));
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob(blob => {
+          if (!blob) { reject(new Error('Compresión fallida')); return; }
+          resolve(new File([blob], 'foto.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', quality);
+      };
+      img.src = e.target.result;
     };
-    img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('No se pudo cargar la imagen')); };
-    img.src = blobUrl;
+    reader.readAsDataURL(file);
   });
 }
 
