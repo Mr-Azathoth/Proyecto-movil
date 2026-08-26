@@ -3,7 +3,7 @@ require_once __DIR__ . '/includes/config.php';
 if (logueado()) { header('Location: '.BASE.'/app.php'); exit; }
 
 $token = trim($_GET['token'] ?? '');
-if (!$token) { header('Location: '.BASE.'/index.php'); exit; }
+if (!$token) { header('Location: '.BASE.'/ingresar.php'); exit; }
 
 $db  = getDB();
 $st  = $db->prepare(
@@ -57,7 +57,7 @@ $valid = (bool) $st->fetch();
       </form>
       <div id="rst-err" class="alert-err mt-10" hidden></div>
       <div class="auth-back">
-        <a href="<?= BASE ?>/index.php">← Volver al inicio de sesión</a>
+        <a href="<?= BASE ?>/ingresar.php">← Volver al inicio de sesión</a>
       </div>
     <?php endif; ?>
   </div>

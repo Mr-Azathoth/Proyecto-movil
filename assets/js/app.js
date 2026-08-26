@@ -269,6 +269,7 @@ function debounce(fn, ms) {
   let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(()=>fn(...args), ms); };
 }
 
+
 async function apiFetch(url, options = {}) {
   url = BASE_PATH + url.replace(/^\/reparo/, '');
   const method = (options.method || 'GET').toUpperCase();
@@ -281,7 +282,7 @@ async function apiFetch(url, options = {}) {
   const response = await fetch(url, options);
   if (response.status === 401) {
     toast('Sesión expirada. Redirigiendo...', 'err');
-    setTimeout(() => { window.location.href = BASE_PATH + '/index.php?expired=1'; }, 1500);
+    setTimeout(() => { window.location.href = BASE_PATH + '/ingresar.php?expired=1'; }, 1500);
     throw new Error('session_expired');
   }
   // Trial vencido o plan vencido mid-session: mostrar muro de pago sin destruir sesión
@@ -1632,12 +1633,17 @@ async function loadUsuarios() {
         `<button class="btn-sm btn-sec" data-action="reset-pass" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}">
            <span class="material-icons-round" style="font-size:15px">lock_reset</span> Contraseña
          </button>`;
+      const btnDel = (!esSelf && !esAdmin)
+        ? `<button class="btn-sm btn-danger" data-action="delete-tecnico" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}" title="Eliminar técnico">
+             <span class="material-icons-round" style="font-size:15px">delete</span>
+           </button>`
+        : '';
       const inicial = u.nombre.charAt(0).toUpperCase();
       return `<tr>
         <td><div class="usr-cell"><div class="user-av">${inicial}</div><strong>${esc(u.nombre)}</strong></div></td>
         <td><code class="code-lbl">${esc(u.user)}</code></td>
         <td>${badge}</td>
-        <td><div class="row-actions">${btnCargo}${btnPass}</div></td>
+        <td><div class="row-actions">${btnCargo}${btnPass}${btnDel}</div></td>
       </tr>`;
     }).join('');
   } catch(e) { _handleErr('apicall', e); }
@@ -2129,6 +2135,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const j = await r.json();
         j.ok ? (toast(`✔ ${j.data.msg}`, 'ok'), loadUsuarios()) : toast(j.msg, 'err');
       } catch(e) { _handleErr('apicall', e); }
+    }
+
+    if (btn.dataset.action === 'delete-tecnico') {
+      const nombre = btn.dataset.nombre;
+      showConfirm('Eliminar técnico', `¿Eliminar al técnico "${nombre}"? Esta acción no se puede deshacer.`, async () => {
+        try {
+          const r = await apiFetch('/reparo/api/usuarios.php', {
+            method: 'DELETE', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id_usuario: buid })
+          });
+          const j = await r.json();
+          j.ok ? (toast(`✔ ${j.data.msg}`, 'ok'), loadUsuarios()) : toast(j.msg, 'err');
+        } catch(e) { _handleErr('apicall', e); }
+      });
+      return;
     }
 
     if (btn.dataset.action === 'reset-pass') {

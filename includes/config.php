@@ -128,7 +128,7 @@ function session_check_timeout(int $segundos = 3600): void {
             $p = session_get_cookie_params();
             setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
         }
-        header('Location: '.BASE.'/index.php?expired=1');
+        header('Location: '.BASE.'/ingresar.php?expired=1');
         exit;
     }
 }
@@ -139,7 +139,7 @@ function requireLogin(): void {
         $here = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
               . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
         $_SESSION['redirect_after_login'] = $here;
-        header('Location: '.BASE.'/index.php'); exit;
+        header('Location: '.BASE.'/ingresar.php'); exit;
     }
     session_check_timeout();
     $_SESSION['last_activity'] = time();
@@ -360,10 +360,10 @@ function guard(): void {
 }
 
 // Registra acciones críticas en la tabla log_acciones
-function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null): void {
+function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null, ?array $entrada = null, ?array $salida = null): void {
     $pdo->prepare(
-        "INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip)
-         VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip, datos_entrada, datos_salida)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
         eid(),
         $_SESSION['user_id'] ?? null,
@@ -371,6 +371,8 @@ function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null): void 
         $accion,
         $id_reparacion,
         explode(',', $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')[0],
+        $entrada !== null ? json_encode($entrada, JSON_UNESCAPED_UNICODE) : null,
+        $salida  !== null ? json_encode($salida,  JSON_UNESCAPED_UNICODE) : null,
     ]);
 }
 

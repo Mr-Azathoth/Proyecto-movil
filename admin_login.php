@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
 
     <div style="text-align:center;margin-top:20px;">
-      <a href="<?= BASE ?>/index.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
+      <a href="<?= BASE ?>/ingresar.php" style="font-size:13px;color:var(--txt2);text-decoration:none;">
         ← Acceso para clientes
       </a>
     </div>

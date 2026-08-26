@@ -23,38 +23,47 @@ $db  = getDB();
 // Migración silenciosa — columna usada más abajo; registro.php llega aquí sin pasar por suscripcion.php
 try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); } catch(PDOException $e) {}
 
-function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string $gateway = ''): void {
-    $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa = ?");
-    $row->execute([$eid]);
-    $actual = $row->fetchColumn();
-
-    // Si el plan vigente no ha vencido aún, extender desde ese día. Si ya venció, desde hoy.
-    $base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
-    $nuevaFecha = date('Y-m-d', strtotime($base . " +{$planInfo['meses']} month"));
-    $label      = $gateway ? 'Suscripción Centrotec – ' . $planInfo['nombre'] . ' – ' . $gateway
-                           : 'Suscripción Centrotec – ' . $planInfo['nombre'];
-
-    $db->beginTransaction();
+function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string $gateway = '', string $paymentId = ''): bool {
     try {
-        $db->prepare(
-            "UPDATE empresas
-             SET activa=1, plan_estado='Activo', plan_tipo=?, plan_vencimiento=?
-             WHERE id_empresa=?"
-        )->execute([$planInfo['nombre'], $nuevaFecha, $eid]);
+        $db->beginTransaction();
+
+        if ($paymentId !== '') {
+            // Idempotencia atómica: lock fila y verificar si este pago ya fue procesado
+            $lock = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1 FOR UPDATE");
+            $lock->execute([$eid]);
+            if ($lock->fetchColumn() === $paymentId) {
+                $db->rollBack();
+                return false;
+            }
+        }
+
+        $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa = ?");
+        $row->execute([$eid]);
+        $actual = $row->fetchColumn();
+
+        $base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
+        $nuevaFecha = date('Y-m-d', strtotime($base . " +{$planInfo['meses']} month"));
+        $label      = $gateway ? 'Suscripción Centrotec – ' . $planInfo['nombre'] . ' – ' . $gateway
+                               : 'Suscripción Centrotec – ' . $planInfo['nombre'];
+
+        if ($paymentId !== '') {
+            $db->prepare(
+                "UPDATE empresas SET activa=1, plan_estado='Activo', plan_tipo=?, plan_vencimiento=?, mp_preapproval_id=? WHERE id_empresa=?"
+            )->execute([$planInfo['nombre'], $nuevaFecha, $paymentId, $eid]);
+        } else {
+            $db->prepare(
+                "UPDATE empresas SET activa=1, plan_estado='Activo', plan_tipo=?, plan_vencimiento=? WHERE id_empresa=?"
+            )->execute([$planInfo['nombre'], $nuevaFecha, $eid]);
+        }
 
         $db->prepare(
-            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado)
-             VALUES (?, ?, ?, ?, ?)"
-        )->execute([
-            $eid,
-            date('Y-m-d'),
-            $planInfo['precio'],
-            $label,
-            $estado,
-        ]);
+            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado) VALUES (?, ?, ?, ?, ?)"
+        )->execute([$eid, date('Y-m-d'), $planInfo['precio'], $label, $estado]);
+
         $db->commit();
+        return true;
     } catch (Throwable $e) {
-        $db->rollBack();
+        if ($db->inTransaction()) $db->rollBack();
         throw $e;
     }
 }
@@ -103,19 +112,13 @@ if ($gateway === 'mp_checkout') {
                         if (($payment['status'] ?? '') === 'approved') {
                             $planInfo = MP_PLANES[$planKey];
 
-                            // Activar plan y guardar payment_id en la misma transacción (evita race con webhook)
-                            $db->beginTransaction();
                             try {
-                                activar_plan($db, $refEid, $planInfo, 'Pagado', 'Mercado Pago');
-                                $db->prepare("UPDATE empresas SET mp_preapproval_id=? WHERE id_empresa=?")
-                                   ->execute([$paymentId, $refEid]);
-                                $db->commit();
+                                $activado = activar_plan($db, $refEid, $planInfo, 'Pagado', 'Mercado Pago', $paymentId);
                             } catch(Throwable $e) {
-                                $db->rollBack();
+                                error_log('[retorno] activar_plan FAILED | eid=' . $refEid . ' | payment=' . $paymentId . ' | err=' . $e->getMessage());
+                                $activado = false;
                             }
-
-                            $activado     = true;
-                            $pago_via_api = true; // auto-login solo si la API confirmó en esta request
+                            $pago_via_api = $activado;
 
                             // Correo de confirmación
                             try {
@@ -163,7 +166,7 @@ if ($gateway === 'mp_checkout') {
              FROM usuarios u
              JOIN empresas e ON e.id_empresa = u.id_empresa
              WHERE u.id_empresa = ? AND u.activo = 1
-             ORDER BY u.id_usuario ASC LIMIT 1"
+             ORDER BY (u.cargo = 'Admin') DESC, u.id_usuario ASC LIMIT 1"
         );
         $row->execute([$refEid]);
         $u = $row->fetch();
@@ -189,7 +192,7 @@ if ($gateway === 'mp_sub') {
         $here = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
               . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
         $_SESSION['redirect_after_login'] = $here;
-        header('Location: ' . BASE . '/index.php?pago_pendiente=1'); exit;
+        header('Location: ' . BASE . '/ingresar.php?pago_pendiente=1'); exit;
     }
     if ($preapprovalId) {
         // Evitar activar dos veces el mismo preapproval
@@ -231,12 +234,12 @@ if ($gateway === 'mp_sub') {
                     }
                 }
                 if ($planInfo) {
-                    activar_plan($db, $eid, $planInfo, 'Pagado', 'Mercado Pago');
                     try {
-                        $db->prepare("UPDATE empresas SET mp_preapproval_id=? WHERE id_empresa=?")
-                           ->execute([$preapprovalId, $eid]);
-                    } catch(PDOException $e) {}
-                    $activado = true;
+                        $activado = activar_plan($db, $eid, $planInfo, 'Pagado', 'Mercado Pago', $preapprovalId);
+                    } catch(Throwable $e) {
+                        error_log('[retorno/mp_sub] activar_plan FAILED | eid=' . $eid . ' | err=' . $e->getMessage());
+                        $activado = false;
+                    }
 
                     // Correo de confirmación de suscripción
                     try {

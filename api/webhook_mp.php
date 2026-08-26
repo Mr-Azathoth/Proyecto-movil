@@ -17,13 +17,18 @@ preg_match('/(?:^|&)type=([^&]*)/',     $rawQuery, $mType);
 $id    = isset($mId[1])   ? urldecode($mId[1])   : ($data['data']['id'] ?? '');
 $topic = isset($mType[1]) ? urldecode($mType[1]) : ($data['type']       ?? '');
 
+// Log headers para debug de HMAC (temporal)
+$xSigRaw  = $_SERVER['HTTP_X_SIGNATURE']  ?? '';
+$xReqRaw  = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
+error_log('[webhook_mp] HIT | topic=' . $topic . ' | id=' . $id . ' | x-sig=' . $xSigRaw . ' | x-req-id=' . $xReqRaw);
+
 // Solo procesar notificaciones de pago
 if ($topic !== 'payment' || !$id) exit;
 
 // Verificar firma HMAC si está configurada (clave secreta del panel MP)
 if (MP_WEBHOOK_SECRET) {
-    $xSignature = $_SERVER['HTTP_X_SIGNATURE'] ?? '';
-    $xRequestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? '';
+    $xSignature = $xSigRaw;
+    $xRequestId = $xReqRaw;
 
     $ts = ''; $v1 = '';
     foreach (explode(',', $xSignature) as $part) {
@@ -32,13 +37,19 @@ if (MP_WEBHOOK_SECRET) {
         if (trim($k) === 'v1') $v1 = trim($v);
     }
 
-    // El manifest usa data.id en minúsculas según la doc de MP
-    $manifest = 'id:' . strtolower($id) . ';request-id:' . $xRequestId . ';ts:' . $ts . ';';
-    $expected = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
+    // Si el proxy (Cloudflare) stripeó x-signature o x-request-id, no podemos validar HMAC.
+    // Fallback: la verificación contra la API de MP garantiza que el pago es legítimo.
+    if ($v1 === '' || $xRequestId === '') {
+        error_log('[webhook_mp] skip HMAC (headers ausentes) | v1=' . ($v1 ?: 'vacío') . ' | xreqid=' . ($xRequestId ?: 'vacío'));
+    } else {
+        // El manifest usa data.id en minúsculas según la doc de MP
+        $manifest = 'id:' . strtolower($id) . ';request-id:' . $xRequestId . ';ts:' . $ts;
+        $expected = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
 
-    if (!hash_equals($expected, $v1)) {
-        error_log('[webhook_mp] firma HMAC inválida');
-        exit;
+        if (!hash_equals($expected, $v1)) {
+            error_log('[webhook_mp] HMAC fail | manifest=' . $manifest . ' | xsig=' . $xSignature . ' | xreqid=' . $xRequestId);
+            exit;
+        }
     }
 }
 
@@ -69,23 +80,24 @@ if (!isset(MP_PLANES[$planKey])) exit;
 
 $db = getDB();
 
-try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id VARCHAR(80) NULL DEFAULT NULL"); } catch(PDOException $e) {}
-
-// Idempotencia: no activar dos veces el mismo pago
-$already = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1");
-$already->execute([$eid]);
-if ($already->fetchColumn() === (string)$id) exit;
-
-// Activar plan
-function activar_plan_webhook(PDO $db, int $eid, array $planInfo, string $estado, string $paymentId): void {
-    $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa=?");
-    $row->execute([$eid]);
-    $actual = $row->fetchColumn();
-    $base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
-    $nuevaFecha = date('Y-m-d', strtotime($base . " +{$planInfo['meses']} month"));
-
-    $db->beginTransaction();
+// Activar plan con idempotencia atómica (SELECT FOR UPDATE evita race condition con retorno.php)
+function activar_plan_webhook(PDO $db, int $eid, array $planInfo, string $estado, string $paymentId): bool {
     try {
+        $db->beginTransaction();
+
+        $lock = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1 FOR UPDATE");
+        $lock->execute([$eid]);
+        if ($lock->fetchColumn() === (string)$paymentId) {
+            $db->rollBack();
+            return false;
+        }
+
+        $row = $db->prepare("SELECT plan_vencimiento FROM empresas WHERE id_empresa=?");
+        $row->execute([$eid]);
+        $actual     = $row->fetchColumn();
+        $base       = ($actual && strtotime($actual) > time()) ? $actual : date('Y-m-d');
+        $nuevaFecha = date('Y-m-d', strtotime($base . " +{$planInfo['meses']} month"));
+
         $db->prepare(
             "UPDATE empresas SET activa=1, plan_estado='Activo', plan_tipo=?, plan_vencimiento=?, mp_preapproval_id=? WHERE id_empresa=?"
         )->execute([$planInfo['nombre'], $nuevaFecha, $paymentId, $eid]);
@@ -93,8 +105,15 @@ function activar_plan_webhook(PDO $db, int $eid, array $planInfo, string $estado
         $db->prepare(
             "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado) VALUES (?,?,?,?,?)"
         )->execute([$eid, date('Y-m-d'), $planInfo['precio'], 'Pago Centrotec — Plan ' . $planInfo['nombre'] . ' — Mercado Pago', $estado]);
+
         $db->commit();
-    } catch(Throwable $e) { $db->rollBack(); }
+        return true;
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        error_log('[webhook_mp] activar_plan FAILED | eid=' . $eid . ' | payment=' . $paymentId . ' | err=' . $e->getMessage());
+        return false;
+    }
 }
 
-activar_plan_webhook($db, $eid, MP_PLANES[$planKey], 'Pagado', $id);
+$activado = activar_plan_webhook($db, $eid, MP_PLANES[$planKey], 'Pagado', $id);
+error_log('[webhook_mp] resultado=' . ($activado ? 'ACTIVADO' : 'ya-procesado') . ' | eid=' . $eid . ' | plan=' . $planKey . ' | payment=' . $id);

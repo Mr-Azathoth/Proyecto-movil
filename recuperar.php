@@ -49,7 +49,7 @@ if (logueado()) { header('Location: '.BASE.'/app.php'); exit; }
     </div>
 
     <div class="auth-back">
-      <a href="<?= BASE ?>/index.php">← Volver al inicio de sesión</a>
+      <a href="<?= BASE ?>/ingresar.php">← Volver al inicio de sesión</a>
     </div>
   </div>
 </div>

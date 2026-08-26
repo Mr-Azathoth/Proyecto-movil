@@ -73,7 +73,7 @@ if (rstForm) {
       const r = await fetch('/api/reset_password.php', { method: 'POST', body: fd });
       const j = await r.json();
       if (j.ok) {
-        window.location.href = '/index.php?reset=1';
+        window.location.href = '/ingresar.php?reset=1';
       } else {
         err.textContent = j.msg || 'Error al actualizar la contraseña.';
         err.removeAttribute('hidden');

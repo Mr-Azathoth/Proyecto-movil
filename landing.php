@@ -83,7 +83,7 @@ $planes = [
       Seguir reparación
     </a></li>
     <li><a href="#precios" class="nav-ghost nav-cta">Precios</a></li>
-    <li><a href="<?= BASE ?>/" class="nav-ghost nav-cta">Ingresar</a></li>
+    <li><a href="<?= BASE ?>/ingresar.php" class="nav-ghost nav-cta">Ingresar</a></li>
     <li><a href="<?= BASE ?>/registro.php" class="nav-cta">Empezar gratis</a></li>
   </ul>
 </nav>
@@ -473,6 +473,39 @@ foreach($planes as $plan):
     <span>Hecho con dedicación en Chile</span>
   </div>
 </footer>
+
+<!-- WhatsApp flotante -->
+<a id="wa-btn" href="https://wa.me/56967791247?text=Hola%2C%20quiero%20saber%20m%C3%A1s%20sobre%20Centrotec" target="_blank" rel="noopener" aria-label="Contactar por WhatsApp">
+  <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M16 3C8.82 3 3 8.82 3 16c0 2.34.64 4.58 1.76 6.52L3 29l6.64-1.74A12.93 12.93 0 0 0 16 29c7.18 0 13-5.82 13-13S23.18 3 16 3z" fill="#fff"/>
+    <path d="M22.46 19.86c-.3-.15-1.77-.87-2.04-.97-.28-.1-.48-.15-.68.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-1.77-.88-2.93-1.57-4.1-3.56-.31-.53.31-.5.9-1.65.1-.2.05-.37-.03-.52-.07-.15-.68-1.63-.93-2.23-.24-.58-.49-.5-.68-.51-.17-.01-.37-.01-.57-.01s-.52.07-.8.37c-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.87 1.22 3.07.15.2 2.1 3.2 5.1 4.49 1.89.82 2.63.89 3.58.75.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z" fill="#25d366"/>
+  </svg>
+</a>
+<div id="wa-bubble" role="status" aria-live="polite">
+  <button id="wa-bubble-close" aria-label="Cerrar">×</button>
+  ¿Tienes dudas? Escríbenos
+  <span class="wa-bubble-sub">Respondemos en minutos</span>
+</div>
+
+<script>
+(function() {
+  var bubble = document.getElementById('wa-bubble');
+  var closeBtn = document.getElementById('wa-bubble-close');
+  bubble.classList.add('wa-hidden');
+
+  // Mostrar burbuja a los 3s si el usuario no la cerró antes
+  var shown = sessionStorage.getItem('wa_bubble_closed');
+  if (!shown) {
+    setTimeout(function() { bubble.classList.remove('wa-hidden'); }, 3000);
+  }
+
+  closeBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    bubble.classList.add('wa-hidden');
+    sessionStorage.setItem('wa_bubble_closed', '1');
+  });
+})();
+</script>
 
 <script src="<?= BASE ?>/assets/js/landing.js?v=<?= filemtime(__DIR__.'/assets/js/landing.js') ?>"></script>
 </body>

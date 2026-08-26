@@ -136,8 +136,20 @@ function fmt_fecha(string $fecha): string {
 
 <nav class="seg-nav">
   <a href="<?= BASE ?>/landing.php" class="seg-nav-logo">
-    <div class="seg-nav-icon">C</div>
-    <span>Centrotec</span>
+    <svg viewBox="0 0 400 110" xmlns="http://www.w3.org/2000/svg" aria-label="Centrotec">
+      <path d="M 62 38 A 20 20 0 1 0 62 65" stroke="#50d2ff" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <line x1="62" y1="38" x2="72" y2="38" stroke="#50d2ff" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="74" cy="38" r="2" fill="#50d2ff"/>
+      <line x1="74" y1="38" x2="74" y2="29" stroke="rgba(80,210,255,.45)" stroke-width="1"/>
+      <line x1="62" y1="65" x2="72" y2="65" stroke="#50d2ff" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="74" cy="65" r="2" fill="#50d2ff"/>
+      <line x1="74" y1="65" x2="74" y2="74" stroke="rgba(80,210,255,.45)" stroke-width="1"/>
+      <line x1="26" y1="48" x2="36" y2="48" stroke="rgba(80,210,255,.4)" stroke-width="1"/>
+      <circle cx="24" cy="48" r="2" fill="rgba(80,210,255,.55)"/>
+      <line x1="26" y1="56" x2="36" y2="56" stroke="rgba(80,210,255,.4)" stroke-width="1"/>
+      <circle cx="24" cy="56" r="2" fill="rgba(80,210,255,.55)"/>
+      <text x="82" y="77" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="44" font-weight="400" letter-spacing="2" fill="#e8f4ff">ENTROTEC</text>
+    </svg>
   </a>
 </nav>
 
