@@ -173,7 +173,7 @@ if ($method === 'POST') {
                        WHERE id_repuesto = ? AND id_empresa = ? AND (cantidad - cantidad_reservada) > 0")
            ->execute([$id_repuesto_inicial, $eid]);
     }
-    log_accion($db, 'nueva_reparacion', $newId);
+    log_accion($db, 'nueva_reparacion', $newId, $f, ['id' => $newId, 'codigo_seguimiento' => $codigo]);
 
     $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user)
                   VALUES (?, ?, '', ?, ?)")
@@ -220,15 +220,24 @@ if ($method === 'PUT') {
 
     $obs_txt = trim($in['obs'] ?? '');
 
+    $nuevo_tel = null;
+    if (array_key_exists('telefono_cliente', $in)) {
+        $t = trim((string)($in['telefono_cliente'] ?? ''));
+        if (strlen($t) > 30) json_err('Teléfono demasiado largo.');
+        $nuevo_tel = $t ?: $row['telefono_cliente'];
+    } else {
+        $nuevo_tel = $row['telefono_cliente'];
+    }
+
     $ya_descontado = (bool) ($row['stock_descontado'] ?? 0);
     $stock_dec = 0;
 
     $db->beginTransaction();
     try {
         $db->prepare("UPDATE reparaciones
-                      SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?
+                      SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?, telefono_cliente = ?
                       WHERE id_ingreso = ? AND id_empresa = ?")
-           ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $id, $eid]);
+           ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $nuevo_tel, $id, $eid]);
 
         // Gestión de reservas al cambiar el repuesto inicial
         $id_rep_ant_v            = $row['id_repuesto_usado'] !== null ? (int)$row['id_repuesto_usado'] : null;
@@ -305,7 +314,7 @@ if ($method === 'PUT') {
                 $v_ant   = '$' . number_format($base_valor, 0, ',', '.');
                 $v_new   = '$' . number_format($nuevo_valor, 0, ',', '.');
                 $val_txt = "Valor modificado: {$v_ant} → {$v_new}";
-                log_accion($db, 'cambio_valor', $id);
+                log_accion($db, 'cambio_valor', $id, ['valor_anterior' => $base_valor, 'valor_nuevo' => $nuevo_valor]);
             }
         }
 
@@ -354,7 +363,7 @@ if ($method === 'PUT') {
             $db->prepare("INSERT INTO historial (id_empresa, id_reparacion, status_anterior, status_cambio, user, detalle)
                           VALUES (?, ?, ?, ?, ?, ?)")
                ->execute([$eid, $id, $row['status'], $nuevo_status, uname(), $detalle]);
-            log_accion($db, 'cambio_status', $id);
+            log_accion($db, 'cambio_status', $id, ['status_anterior' => $row['status'], 'status_nuevo' => $nuevo_status]);
             $val_txt = '';
             $rep_txt = '';
             $obs_txt = '';
@@ -411,6 +420,6 @@ if ($method === 'DELETE') {
     $db->prepare("UPDATE reparaciones SET deleted_at = NOW() WHERE id_ingreso = ? AND id_empresa = ?")
        ->execute([$id, $eid]);
 
-    log_accion($db, 'eliminacion', $id);
+    log_accion($db, 'eliminacion', $id, ['id' => $id, 'cliente' => $rep_del['id_ingreso'] ?? $id]);
     json_ok(['msg' => "Servicio #{$id} eliminado."]);
 }

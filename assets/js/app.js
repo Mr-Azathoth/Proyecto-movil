@@ -511,7 +511,7 @@ function openDetalle(rep) {
   _pendingUndo = [];
   document.getElementById('det-id').textContent      = rep.id_ingreso;
   document.getElementById('det-cliente').textContent = rep.nombre_cliente;
-  document.getElementById('det-tel').textContent     = rep.telefono_cliente || '—';
+  document.getElementById('det-tel').value            = rep.telefono_cliente || '';
   document.getElementById('det-equipo').textContent  = `${rep.marca_ingreso} ${rep.modelo_ingreso} (${rep.tipo_ingreso})`;
   document.getElementById('det-imei').textContent    = `IMEI: ${rep.imei||'—'} · Clave: ${rep.pass_ingreso||'—'}`;
   document.getElementById('det-daño').textContent    = rep.dano_ingreso;
@@ -844,13 +844,20 @@ async function _undoPendingChanges() {
 
 async function submitActualizar(e) {
   e.preventDefault();
+  const telRaw = document.getElementById('det-tel').value.trim();
+  const telDigits = telRaw.replace(/\D/g, '').replace(/^56/, '');
+  if (telRaw && telDigits.length !== 9) {
+    toast('Teléfono inválido. Ingresa 9 dígitos (sin código de país).', 'err');
+    return;
+  }
   const payload = {
-    id:             parseInt(document.getElementById('det-hidden-id').value),
-    status:         document.getElementById('det-status').value,
-    valor:          parseInt(document.getElementById('det-valor').value || 0),
-    valor_original: _valOriginal,
-    obs:            document.getElementById('det-obs').value.trim(),
-    rep_cambios:    _repCambios,
+    id:                parseInt(document.getElementById('det-hidden-id').value),
+    status:            document.getElementById('det-status').value,
+    valor:             parseInt(document.getElementById('det-valor').value || 0),
+    valor_original:    _valOriginal,
+    obs:               document.getElementById('det-obs').value.trim(),
+    rep_cambios:       _repCambios,
+    telefono_cliente:  telRaw || null,
   };
   const btnGuardar = document.querySelector('#form-actualizar button[type="submit"]');
   if (btnGuardar) { btnGuardar.disabled = true; }

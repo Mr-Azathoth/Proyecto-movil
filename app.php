@@ -897,7 +897,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
         <div class="det-left">
           <div class="info-block">
             <p><span class="info-lbl">Cliente</span><span class="info-val" id="det-cliente"></span></p>
-            <p><span class="info-lbl">Teléfono</span><span class="info-val" id="det-tel"></span></p>
+            <p><span class="info-lbl">Teléfono</span><input class="info-val info-val-input" id="det-tel" type="tel" placeholder="+56 9 XXXX XXXX" maxlength="30"></p>
             <p><span class="info-lbl">Equipo</span><span class="info-val" id="det-equipo"></span></p>
             <p class="info-sm"><span class="info-lbl">Ingresado por</span><span class="info-val" id="det-tecnico"></span></p>
             <p class="info-sm"><span class="info-lbl">Código seguimiento</span><span class="info-val" id="det-codigo"></span></p>
