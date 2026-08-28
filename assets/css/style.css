@@ -474,8 +474,13 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 .info-block p { display:flex; flex-direction:column; gap:1px; font-size:12.5px; line-height:1.35; margin:0; grid-column:span 2; }
 .info-lbl   { font-size:10.5px; font-weight:600; color:var(--txt3); text-transform:uppercase; letter-spacing:.03em; }
 .info-val   { color:var(--txt); }
-.info-val-input { background:transparent; border:none; border-bottom:1px solid var(--border); border-radius:0; padding:1px 0; font-size:inherit; color:var(--txt); width:100%; outline:none; font-family:inherit; }
-.info-val-input:focus { border-bottom-color:var(--accent); }
+.info-tel-wrap { display:flex; align-items:center; gap:4px; }
+.info-val-input { background:transparent; border:none; border-bottom:1px solid transparent; border-radius:0; padding:1px 0; font-size:inherit; color:var(--txt); width:100%; outline:none; font-family:inherit; }
+.info-val-input:not([readonly]) { border-bottom-color:var(--border); }
+.info-val-input:not([readonly]):focus { border-bottom-color:var(--accent); }
+.tel-edit-btn { background:none; border:none; padding:0; cursor:pointer; color:var(--txt3); display:flex; line-height:1; flex-shrink:0; }
+.tel-edit-btn:hover { color:var(--accent); }
+.tel-edit-btn .material-icons-round { font-size:14px; }
 .info-block p.info-full { grid-column:1/-1; }
 .info-block p.info-sm   { grid-column:span 1; }
 .timeline-list { display:flex; flex-direction:column; overflow-y:auto; padding-right:4px; }

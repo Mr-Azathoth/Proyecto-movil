@@ -511,7 +511,28 @@ function openDetalle(rep) {
   _pendingUndo = [];
   document.getElementById('det-id').textContent      = rep.id_ingreso;
   document.getElementById('det-cliente').textContent = rep.nombre_cliente;
-  document.getElementById('det-tel').value            = rep.telefono_cliente || '';
+  const telInput = document.getElementById('det-tel');
+  const telBtn   = document.getElementById('det-tel-edit');
+  telInput.value = rep.telefono_cliente || '';
+  telInput.setAttribute('readonly', '');
+  if (telBtn) {
+    telBtn.innerHTML = '<span class="material-icons-round">edit</span>';
+    telBtn.title = 'Editar teléfono';
+    telBtn.onclick = () => {
+      const isEditing = !telInput.hasAttribute('readonly');
+      if (isEditing) {
+        telInput.setAttribute('readonly', '');
+        telBtn.innerHTML = '<span class="material-icons-round">edit</span>';
+        telBtn.title = 'Editar teléfono';
+      } else {
+        telInput.removeAttribute('readonly');
+        telInput.focus();
+        telInput.select();
+        telBtn.innerHTML = '<span class="material-icons-round">check</span>';
+        telBtn.title = 'Confirmar';
+      }
+    };
+  }
   document.getElementById('det-equipo').textContent  = `${rep.marca_ingreso} ${rep.modelo_ingreso} (${rep.tipo_ingreso})`;
   document.getElementById('det-imei').textContent    = `IMEI: ${rep.imei||'—'} · Clave: ${rep.pass_ingreso||'—'}`;
   document.getElementById('det-daño').textContent    = rep.dano_ingreso;
