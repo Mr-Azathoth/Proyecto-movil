@@ -68,12 +68,13 @@ if ($method === 'POST') {
     // Logo
     if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
         $file    = $_FILES['logo'];
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        $mime    = mime_content_type($file['tmp_name']);
-        if (!in_array($mime, $allowed)) json_err('Tipo de imagen no permitido (jpg, png, webp, gif).');
+        $mime_map = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+        $mime     = mime_content_type($file['tmp_name']);
+        if (!array_key_exists($mime, $mime_map)) json_err('Tipo de imagen no permitido (jpg, png, webp, gif).');
         if ($file['size'] > 2 * 1024 * 1024) json_err('La imagen debe ser menor a 2 MB.');
 
-        $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        // Extensión derivada del MIME real, nunca del nombre de archivo del usuario
+        $ext      = $mime_map[$mime];
         $filename = "logo_{$eid}_" . time() . "." . $ext;
         $dir      = __DIR__ . '/../assets/uploads/';
         if (!is_dir($dir)) mkdir($dir, 0755, true);

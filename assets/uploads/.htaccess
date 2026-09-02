@@ -1,0 +1,9 @@
+# Bloquear ejecución de scripts en uploads — previene PHP/CGI upload exploit
+<FilesMatch "\.(php|php\d|phtml|phar|pl|py|cgi|sh|exe|jsp|asp|aspx)$">
+    Require all denied
+</FilesMatch>
+
+# Forzar todos los archivos como descarga/imagen, nunca ejecutar
+Options -ExecCGI
+RemoveHandler .php .php3 .php4 .php5 .php7 .phtml .phar
+RemoveType .php .php3 .php4 .php5 .php7 .phtml .phar

@@ -1,0 +1,8 @@
+# Heredado del directorio padre — bloqueo explícito también aquí
+<FilesMatch "\.(php|php\d|phtml|phar|pl|py|cgi|sh|exe|jsp|asp|aspx)$">
+    Require all denied
+</FilesMatch>
+
+Options -ExecCGI
+RemoveHandler .php .php3 .php4 .php5 .php7 .phtml .phar
+RemoveType .php .php3 .php4 .php5 .php7 .phtml .phar
