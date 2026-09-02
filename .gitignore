@@ -22,3 +22,7 @@ node_modules/
 # ── Composer binario (no va al repo) ─────────────────────────
 composer.phar
 composer-setup.php
+
+# ── Docs generados automáticamente ───────────────────────────
+PRODUCT.md
+docs/web-to-mobile/
