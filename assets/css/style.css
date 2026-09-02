@@ -1564,7 +1564,7 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
   border-top: 1px solid var(--border1, rgba(255,255,255,.07));
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 .cfg-tipo-header {
   display: flex;
@@ -1588,6 +1588,9 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
   font-size: 13px;
   color: var(--txt2);
   line-height: 1.55;
+}
+.sel-wrap {
+  margin-bottom: 8px;
 }
 .sel-wrap select {
   width: 100%;
