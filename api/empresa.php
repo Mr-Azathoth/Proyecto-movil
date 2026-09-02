@@ -46,7 +46,7 @@ if ($method === 'PUT') {
     $vals[] = $eid;
     $db->prepare("UPDATE empresas SET " . implode(', ', $sets) . " WHERE id_empresa = ?")
        ->execute($vals);
-    log_accion($db, 'empresa_contacto_actualizado', null);
+    log_accion($db, 'empresa_contacto_actualizado', null, array_intersect_key($in, array_flip($allowed)));
     json_ok(['msg' => 'Datos guardados.']);
 }
 
@@ -90,7 +90,7 @@ if ($method === 'POST') {
     $vals[] = $eid;
     $db->prepare("UPDATE empresas SET " . implode(', ', $sets) . " WHERE id_empresa = ?")
        ->execute($vals);
-    log_accion($db, 'empresa_identidad_actualizada', null);
+    log_accion($db, 'empresa_identidad_actualizada', null, ['nombre' => $nombre ?: null, 'logo_subido' => isset($_FILES['logo'])]);
 
     $s = $db->prepare("SELECT nombre, logo_path FROM empresas WHERE id_empresa = ?");
     $s->execute([$eid]);

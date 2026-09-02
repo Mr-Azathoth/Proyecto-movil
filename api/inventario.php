@@ -72,7 +72,8 @@ if ($method === 'POST') {
        ->execute([$eid, $f['codigo'], $f['nombre'], $f['marca_compatible'],
                   $f['modelo_compatible'], $f['precio_venta'], $f['cantidad']]);
 
-    log_accion($db, 'repuesto_creado_inv', null);
+    $newRid = (int) $db->lastInsertId();
+    log_accion($db, 'repuesto_creado_inv', null, $f, ['id' => $newRid]);
     json_ok(['msg' => 'Repuesto agregado.']);
 }
 
@@ -102,7 +103,7 @@ if ($method === 'PUT') {
                 cantidad=?, cantidad_reservada = LEAST(cantidad_reservada, ?)
             WHERE id_repuesto=? AND id_empresa=?")
            ->execute([$nombre, $marca, $modelo, $precio, $qty, $qty, $rid, $eid]);
-        log_accion($db, 'repuesto_editado_inv', null);
+        log_accion($db, 'repuesto_editado_inv', null, ['id' => $rid, 'nombre' => $nombre, 'precio_venta' => $precio, 'cantidad' => $qty]);
         json_ok(['msg' => 'Repuesto actualizado.']);
     }
 
@@ -110,7 +111,7 @@ if ($method === 'PUT') {
     $qty = max(0, (int) ($in['cantidad'] ?? 0));
     $db->prepare("UPDATE inventario SET cantidad=?, cantidad_reservada = LEAST(cantidad_reservada, ?) WHERE id_repuesto=? AND id_empresa=?")
        ->execute([$qty, $qty, $rid, $eid]);
-    log_accion($db, 'stock_actualizado_inv', null);
+    log_accion($db, 'stock_actualizado_inv', null, ['id' => $rid, 'cantidad_nueva' => $qty]);
     json_ok(['msg' => 'Stock actualizado.']);
 }
 
@@ -122,6 +123,6 @@ if ($method === 'DELETE') {
     $st = $db->prepare("UPDATE inventario SET deleted_at = NOW() WHERE id_repuesto=? AND id_empresa=? AND deleted_at IS NULL");
     $st->execute([$rid, $eid]);
     if ($st->rowCount() === 0) json_err('Repuesto no encontrado.');
-    log_accion($db, 'repuesto_eliminado', $rid);
+    log_accion($db, 'repuesto_eliminado', null, ['id' => $rid]);
     json_ok(['msg' => 'Repuesto eliminado.']);
 }

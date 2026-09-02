@@ -44,7 +44,7 @@ function fmtNum(int $n): string  { return '$' . number_format($n, 0, ',', '.'); 
 
 // ─── XLSX ─────────────────────────────────────────────────────────────────────
 if ($formato === 'xlsx') {
-    log_accion($db, 'exportacion_inv_xlsx', null);
+    log_accion($db, 'exportacion_inv_xlsx', null, ['formato' => 'xlsx', 'registros' => count($rows)]);
 
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
@@ -100,7 +100,7 @@ if ($formato === 'xlsx') {
 
 // ─── CSV ──────────────────────────────────────────────────────────────────────
 if ($formato === 'csv') {
-    log_accion($db, 'exportacion_inv_csv', null);
+    log_accion($db, 'exportacion_inv_csv', null, ['formato' => 'csv', 'registros' => count($rows)]);
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="inventario_' . date('Y-m-d') . '.csv"');
     header('Cache-Control: no-cache');
@@ -125,7 +125,7 @@ if ($formato === 'csv') {
 }
 
 // ─── PDF (HTML para imprimir) ─────────────────────────────────────────────────
-log_accion($db, 'exportacion_inv_pdf', null);
+log_accion($db, 'exportacion_inv_pdf', null, ['formato' => 'pdf', 'registros' => count($rows)]);
 $titulo = 'Inventario — ' . date('d/m/Y');
 $total  = count($rows);
 $stock  = array_sum(array_column($rows, 'cantidad'));

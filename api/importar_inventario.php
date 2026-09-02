@@ -162,7 +162,7 @@ try {
 }
 
 if ($inserted > 0 || $updated > 0) {
-    log_accion($db, 'importacion_inv_xlsx', null);
+    log_accion($db, 'importacion_inv_xlsx', null, ['archivo' => $_FILES['archivo']['name'] ?? ''], ['insertados' => $inserted, 'actualizados' => $updated]);
 }
 
 json_ok([

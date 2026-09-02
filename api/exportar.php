@@ -69,7 +69,7 @@ $rows = $s->fetchAll();
 
 // ─── CSV (Excel) ──────────────────────────────────────────────────────────────
 if ($formato === 'csv') {
-    log_accion($db, 'exportacion_csv', null);
+    log_accion($db, 'exportacion_csv', null, ['formato' => 'csv', 'registros' => count($rows)]);
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="servicios_' . date('Y-m-d') . '.csv"');
     header('Cache-Control: no-cache');
@@ -133,7 +133,7 @@ if ($id_repuesto) {
     $filtrosAplicados[] = 'Repuesto: ' . $rNombre;
 }
 
-log_accion($db, 'exportacion_pdf', null);
+log_accion($db, 'exportacion_pdf', null, ['formato' => 'pdf', 'registros' => count($rows)]);
 header('Content-Type: text/html; charset=utf-8');
 ?><!DOCTYPE html>
 <html lang="es">

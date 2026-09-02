@@ -40,7 +40,7 @@ if ($method === 'PUT') {
         if (!in_array($cargo, ['Admin', 'Tecnico'])) json_err('Cargo inválido.');
         $db->prepare("UPDATE usuarios SET cargo = ? WHERE id_usuario = ? AND id_empresa = ?")
            ->execute([$cargo, $uid, $eid]);
-        log_accion($db, 'usuario_cargo_cambiado', null);
+        log_accion($db, 'usuario_cargo_cambiado', null, ['id_usuario' => $uid, 'cargo_nuevo' => $cargo]);
         json_ok(['msg' => "Cargo actualizado a $cargo."]);
     }
 
@@ -75,11 +75,34 @@ if ($method === 'PUT') {
         $nuevo_hash = password_hash($nueva, PASSWORD_BCRYPT);
         $db->prepare("UPDATE usuarios SET pass = ? WHERE id_usuario = ? AND id_empresa = ?")
            ->execute([$nuevo_hash, $uid, $eid]);
-        log_accion($db, $isSelf ? 'password_propio_cambiado' : 'password_usuario_reseteado', null);
+        log_accion($db, $isSelf ? 'password_propio_cambiado' : 'password_usuario_reseteado', null, ['id_usuario' => $uid]);
         json_ok(['msg' => 'Contraseña actualizada.']);
     }
 
     json_err('Operación no especificada.');
+}
+
+// ── DELETE: eliminar técnico ──────────────────────────────
+if ($method === 'DELETE') {
+    if (!isAdmin()) json_err('Sin permisos.', 403);
+    csrf_check();
+
+    $in  = json_decode(file_get_contents('php://input'), true) ?? [];
+    $uid = (int)($in['id_usuario'] ?? 0);
+    if (!$uid) json_err('ID inválido.');
+
+    $me = (int)($_SESSION['user_id'] ?? 0);
+    if ($uid === $me) json_err('No puedes eliminar tu propia cuenta.');
+
+    $chk = $db->prepare("SELECT id_usuario, nombre, cargo FROM usuarios WHERE id_usuario = ? AND id_empresa = ?");
+    $chk->execute([$uid, $eid]);
+    $target = $chk->fetch();
+    if (!$target) json_err('Usuario no encontrado.', 404);
+    if ($target['cargo'] !== 'Tecnico') json_err('Solo se pueden eliminar técnicos.');
+
+    $db->prepare("DELETE FROM usuarios WHERE id_usuario = ? AND id_empresa = ?")->execute([$uid, $eid]);
+    log_accion($db, 'tecnico_eliminado', null, ['id_usuario' => $uid, 'nombre' => $target['nombre']]);
+    json_ok(['msg' => "Técnico {$target['nombre']} eliminado."]);
 }
 
 // ── POST: crear técnico ───────────────────────────────────
@@ -112,6 +135,7 @@ if ($method === 'POST') {
          VALUES (?, ?, ?, ?, 'Tecnico', 1)"
     );
     $ins->execute([$eid, $nombre, $user, $hash]);
-    log_accion($db, 'tecnico_creado', null);
-    json_ok(['msg' => "Técnico {$nombre} creado correctamente.", 'id' => (int)$db->lastInsertId()]);
+    $newUid = (int)$db->lastInsertId();
+    log_accion($db, 'tecnico_creado', null, ['nombre' => $nombre, 'user' => $user], ['id' => $newUid]);
+    json_ok(['msg' => "Técnico {$nombre} creado correctamente.", 'id' => $newUid]);
 }

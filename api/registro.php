@@ -222,7 +222,7 @@ $_SESSION['empresa_id']    = $id_empresa;
 $_SESSION['last_activity'] = time();
 
 // Registrar acción (sesión ya activa)
-log_accion($db, 'registro_empresa', null);
+log_accion($db, 'registro_empresa', null, ['empresa' => $nombre_local, 'plan' => $plan_key], ['id_empresa' => $id_empresa]);
 
 if ($plan_key === 'trial') {
     json_ok(['redirect' => APP_URL . '/app.php?trial=1']);

@@ -13,6 +13,12 @@ $planes = [
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Centrotec — Gestión para servicios técnicos</title>
+<link rel="icon" type="image/x-icon" href="<?= BASE ?>/assets/img/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="<?= BASE ?>/assets/img/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="<?= BASE ?>/assets/img/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= BASE ?>/assets/img/apple-touch-icon.png">
+<link rel="manifest" href="<?= BASE ?>/site.webmanifest">
+<meta name="theme-color" content="#030507">
 <meta name="description" content="Digitaliza tu servicio técnico con Centrotec. Órdenes de trabajo, clientes, repuestos y estadísticas en un solo lugar.">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/landing.css?v=<?= filemtime(__DIR__.'/assets/css/landing.css') ?>">
 </head>

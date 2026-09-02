@@ -126,7 +126,7 @@ if ($method === 'POST') {
     $qv->execute([$id_reparacion, $eid]);
     $nuevo_valor = (int) $qv->fetchColumn();
 
-    log_accion($db, 'repuesto_agregado', $id_reparacion);
+    log_accion($db, 'repuesto_agregado', $id_reparacion, ['repuesto' => $nombre_snap, 'cantidad' => $cantidad, 'precio' => (int)$rep['precio_venta']]);
 
     json_ok([
         'id'          => $newId,
@@ -176,7 +176,7 @@ if ($method === 'DELETE') {
     $nuevo_valor = $qv->fetchColumn();
     if ($nuevo_valor === false) json_err('Reparación no encontrada.', 404);
 
-    log_accion($db, 'repuesto_eliminado', (int) $row['id_reparacion']);
+    log_accion($db, 'repuesto_eliminado', (int) $row['id_reparacion'], ['repuesto' => $row['nombre_snap'], 'cantidad' => (int)$row['cantidad']]);
 
     json_ok(['nuevo_valor' => $nuevo_valor]);
 }
