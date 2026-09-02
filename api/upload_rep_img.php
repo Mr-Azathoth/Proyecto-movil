@@ -36,7 +36,51 @@ if (!is_dir($dir)) mkdir($dir, 0755, true);
 $fname = $eid . '_r' . $id_reparacion . '_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
 if (!move_uploaded_file($file['tmp_name'], $dir . $fname)) json_err('Error al guardar imagen.');
 
+// Comprimir y redimensionar — máx 1920px, mantiene proporción
+if (function_exists('imagecreatefromjpeg')) {
+    _compress_rep_image($dir . $fname, $mime);
+}
+
 $url = BASE . '/assets/uploads/reparaciones/' . $fname;
+
+function _compress_rep_image(string $path, string $mime): void {
+    $info = @getimagesize($path);
+    if (!$info) return;
+    [$w, $h] = $info;
+
+    $src = match($mime) {
+        'image/jpeg' => @imagecreatefromjpeg($path),
+        'image/png'  => @imagecreatefrompng($path),
+        'image/webp' => @imagecreatefromwebp($path),
+        default      => null,
+    };
+    if (!$src) return;
+
+    $max = 1920;
+    if ($w > $max || $h > $max) {
+        $ratio = min($max / $w, $max / $h);
+        $nw    = (int) round($w * $ratio);
+        $nh    = (int) round($h * $ratio);
+        $dst   = imagecreatetruecolor($nw, $nh);
+        if ($mime === 'image/png') {
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            $transparent = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+            imagefill($dst, 0, 0, $transparent);
+        }
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagedestroy($src);
+        $src = $dst;
+    }
+
+    match($mime) {
+        'image/jpeg' => imagejpeg($src, $path, 82),
+        'image/png'  => imagepng($src, $path, 8),
+        'image/webp' => imagewebp($src, $path, 82),
+        default      => null,
+    };
+    imagedestroy($src);
+}
 
 try {
     $db->beginTransaction();

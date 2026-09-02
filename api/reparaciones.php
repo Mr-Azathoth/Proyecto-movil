@@ -433,6 +433,23 @@ if ($method === 'DELETE') {
            ->execute([(int)$ar_del['cantidad'], (int)$ar_del['id_repuesto'], $eid]);
     }
 
+    // Eliminar fotos físicas + registros de BD antes del soft delete
+    $fotos_del = $db->prepare("SELECT url FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ?");
+    $fotos_del->execute([$id, $eid]);
+    $upload_dir = realpath(__DIR__ . '/../assets/uploads/reparaciones');
+    foreach ($fotos_del->fetchAll() as $foto_row) {
+        $url_path  = parse_url($foto_row['url'], PHP_URL_PATH);
+        $base_path = parse_url(BASE, PHP_URL_PATH);
+        $rel       = ($base_path && strncmp($url_path, $base_path, strlen($base_path)) === 0)
+                       ? substr($url_path, strlen($base_path)) : $url_path;
+        $file_path = realpath(__DIR__ . '/..') . $rel;
+        $real_path = $file_path ? realpath($file_path) : false;
+        if ($real_path && $upload_dir && strncmp($real_path, $upload_dir, strlen($upload_dir)) === 0) {
+            @unlink($real_path);
+        }
+    }
+    $db->prepare("DELETE FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ?")->execute([$id, $eid]);
+
     $db->prepare("UPDATE reparaciones SET deleted_at = NOW() WHERE id_ingreso = ? AND id_empresa = ?")
        ->execute([$id, $eid]);
 
