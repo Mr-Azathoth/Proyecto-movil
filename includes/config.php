@@ -41,16 +41,21 @@ ini_set('session.cookie_httponly', '1');
 ini_set('session.cookie_samesite', 'Lax');
 ini_set('session.use_strict_mode', '1');
 
-// Producción: ocultar errores; cookie segura solo si la conexión es realmente HTTPS
+// Detectar HTTPS real o proxy (Cloudflare, LB) en cualquier entorno
+$_is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+          || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+          || (($_SERVER['HTTP_CF_VISITOR'] ?? '') !== '' && str_contains($_SERVER['HTTP_CF_VISITOR'] ?? '', '"https"'));
+define('IS_HTTPS', $_is_https);
+unset($_is_https);
+
 if (defined('APP_ENV') && APP_ENV === 'production') {
     ini_set('display_errors', '0');
-    $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-             || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-    if ($is_https) ini_set('session.cookie_secure', '1');
-    unset($is_https);
 } else {
     ini_set('display_errors', '1');
 }
+
+// Secure cookie siempre que la conexión sea HTTPS (producción o staging detrás de proxy)
+if (IS_HTTPS) ini_set('session.cookie_secure', '1');
 
 session_start();
 
@@ -173,6 +178,7 @@ function remember_set(int $id_usuario, int $id_empresa): void {
         'path'     => BASE ?: '/',
         'httponly' => true,
         'samesite' => 'Strict',
+        'secure'   => IS_HTTPS,
     ]);
 }
 
@@ -220,7 +226,7 @@ function remember_clear(): void {
                    ->execute([hash('sha256', $token)]);
         } catch (Throwable $ignored) {}
     }
-    setcookie('rp_rem', '', ['expires' => time() - 86400, 'path' => BASE ?: '/', 'httponly' => true, 'samesite' => 'Strict']);
+    setcookie('rp_rem', '', ['expires' => time() - 86400, 'path' => BASE ?: '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => IS_HTTPS]);
 }
 
 // ── SMTP (recuperación de contraseña) ────────────────────────
