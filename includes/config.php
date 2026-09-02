@@ -345,6 +345,11 @@ function guard(): void {
         }
     }
 
+    // Vencido con activa=1 (estado puede quedar así si el cron no actualizó activa todavía)
+    if ($emp && (bool)$emp['activa'] && $emp['plan_estado'] === 'Vencido') {
+        json_err('trial_vencido', 402);
+    }
+
     if ($emp && !(bool)$emp['activa']) {
         // Trial/plan vencido: NO destruir sesión — el usuario puede suscribirse desde el muro
         if (in_array($emp['plan_estado'], ['Trial', 'Vencido'], true)) {
