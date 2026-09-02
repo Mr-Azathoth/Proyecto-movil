@@ -862,7 +862,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" name="nombre_cliente" placeholder="Juan Pérez" required></div>
           <div class="fg"><label>Teléfono <span class="req">*</span></label><input type="text" name="telefono_cliente" placeholder="+56 9 XXXX XXXX" value="+56 " required></div>
           <div class="fg"><label>RUT</label><input type="text" name="rut_cliente" placeholder="12.345.678-9"></div>
-          <div class="fg">
+          <div class="fg fg-tipo-equipo">
             <label>Tipo de equipo</label>
             <div class="tp-wrap" id="tp-nuevo-wrap">
               <button type="button" class="tp-btn" id="tp-nuevo-btn">

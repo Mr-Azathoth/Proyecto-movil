@@ -418,7 +418,7 @@ select option { background:#0c1220; color:#e8f4ff; }
 @keyframes fadeIn { from{opacity:0;transform:scale(.97)} to{opacity:1;transform:scale(1)} }
 
 .modal-box { background:var(--bg2); border:1px solid var(--border2); border-radius:var(--r2);
-  width:100%; max-width:min(980px,96vw); max-height:96vh; display:flex; flex-direction:column;
+  width:100%; max-width:min(1100px,96vw); max-height:96vh; display:flex; flex-direction:column;
   box-shadow:0 24px 64px rgba(0,0,0,.6); }
 .modal-box-lg { max-width:min(820px,96vw); }
 .modal-box-sm { max-width:min(480px,96vw) !important; }
@@ -438,6 +438,8 @@ select option { background:#0c1220; color:#e8f4ff; }
 /* Formularios dentro de modales */
 .form-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .form-grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+/* Fila cliente: Nombre | Teléfono | RUT | Tipo(más ancho) */
+#form-nuevo .form-grid4:first-of-type { grid-template-columns: repeat(3,1fr) 2fr; }
 .fg-full    { grid-column:1/-1; }
 .fg         { margin-bottom:0; }
 .hint-txt { font-size:11px; color:var(--txt3); margin:4px 0 0; line-height:1.4; display:none; }
