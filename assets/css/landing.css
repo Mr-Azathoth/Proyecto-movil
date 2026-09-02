@@ -18,7 +18,7 @@ nav{
   background:rgba(3,5,7,.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
   border-bottom:1px solid rgba(80,180,255,.06);
 }
-.nav-logo-svg{height:54px;width:auto;display:block}
+.nav-logo-svg{height:72px;width:auto;display:block}
 .nav-links{display:flex;align-items:center;gap:1.5rem;list-style:none}
 .nav-links a{font-size:.78rem;color:var(--text-sub);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;transition:color .15s;white-space:nowrap}
 .nav-links a:hover{color:var(--text-main)}
