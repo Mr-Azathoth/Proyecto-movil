@@ -1589,3 +1589,25 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
   color: var(--txt2);
   line-height: 1.55;
 }
+.sel-wrap select {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 11px 14px;
+  color: var(--txt);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--tr);
+  appearance: auto;
+}
+.sel-wrap select:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--input-focus-bg);
+  box-shadow: 0 0 0 3px var(--input-focus-ring);
+}
+.sel-wrap select option { background: #0c1220; color: #e8f4ff; }
+[data-theme="medium"] .sel-wrap select { background: var(--input-bg); color: var(--txt); }
+[data-theme="medium"] .sel-wrap select option { background: #ffffff; color: #0d1e2e; }
