@@ -6,17 +6,18 @@ guard();
 $db  = getDB();
 $eid = eid();
 
-// Migración silenciosa de columnas nuevas
-try {
-    $db->exec("ALTER TABLE empresas
-        ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255) DEFAULT NULL,
-        ADD COLUMN IF NOT EXISTS direccion VARCHAR(150) DEFAULT '',
-        ADD COLUMN IF NOT EXISTS telefono  VARCHAR(30)  DEFAULT '',
-        ADD COLUMN IF NOT EXISTS correo    VARCHAR(80)  DEFAULT '',
-        ADD COLUMN IF NOT EXISTS comuna             VARCHAR(60)  DEFAULT '',
-        ADD COLUMN IF NOT EXISTS region             VARCHAR(60)  DEFAULT '',
-        ADD COLUMN IF NOT EXISTS default_tipo_equipo VARCHAR(100) DEFAULT ''");
-} catch (PDOException $ignored) {}
+// Migración silenciosa de columnas nuevas (una por una para compatibilidad MySQL 5.x)
+foreach ([
+    "ALTER TABLE empresas ADD COLUMN logo_path VARCHAR(255) DEFAULT NULL",
+    "ALTER TABLE empresas ADD COLUMN direccion VARCHAR(150) DEFAULT ''",
+    "ALTER TABLE empresas ADD COLUMN telefono  VARCHAR(30)  DEFAULT ''",
+    "ALTER TABLE empresas ADD COLUMN correo    VARCHAR(80)  DEFAULT ''",
+    "ALTER TABLE empresas ADD COLUMN comuna    VARCHAR(60)  DEFAULT ''",
+    "ALTER TABLE empresas ADD COLUMN region    VARCHAR(60)  DEFAULT ''",
+    "ALTER TABLE empresas ADD COLUMN default_tipo_equipo VARCHAR(100) DEFAULT ''",
+] as $_sql) {
+    try { $db->exec($_sql); } catch (PDOException $ignored) {}
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
