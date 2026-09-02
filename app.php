@@ -410,8 +410,14 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <div class="fg"><label>Comuna</label><input type="text" id="cfg-comuna" placeholder="Providencia"></div>
             <div class="fg fg-wide"><label>Región</label><input type="text" id="cfg-region" placeholder="Región Metropolitana"></div>
           </div>
-          <div class="fg fg-wide">
-            <label>Tipo de equipo predeterminado</label>
+          <div class="cfg-tipo-block">
+            <div class="cfg-tipo-header">
+              <span class="material-icons-round">devices</span>
+              <div>
+                <strong>Tipo de equipo predeterminado</strong>
+                <p>Si tu taller se especializa en un tipo de equipo, elige cuál aparecerá seleccionado automáticamente cada vez que ingreses un servicio nuevo. Siempre puedes cambiarlo al momento de ingresar.</p>
+              </div>
+            </div>
             <div class="sel-wrap">
               <select id="cfg-tipo-default">
                 <option value="">Sin predeterminado — mostrar vacío</option>
@@ -451,7 +457,6 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
                 </optgroup>
               </select>
             </div>
-            <small class="fg-hint">Al ingresar un nuevo servicio este tipo aparecerá preseleccionado</small>
           </div>
           <button type="button" class="btn-primary" id="btn-cfg-empresa">
             <span class="material-icons-round">save</span> Guardar datos
