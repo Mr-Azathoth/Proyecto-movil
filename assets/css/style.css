@@ -1552,3 +1552,7 @@ input.hidden           { display:none !important; }
 .tp-sub-item.tp-selected { background:rgba(59,130,246,.12); color:var(--accent,#3b82f6); font-weight:600; }
 .tp-sub-item.tp-selected::before { background:var(--accent,#3b82f6); }
 .fg-hint { font-size:11px; color:var(--txt3,rgba(255,255,255,.35)); margin-top:2px; display:block; }
+
+/* ─── optgroup labels visibles en dark mode ──────────────── */
+select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:normal; font-weight:700; }
+[data-theme="medium"] select optgroup { background:#e8f0f8; color:#1a4a7a; font-weight:700; }
