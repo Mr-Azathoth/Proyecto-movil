@@ -1558,13 +1558,14 @@ input.hidden           { display:none !important; }
 /* ─── optgroup labels visibles en dark mode ──────────────── */
 select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:normal; font-weight:700; }
 [data-theme="medium"] select optgroup { background:#e8f0f8; color:#1a4a7a; font-weight:700; }
+[data-theme="light"] select optgroup { background:#e4eef8; color:#0e5580; font-weight:700; }
 
 /* ─── Bloque tipo predeterminado en config ───────────────── */
 .cfg-tipo-block {
   margin-top: 24px;
   margin-bottom: 24px;
   padding-top: 24px;
-  border-top: 1px solid var(--border1, rgba(255,255,255,.07));
+  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1617,3 +1618,5 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 .sel-wrap select option { background: #0c1220; color: #e8f4ff; }
 [data-theme="medium"] .sel-wrap select { background: var(--input-bg); color: var(--txt); }
 [data-theme="medium"] .sel-wrap select option { background: #ffffff; color: #0d1e2e; }
+[data-theme="light"] .sel-wrap select { background: var(--input-bg); color: var(--txt); }
+[data-theme="light"] .sel-wrap select option { background: #ffffff; color: #0d1e2e; }
