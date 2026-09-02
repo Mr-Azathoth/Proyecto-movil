@@ -220,6 +220,10 @@ html,body { height:100%; font-family:'Inter',sans-serif; font-size:14px; color:v
 }
 .fg input[disabled] { opacity:.5; cursor:not-allowed; }
 .fg select { cursor:pointer; }
+.fg select option { background:#0c1220; color:#e8f4ff; }
+[data-theme="medium"] .fg select option { background:#ffffff; color:#0d1e2e; }
+select option { background:#0c1220; color:#e8f4ff; }
+[data-theme="medium"] select option { background:#ffffff; color:#0d1e2e; }
 .fg textarea { resize:vertical; }
 .btn-login { width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
   background:linear-gradient(135deg,var(--accent),#388bfd); border:none; border-radius:var(--r);
