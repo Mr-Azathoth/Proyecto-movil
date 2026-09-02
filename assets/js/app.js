@@ -2124,7 +2124,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
       });
       const j = await r.json();
-      j.ok ? toast('✔ Datos guardados.', 'ok') : toast(j.msg, 'err');
+      if (j.ok) {
+        toast('✔ Datos guardados.', 'ok');
+        _tipoPikerDefault = payload.default_tipo_equipo;
+      } else { toast(j.msg, 'err'); }
     } catch(e) { _handleErr('apicall', e); }
   });
 
