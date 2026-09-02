@@ -1590,7 +1590,7 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
   line-height: 1.55;
 }
 .sel-wrap {
-  margin-bottom: 8px;
+  margin-bottom: 20px;
 }
 .sel-wrap select {
   width: 100%;
