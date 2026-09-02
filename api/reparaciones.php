@@ -134,8 +134,7 @@ if ($method === 'POST') {
     if (strlen($f['obs'])              > 2000)            json_err('Observación demasiado larga (máx. 2000 caracteres).');
     if (!in_array($f['status'], VALID_STATUS, true))      json_err('Estado inicial inválido.');
 
-    $tipos_validos = ['Telefono', 'Tablet', 'Notebook', 'Televisor', 'Otro'];
-    if (!in_array($f['tipo_ingreso'], $tipos_validos, true)) $f['tipo_ingreso'] = 'Otro';
+    if (strlen($f['tipo_ingreso']) > 100) $f['tipo_ingreso'] = substr($f['tipo_ingreso'], 0, 100);
 
     // Repuesto inicial opcional
     $id_repuesto_inicial = null;

@@ -1359,6 +1359,7 @@ function _resetModalNuevo() {
   if (inpMM) { inpMM.classList.remove('visible'); inpMM.value = ''; }
   document.getElementById('hid-marca-nuevo').value  = '';
   document.getElementById('hid-modelo-nuevo').value = '';
+  _tpNuevoSetValue(_tipoPikerDefault);
 
   // Restaurar botón submit
   const btn = document.getElementById('btn-submit-nuevo');
@@ -1553,6 +1554,8 @@ async function loadConfigData() {
     if (el('cfg-mail'))   el('cfg-mail').value   = d.correo    || '';
     if (el('cfg-comuna')) el('cfg-comuna').value = d.comuna    || '';
     if (el('cfg-region')) el('cfg-region').value = d.region    || '';
+    if (el('cfg-tipo-default')) el('cfg-tipo-default').value = d.default_tipo_equipo || '';
+    _tipoPikerDefault = d.default_tipo_equipo || '';
   } catch(e) {}
   loadUsuarios();
 }
@@ -2109,11 +2112,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── Guardar datos de contacto empresa ───────────────────────
   document.getElementById('btn-cfg-empresa')?.addEventListener('click', async () => {
     const payload = {
-      direccion: document.getElementById('cfg-dir').value.trim(),
-      telefono:  document.getElementById('cfg-tel').value.trim(),
-      correo:    document.getElementById('cfg-mail').value.trim(),
-      comuna:    document.getElementById('cfg-comuna').value.trim(),
-      region:    document.getElementById('cfg-region').value.trim(),
+      direccion:           document.getElementById('cfg-dir').value.trim(),
+      telefono:            document.getElementById('cfg-tel').value.trim(),
+      correo:              document.getElementById('cfg-mail').value.trim(),
+      comuna:              document.getElementById('cfg-comuna').value.trim(),
+      region:              document.getElementById('cfg-region').value.trim(),
+      default_tipo_equipo: (document.getElementById('cfg-tipo-default')?.value || '').trim(),
     };
     try {
       const r = await apiFetch('/reparo/api/empresa.php', {
@@ -3004,3 +3008,124 @@ function closeLightbox() {
   const lb = document.getElementById('_lightbox');
   if (lb) { lb.classList.remove('_lb-open'); document.body.style.overflow = ''; }
 }
+
+// ═══════════════════════════════════════════════════════════
+// TIPO-EQUIPO PICKER
+// ═══════════════════════════════════════════════════════════
+const _TIPO_CATS = [
+  { id:'comp',   emoji:'💻', label:'Computación',
+    subs:['Notebook','Desktop / PC','Placa madre','Fuente de poder','RAM','Disco duro','Tarjeta de video','Otro componente PC'] },
+  { id:'movil',  emoji:'📱', label:'Móviles',
+    subs:['Smartphone','Tablet','Smartwatch'] },
+  { id:'gaming', emoji:'🎮', label:'Gaming',
+    subs:['Control / Joystick','Consola','Volante / Periférico','Auriculares gaming'] },
+  { id:'audio',  emoji:'🎧', label:'Audio',
+    subs:['Auriculares','Parlante / Soundbar','Micrófono'] },
+  { id:'peri',   emoji:'🖨️', label:'Periféricos',
+    subs:['Teclado / Mouse','Monitor','Impresora','Scanner'] },
+  { id:'otro',   emoji:'📦', label:'Otro',
+    subs:['Especificar en descripción'] },
+];
+
+let _tipoPikerDefault = '';
+
+// Construye el picker dentro de panelEl, escribe en hiddenInput, llama onSelect(value)
+function _buildTipoPicker(btnEl, panelEl, hiddenEl, onSelect) {
+  let _openCat = null;
+
+  _TIPO_CATS.forEach(cat => {
+    const row = document.createElement('div');
+    row.className = 'tp-cat-row'; row.dataset.catId = cat.id;
+    row.innerHTML = `<div class="tp-cat-left"><span>${cat.emoji}</span><span>${cat.label}</span></div>
+      <span class="material-icons-round tp-cat-chevron">chevron_right</span>`;
+    row.addEventListener('click', e => { e.stopPropagation(); _toggleCat(cat.id); });
+    panelEl.appendChild(row);
+
+    const list = document.createElement('div');
+    list.className = 'tp-sub-list'; list.id = panelEl.id + '-subs-' + cat.id;
+    cat.subs.forEach(sub => {
+      const item = document.createElement('div');
+      item.className = 'tp-sub-item';
+      item.dataset.catId = cat.id; item.dataset.sub = sub;
+      item.textContent = sub;
+      item.addEventListener('click', e => { e.stopPropagation(); _selectItem(cat, sub); });
+      list.appendChild(item);
+    });
+    panelEl.appendChild(list);
+  });
+
+  function _toggleCat(catId) {
+    const row  = panelEl.querySelector(`.tp-cat-row[data-cat-id="${catId}"]`);
+    const list = document.getElementById(panelEl.id + '-subs-' + catId);
+    const isOpen = list.classList.contains('open');
+    panelEl.querySelectorAll('.tp-cat-row').forEach(r => r.classList.remove('tp-expanded'));
+    panelEl.querySelectorAll('.tp-sub-list').forEach(l => l.classList.remove('open'));
+    if (!isOpen) { row.classList.add('tp-expanded'); list.classList.add('open'); _openCat = catId; }
+    else _openCat = null;
+  }
+
+  function _selectItem(cat, sub) {
+    panelEl.querySelectorAll('.tp-sub-item').forEach(i => i.classList.remove('tp-selected'));
+    const item = panelEl.querySelector(`.tp-sub-item[data-cat-id="${cat.id}"][data-sub="${sub}"]`);
+    if (item) item.classList.add('tp-selected');
+    const val = `${cat.label} / ${sub}`;
+    if (hiddenEl) hiddenEl.value = val;
+    const lbl = btnEl.querySelector('.tp-label');
+    lbl.innerHTML = `<span class="tp-chip"><span class="tp-chip-cat">${cat.emoji} ${cat.label}</span><span class="tp-chip-sep">›</span><span>${sub}</span></span>`;
+    lbl.classList.remove('tp-placeholder');
+    _closePanel();
+    if (onSelect) onSelect(val);
+  }
+
+  function _closePanel() {
+    btnEl.classList.remove('open');
+    panelEl.classList.remove('open');
+  }
+
+  // Expone setValue para pre-seleccionar desde fuera
+  return function setValue(val) {
+    if (!val) {
+      const lbl = btnEl.querySelector('.tp-label');
+      lbl.textContent = 'Seleccionar…'; lbl.classList.add('tp-placeholder');
+      panelEl.querySelectorAll('.tp-sub-item').forEach(i => i.classList.remove('tp-selected'));
+      if (hiddenEl) hiddenEl.value = '';
+      return;
+    }
+    // val = "Computación / Placa madre" — buscar cat+sub
+    for (const cat of _TIPO_CATS) {
+      for (const sub of cat.subs) {
+        if (`${cat.label} / ${sub}` === val) { _selectItem(cat, sub); return; }
+      }
+    }
+    // fallback: mostrar como texto libre
+    const lbl = btnEl.querySelector('.tp-label');
+    lbl.textContent = val; lbl.classList.remove('tp-placeholder');
+    if (hiddenEl) hiddenEl.value = val;
+  };
+}
+
+// ── Instanciar en modal nuevo ─────────────────────────────
+let _tpNuevoSetValue = () => {};
+(function initTipoPicker() {
+  const btnEl    = document.getElementById('tp-nuevo-btn');
+  const panelEl  = document.getElementById('tp-nuevo-panel');
+  const hiddenEl = document.getElementById('hid-tipo-ingreso');
+  if (!btnEl || !panelEl) return;
+
+  _tpNuevoSetValue = _buildTipoPicker(btnEl, panelEl, hiddenEl, null);
+
+  // Abrir/cerrar al hacer clic en el botón
+  btnEl.addEventListener('click', () => {
+    const isOpen = panelEl.classList.contains('open');
+    if (isOpen) { btnEl.classList.remove('open'); panelEl.classList.remove('open'); }
+    else         { btnEl.classList.add('open');    panelEl.classList.add('open'); }
+  });
+
+  // Cerrar al clic fuera
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('tp-nuevo-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      btnEl.classList.remove('open'); panelEl.classList.remove('open');
+    }
+  });
+})();

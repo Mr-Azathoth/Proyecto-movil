@@ -13,15 +13,16 @@ try {
         ADD COLUMN IF NOT EXISTS direccion VARCHAR(150) DEFAULT '',
         ADD COLUMN IF NOT EXISTS telefono  VARCHAR(30)  DEFAULT '',
         ADD COLUMN IF NOT EXISTS correo    VARCHAR(80)  DEFAULT '',
-        ADD COLUMN IF NOT EXISTS comuna    VARCHAR(60)  DEFAULT '',
-        ADD COLUMN IF NOT EXISTS region    VARCHAR(60)  DEFAULT ''");
+        ADD COLUMN IF NOT EXISTS comuna             VARCHAR(60)  DEFAULT '',
+        ADD COLUMN IF NOT EXISTS region             VARCHAR(60)  DEFAULT '',
+        ADD COLUMN IF NOT EXISTS default_tipo_equipo VARCHAR(100) DEFAULT ''");
 } catch (PDOException $ignored) {}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
 // ── GET: datos de la empresa ──────────────────────────────────
 if ($method === 'GET') {
-    $s = $db->prepare("SELECT nombre, logo_path, direccion, telefono, correo, comuna, region
+    $s = $db->prepare("SELECT nombre, logo_path, direccion, telefono, correo, comuna, region, default_tipo_equipo
                        FROM empresas WHERE id_empresa = ?");
     $s->execute([$eid]);
     $row = $s->fetch();
@@ -34,7 +35,7 @@ if ($method === 'PUT') {
     if (!isAdmin()) json_err('Sin permisos.', 403);
     csrf_check();
     $in = json_decode(file_get_contents('php://input'), true) ?? [];
-    $allowed = ['direccion', 'telefono', 'correo', 'comuna', 'region'];
+    $allowed = ['direccion', 'telefono', 'correo', 'comuna', 'region', 'default_tipo_equipo'];
     $sets = []; $vals = [];
     foreach ($allowed as $f) {
         if (array_key_exists($f, $in)) {

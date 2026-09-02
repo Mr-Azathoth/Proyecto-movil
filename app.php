@@ -410,6 +410,49 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <div class="fg"><label>Comuna</label><input type="text" id="cfg-comuna" placeholder="Providencia"></div>
             <div class="fg fg-wide"><label>Región</label><input type="text" id="cfg-region" placeholder="Región Metropolitana"></div>
           </div>
+          <div class="fg fg-wide">
+            <label>Tipo de equipo predeterminado</label>
+            <div class="sel-wrap">
+              <select id="cfg-tipo-default">
+                <option value="">Sin predeterminado — mostrar vacío</option>
+                <optgroup label="💻 Computación">
+                  <option value="Computación / Notebook">Notebook</option>
+                  <option value="Computación / Desktop / PC">Desktop / PC</option>
+                  <option value="Computación / Placa madre">Placa madre</option>
+                  <option value="Computación / Fuente de poder">Fuente de poder</option>
+                  <option value="Computación / RAM">RAM</option>
+                  <option value="Computación / Disco duro">Disco duro</option>
+                  <option value="Computación / Tarjeta de video">Tarjeta de video</option>
+                </optgroup>
+                <optgroup label="📱 Móviles">
+                  <option value="Móviles / Smartphone">Smartphone</option>
+                  <option value="Móviles / Tablet">Tablet</option>
+                  <option value="Móviles / Smartwatch">Smartwatch</option>
+                </optgroup>
+                <optgroup label="🎮 Gaming">
+                  <option value="Gaming / Control / Joystick">Control / Joystick</option>
+                  <option value="Gaming / Consola">Consola</option>
+                  <option value="Gaming / Volante / Periférico">Volante / Periférico</option>
+                  <option value="Gaming / Auriculares gaming">Auriculares gaming</option>
+                </optgroup>
+                <optgroup label="🎧 Audio">
+                  <option value="Audio / Auriculares">Auriculares</option>
+                  <option value="Audio / Parlante / Soundbar">Parlante / Soundbar</option>
+                  <option value="Audio / Micrófono">Micrófono</option>
+                </optgroup>
+                <optgroup label="🖨️ Periféricos">
+                  <option value="Periféricos / Teclado / Mouse">Teclado / Mouse</option>
+                  <option value="Periféricos / Monitor">Monitor</option>
+                  <option value="Periféricos / Impresora">Impresora</option>
+                  <option value="Periféricos / Scanner">Scanner</option>
+                </optgroup>
+                <optgroup label="📦 Otro">
+                  <option value="Otro / Especificar en descripción">Otro (especificar)</option>
+                </optgroup>
+              </select>
+            </div>
+            <small class="fg-hint">Al ingresar un nuevo servicio este tipo aparecerá preseleccionado</small>
+          </div>
           <button type="button" class="btn-primary" id="btn-cfg-empresa">
             <span class="material-icons-round">save</span> Guardar datos
           </button>
@@ -814,11 +857,16 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" name="nombre_cliente" placeholder="Juan Pérez" required></div>
           <div class="fg"><label>Teléfono <span class="req">*</span></label><input type="text" name="telefono_cliente" placeholder="+56 9 XXXX XXXX" value="+56 " required></div>
           <div class="fg"><label>RUT</label><input type="text" name="rut_cliente" placeholder="12.345.678-9"></div>
-          <div class="fg"><label>Tipo</label>
-            <select name="tipo_ingreso">
-              <option>Telefono</option><option>Tablet</option>
-              <option>Notebook</option><option>Televisor</option><option>Otro</option>
-            </select>
+          <div class="fg">
+            <label>Tipo de equipo</label>
+            <div class="tp-wrap" id="tp-nuevo-wrap">
+              <button type="button" class="tp-btn" id="tp-nuevo-btn">
+                <span class="tp-label" id="tp-nuevo-label">Seleccionar…</span>
+                <span class="tp-arrow"></span>
+              </button>
+              <div class="tp-panel" id="tp-nuevo-panel"></div>
+            </div>
+            <input type="hidden" name="tipo_ingreso" id="hid-tipo-ingreso" value="">
           </div>
         </div>
         <p class="section-label">Datos del equipo</p>
