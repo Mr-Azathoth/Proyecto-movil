@@ -858,7 +858,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
     <form id="form-nuevo">
       <div class="modal-body">
         <p class="section-label">Datos del cliente</p>
-        <div class="form-grid4">
+        <div class="form-grid4 form-grid-cliente">
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" name="nombre_cliente" placeholder="Juan Pérez" required></div>
           <div class="fg"><label>Teléfono <span class="req">*</span></label><input type="text" name="telefono_cliente" placeholder="+56 9 XXXX XXXX" value="+56 " required></div>
           <div class="fg"><label>RUT</label><input type="text" name="rut_cliente" placeholder="12.345.678-9"></div>

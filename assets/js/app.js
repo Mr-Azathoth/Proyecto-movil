@@ -767,6 +767,9 @@ async function submitNuevo(e) {
   }
   telInput?.classList.remove('inp-err');
 
+  const tipoIngreso = (document.getElementById('hid-tipo-ingreso')?.value || '').trim();
+  if (!tipoIngreso) { toast('Selecciona el tipo de equipo.', 'err'); return; }
+
   if (!marcaNombre)  { toast('Selecciona o escribe la marca del equipo.', 'err'); return; }
   if (!modeloNombre) { toast('Selecciona o escribe el modelo del equipo.', 'err'); return; }
 
@@ -3116,6 +3119,13 @@ let _tpNuevoSetValue = () => {};
   if (!btnEl || !panelEl) return;
 
   _tpNuevoSetValue = _buildTipoPicker(btnEl, panelEl, hiddenEl, null);
+
+  // Cargar default al inicio sin esperar visita a Config
+  apiFetch('/reparo/api/empresa.php').then(r => r.json()).then(j => {
+    if (j.ok && j.data?.default_tipo_equipo) {
+      _tipoPikerDefault = j.data.default_tipo_equipo;
+    }
+  }).catch(() => {});
 
   // Abrir/cerrar al hacer clic en el botón
   btnEl.addEventListener('click', () => {

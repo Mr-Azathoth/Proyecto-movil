@@ -439,7 +439,7 @@ select option { background:#0c1220; color:#e8f4ff; }
 .form-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .form-grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
 /* Fila cliente: Nombre | Teléfono | RUT | Tipo(más ancho) */
-#form-nuevo .form-grid4:first-of-type { grid-template-columns: repeat(3,1fr) 2fr; }
+#form-nuevo .form-grid-cliente { grid-template-columns: repeat(3,1fr) 2fr; }
 .fg-full    { grid-column:1/-1; }
 .fg         { margin-bottom:0; }
 .hint-txt { font-size:11px; color:var(--txt3); margin:4px 0 0; line-height:1.4; display:none; }

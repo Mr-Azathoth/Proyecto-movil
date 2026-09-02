@@ -111,7 +111,7 @@ if ($method === 'POST') {
         'nombre_cliente'   => trim($_POST['nombre_cliente']   ?? ''),
         'telefono_cliente' => trim($_POST['telefono_cliente'] ?? ''),
         'rut_cliente'      => trim($_POST['rut_cliente']      ?? ''),
-        'tipo_ingreso'     => trim($_POST['tipo_ingreso']     ?? 'Telefono'),
+        'tipo_ingreso'     => trim($_POST['tipo_ingreso']     ?? '') ?: 'Telefono',
         'marca_ingreso'    => trim($_POST['marca_ingreso']    ?? ''),
         'modelo_ingreso'   => trim($_POST['modelo_ingreso']   ?? ''),
         'imei'             => trim($_POST['imei']             ?? ''),
@@ -134,7 +134,24 @@ if ($method === 'POST') {
     if (strlen($f['obs'])              > 2000)            json_err('Observación demasiado larga (máx. 2000 caracteres).');
     if (!in_array($f['status'], VALID_STATUS, true))      json_err('Estado inicial inválido.');
 
-    if (strlen($f['tipo_ingreso']) > 100) $f['tipo_ingreso'] = substr($f['tipo_ingreso'], 0, 100);
+    // Validar tipo_ingreso contra categorías conocidas del picker
+    $tipos_validos = [
+        'Computación / Notebook','Computación / Desktop / PC','Computación / Placa madre',
+        'Computación / Fuente de poder','Computación / RAM','Computación / Disco duro',
+        'Computación / Tarjeta de video','Computación / Otro componente PC',
+        'Móviles / Smartphone','Móviles / Tablet','Móviles / Smartwatch',
+        'Gaming / Control / Joystick','Gaming / Consola','Gaming / Volante / Periférico','Gaming / Auriculares gaming',
+        'Audio / Auriculares','Audio / Parlante / Soundbar','Audio / Micrófono',
+        'Periféricos / Teclado / Mouse','Periféricos / Monitor','Periféricos / Impresora','Periféricos / Scanner',
+        'Otro / Especificar en descripción',
+        // Valores legacy anteriores al picker
+        'Telefono','Tablet','Notebook','Televisor','Otro',
+    ];
+    if (!in_array($f['tipo_ingreso'], $tipos_validos, true)) {
+        if (strlen($f['tipo_ingreso']) > 100) $f['tipo_ingreso'] = 'Otro';
+        // Aceptar valor desconocido pero truncar (compatibilidad datos existentes)
+        else if (empty($f['tipo_ingreso'])) $f['tipo_ingreso'] = 'Otro';
+    }
 
     // Repuesto inicial opcional
     $id_repuesto_inicial = null;
