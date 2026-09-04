@@ -33,6 +33,13 @@ document.querySelectorAll('tr[data-href]').forEach(tr => {
   ham.innerHTML = '<span class="material-icons-round">menu</span>';
   document.body.appendChild(ham);
 
+  // Botón instalar visible en móvil (fuera del sidebar)
+  var hamInstall = document.createElement('button');
+  hamInstall.className = 'btn-pwa-install hidden adm-ham-install';
+  hamInstall.setAttribute('title', 'Instalar app');
+  hamInstall.innerHTML = '<span class="material-icons-round">install_mobile</span>';
+  document.body.appendChild(hamInstall);
+
   function open()  { sidebar.classList.add('adm-sidebar-open');  overlay.classList.add('adm-overlay-show'); }
   function close() { sidebar.classList.remove('adm-sidebar-open'); overlay.classList.remove('adm-overlay-show'); }
 

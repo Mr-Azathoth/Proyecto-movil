@@ -492,6 +492,23 @@ tr[data-href]:hover td { background: rgba(124,58,237,0.06); }
 }
 .adm-ham .material-icons-round { font-size: 20px; }
 
+/* Botón instalar flotante (solo móvil, aparece junto al hamburguesa) */
+.adm-ham-install {
+  display: none;
+  position: fixed;
+  top: 12px; right: 12px;
+  z-index: 300;
+  width: 40px; height: 40px;
+  border-radius: var(--r);
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(124,58,237,0.35);
+  color: #a78bfa;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+}
+.adm-ham-install .material-icons-round { font-size: 20px; }
+
 /* Overlay oscuro detrás del sidebar */
 .adm-overlay {
   display: none;
@@ -501,8 +518,9 @@ tr[data-href]:hover td { background: rgba(124,58,237,0.06); }
 }
 
 @media (max-width: 768px) {
-  /* Mostrar hamburguesa */
+  /* Mostrar hamburguesa e instalar */
   .adm-ham { display: flex; }
+  .adm-ham-install:not(.hidden) { display: flex; }
 
   /* Sidebar: oculto por defecto, drawer overlay */
   .adm-sidebar {
