@@ -8,7 +8,7 @@ echo json_encode([
     'short_name'       => 'CT Admin',
     'description'      => 'Panel de administración Centrotec',
     'start_url'        => $base . '/admin.php',
-    'scope'            => $base . '/',
+    'scope'            => $base . '/admin',
     'display'          => 'standalone',
     'orientation'      => 'portrait',
     'background_color' => '#0d1117',
