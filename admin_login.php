@@ -44,6 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unset($_SESSION['admin_login_csrf']);
 
                 $db->prepare("UPDATE super_admins SET ultimo_acceso = NOW() WHERE id = ?")->execute([$row['id']]);
+                if (!empty($_POST['remember'])) {
+                    sadmin_remember_set($row['id']);
+                }
                 header('Location: '.BASE.'/admin.php');
                 exit;
             }
@@ -91,6 +94,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="fg">
         <label>Contraseña</label>
         <input type="password" name="pass" placeholder="Contraseña" required autocomplete="current-password">
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <input type="checkbox" name="remember" id="rem" value="1" style="width:16px;height:16px;accent-color:#7c3aed;cursor:pointer;">
+        <label for="rem" style="font-size:13px;color:var(--txt2);cursor:pointer;">Recordar sesión (30 días)</label>
       </div>
       <button type="submit" class="btn-login">
         Ingresar <span class="material-icons-round">admin_panel_settings</span>
