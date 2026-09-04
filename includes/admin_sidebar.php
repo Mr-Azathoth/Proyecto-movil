@@ -40,8 +40,13 @@ if (isset($db)) {
   </nav>
   <div class="adm-sidebar-footer">
     <div style="font-size:12px;color:var(--txt2);"><?= htmlspecialchars(sadmin_nombre()) ?></div>
-    <a href="<?= BASE ?>/admin_logout.php" class="adm-logout">
-      <span class="material-icons-round">logout</span>Salir
-    </a>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <button class="btn-pwa-install hidden adm-logout" title="Instalar app" style="background:none;border:none;cursor:pointer;padding:0;">
+        <span class="material-icons-round">install_mobile</span>
+      </button>
+      <a href="<?= BASE ?>/admin_logout.php" class="adm-logout">
+        <span class="material-icons-round">logout</span>Salir
+      </a>
+    </div>
   </div>
 </aside>
