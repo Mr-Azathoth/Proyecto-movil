@@ -61,6 +61,22 @@ var obs=new IntersectionObserver(function(entries){
 },{threshold:0.1});
 document.querySelectorAll('.reveal').forEach(function(el){obs.observe(el);});
 
+/* ─── Mobile nav ─── */
+(function(){
+  var btn=document.getElementById('nav-ham-btn');
+  var mob=document.getElementById('nav-mob');
+  if(!btn||!mob)return;
+  function close(){mob.classList.remove('open');btn.classList.remove('open');btn.setAttribute('aria-expanded','false');mob.setAttribute('aria-hidden','true');}
+  btn.addEventListener('click',function(){
+    var open=mob.classList.toggle('open');
+    btn.classList.toggle('open',open);
+    btn.setAttribute('aria-expanded',open?'true':'false');
+    mob.setAttribute('aria-hidden',open?'false':'true');
+  });
+  mob.querySelectorAll('a').forEach(function(a){a.addEventListener('click',close);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+
 /* ─── Counter ─── */
 var cobs=new IntersectionObserver(function(entries){
   entries.forEach(function(e){

@@ -83,6 +83,9 @@ $planes = [
       </g>
     </svg>
   </a>
+  <button class="nav-ham" id="nav-ham-btn" aria-label="Abrir menú" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
   <ul class="nav-links">
     <li><a href="<?= BASE ?>/seguimiento" class="nav-seguimiento">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -93,6 +96,15 @@ $planes = [
     <li><a href="<?= BASE ?>/registro.php" class="nav-cta">Empezar gratis</a></li>
   </ul>
 </nav>
+<div class="nav-mob" id="nav-mob" aria-hidden="true">
+  <ul>
+    <li><a href="<?= BASE ?>/seguimiento">Seguir reparación</a></li>
+    <li><a href="#caracteristicas">Características</a></li>
+    <li><a href="#precios">Precios</a></li>
+    <li><a href="<?= BASE ?>/ingresar.php">Ingresar</a></li>
+    <li><a href="<?= BASE ?>/registro.php" class="mob-cta">Empezar gratis →</a></li>
+  </ul>
+</div>
 
 <!-- HERO -->
 <section class="hero">
