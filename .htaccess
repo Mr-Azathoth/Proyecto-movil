@@ -25,6 +25,12 @@ Options -Indexes
     Deny from all
 </FilesMatch>
 
+# ── Bloquear scripts de debug/test (no deben ser accesibles en server) ─
+<FilesMatch "^(_test_patch|_del_test|delete_test_rep)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
 # ── Bloquear ejecución PHP en uploads (logos) ────────────────
 <IfModule mod_rewrite.c>
     RewriteRule ^assets/uploads/.*\.php$ - [F,L]

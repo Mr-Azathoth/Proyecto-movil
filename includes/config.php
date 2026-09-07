@@ -94,6 +94,7 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+if (IS_HTTPS) header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
 // Google Fonts y Material Icons necesitan fonts.googleapis.com / fonts.gstatic.com
 $_csp_nonce = base64_encode(random_bytes(16));
 define('CSP_NONCE', $_csp_nonce);
@@ -305,7 +306,15 @@ define('WP_COMMERCE_CODE', $_ENV['WP_COMMERCE_CODE'] ?? '597055555532');
 define('WP_API_KEY',       $_ENV['WP_API_KEY']       ?? '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C');
 define('WP_ENV',           $_ENV['WP_ENV']           ?? 'integration');   // 'integration' | 'production'
 
-function eid(): int           { return (int)($_SESSION['empresa_id'] ?? EMPRESA_ID); }
+function eid(): int {
+    if (!isset($_SESSION['empresa_id'])) {
+        // Sin sesión activa: no hay empresa. Fallar explícitamente evita
+        // que operaciones corran contra empresa 1 (fallback peligroso).
+        http_response_code(401);
+        exit(json_encode(['ok' => false, 'msg' => 'Sesión no válida.']));
+    }
+    return (int)$_SESSION['empresa_id'];
+}
 function uid(): int           { return (int)($_SESSION['user_id']    ?? 0); }
 function uname(): string      { return $_SESSION['user']   ?? ''; }
 function unombre(): string    { return $_SESSION['nombre'] ?? ''; }

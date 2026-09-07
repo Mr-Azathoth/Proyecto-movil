@@ -74,6 +74,7 @@ function formatear_rut(string $rut): string {
 }
 
 if (!validar_rut($rut)) {
+    login_fallo($ip);
     json_err('RUT inválido. Verifica el formato y el dígito verificador.');
 }
 $rut = formatear_rut($rut);
@@ -97,33 +98,34 @@ try {
 } catch (PDOException $ignored) {}
 
 // Unicidad subdominio: si hay colisión agrega sufijo numérico automáticamente
+$stSub = $db->prepare("SELECT id_empresa FROM empresas WHERE subdominio = ? LIMIT 1");
 $base_sub = substr($subdominio, 0, 55) ?: 'empresa';
 $subdominio = $base_sub;
+$stSub->execute([$subdominio]);
 $sufijo = 2;
-while ($sufijo <= 100) {
-    $st = $db->prepare("SELECT id_empresa FROM empresas WHERE subdominio = ? LIMIT 1");
-    $st->execute([$subdominio]);
-    if (!$st->fetchColumn()) break;
+while ($stSub->fetchColumn()) {
+    if ($sufijo > 100) json_err('No se pudo generar un identificador único. Intenta con un nombre diferente.');
     $subdominio = $base_sub . '-' . $sufijo++;
+    $stSub->execute([$subdominio]);
 }
-if ($sufijo > 100) json_err('No se pudo generar un identificador único. Intenta con un nombre diferente.');
 
 // Unicidad RUT — impide crear una segunda cuenta con el mismo RUT
 $stRut = $db->prepare("SELECT id_empresa FROM empresas WHERE rut = ? LIMIT 1");
 $stRut->execute([$rut]);
 if ($stRut->fetchColumn()) {
+    login_fallo($ip);
     json_err('El RUT ' . $rut . ' ya tiene una cuenta registrada en Centrotec. Si tu período de prueba terminó, inicia sesión y activa un plan para continuar.');
 }
 
 // Unicidad email (usamos el email final que se guardará en empresas.correo)
 $st2 = $db->prepare("SELECT id_empresa FROM empresas WHERE correo = ? LIMIT 1");
 $st2->execute([$email]);
-if ($st2->fetchColumn()) json_err('Ya existe una cuenta registrada con ese email.');
+if ($st2->fetchColumn()) { login_fallo($ip); json_err('Ya existe una cuenta registrada con ese email.'); }
 // Si el local usa un email diferente al personal, verificar también el personal
 if ($email_local && $email_local !== $email_personal) {
     $st3 = $db->prepare("SELECT id_empresa FROM empresas WHERE correo = ? LIMIT 1");
     $st3->execute([$email_personal]);
-    if ($st3->fetchColumn()) json_err('El email personal ya está registrado en otra cuenta.');
+    if ($st3->fetchColumn()) { login_fallo($ip); json_err('El email personal ya está registrado en otra cuenta.'); }
 }
 
 // Validar logo antes de abrir la transacción
