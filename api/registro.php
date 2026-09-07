@@ -100,12 +100,13 @@ try {
 $base_sub = substr($subdominio, 0, 55) ?: 'empresa';
 $subdominio = $base_sub;
 $sufijo = 2;
-while (true) {
+while ($sufijo <= 100) {
     $st = $db->prepare("SELECT id_empresa FROM empresas WHERE subdominio = ? LIMIT 1");
     $st->execute([$subdominio]);
     if (!$st->fetchColumn()) break;
     $subdominio = $base_sub . '-' . $sufijo++;
 }
+if ($sufijo > 100) json_err('No se pudo generar un identificador único. Intenta con un nombre diferente.');
 
 // Unicidad RUT — impide crear una segunda cuenta con el mismo RUT
 $stRut = $db->prepare("SELECT id_empresa FROM empresas WHERE rut = ? LIMIT 1");
@@ -148,18 +149,17 @@ try {
     )->execute([$nombre_local, $subdominio, $rut, $telefono ?: null, $email, $direccion ?: null, $comuna ?: null, $plan_nombre]);
     $id_empresa = (int)$db->lastInsertId();
 
-    // Guardar logo
+    // Guardar logo (fallo silencioso — no cancela el registro)
     $logo_path = null;
     if ($logo_tmp && $logo_ext) {
         $logo_dir = __DIR__ . '/../assets/uploads/logos/';
-        if (!is_dir($logo_dir)) mkdir($logo_dir, 0755, true);
+        if (!is_dir($logo_dir)) @mkdir($logo_dir, 0755, true);
         $logo_file = $id_empresa . '.' . $logo_ext;
-        if (!move_uploaded_file($logo_tmp, $logo_dir . $logo_file)) {
-            throw new RuntimeException('No se pudo guardar el logo.');
+        if (move_uploaded_file($logo_tmp, $logo_dir . $logo_file)) {
+            $logo_path = 'assets/uploads/logos/' . $logo_file;
+            $db->prepare("UPDATE empresas SET logo_path = ? WHERE id_empresa = ?")
+               ->execute([$logo_path, $id_empresa]);
         }
-        $logo_path = 'assets/uploads/logos/' . $logo_file;
-        $db->prepare("UPDATE empresas SET logo_path = ? WHERE id_empresa = ?")
-           ->execute([$logo_path, $id_empresa]);
     }
 
     // Usuario administrador
