@@ -483,6 +483,7 @@ foreach($planes as $plan):
       <ul class="footer-links">
         <li><a href="mailto:centrotec@gmail.com">centrotec@gmail.com</a></li>
         <li><a href="<?= BASE ?>/app">Ingresar al sistema</a></li>
+        <li><a href="<?= BASE ?>/privacidad.php">Política de Privacidad</a></li>
       </ul>
     </div>
   </div>
