@@ -7,6 +7,12 @@ Options -Indexes
     Deny from all
 </FilesMatch>
 
+# ── Permitir .well-known (Digital Asset Links para TWA/Play Store) ──
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^\.well-known/ - [L]
+</IfModule>
+
 # ── URL amigable: /reparo/seguimiento → seguimiento.php ──────
 <IfModule mod_rewrite.c>
     RewriteEngine On

@@ -5,28 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sin conexión — Centrotec</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: #0d1117; color: #e6edf3;
-    font-family: 'Inter', system-ui, sans-serif;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    min-height: 100vh; gap: 16px; padding: 24px; text-align: center;
-  }
-  .icon { font-size: 56px; }
-  h1 { font-size: 20px; font-weight: 700; }
-  p  { color: #8b949e; font-size: 14px; max-width: 280px; line-height: 1.5; }
-  button {
-    margin-top: 8px; padding: 12px 28px;
-    background: #7c3aed; color: #fff; border: none;
-    border-radius: 10px; font-size: 14px; cursor: pointer;
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#030507;color:#e8f4ff;
+  font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100svh;gap:0;padding:24px;text-align:center;
+  -webkit-font-smoothing:antialiased;
+}
+.logo{margin-bottom:2.5rem;opacity:.7}
+.icon-wrap{
+  width:72px;height:72px;border-radius:50%;
+  border:1px solid rgba(80,210,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 1.5rem;
+  background:rgba(14,85,128,.15);
+}
+.icon-wrap svg{opacity:.6}
+h1{
+  font-size:1.3rem;font-weight:200;text-transform:uppercase;
+  letter-spacing:.1em;color:#e8f4ff;margin-bottom:.625rem;
+}
+p{
+  color:rgba(180,215,240,.5);font-size:.875rem;
+  max-width:26ch;line-height:1.65;margin:0 auto 2rem;font-weight:300;
+}
+button{
+  padding:.75rem 2rem;
+  background:rgba(14,85,128,.7);
+  color:#e8f4ff;border:1px solid rgba(80,210,255,.25);
+  border-radius:3px;font-size:.82rem;cursor:pointer;
+  letter-spacing:.08em;text-transform:uppercase;font-weight:300;
+  font-family:inherit;
+  transition:background .15s,border-color .15s;
+}
+button:hover{background:rgba(26,122,176,.85);border-color:rgba(80,210,255,.45)}
+.note{margin-top:1.5rem;font-size:.72rem;color:rgba(120,170,210,.3);letter-spacing:.05em}
 </style>
 </head>
 <body>
-  <div class="icon">📡</div>
+  <div class="logo">
+    <svg width="120" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" aria-label="Centrotec">
+      <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#50d2ff" stroke-width="11" fill="none" stroke-linecap="round"/>
+      <line x1="120" y1="75" x2="138" y2="75" stroke="#50d2ff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="141" cy="75" r="3" fill="#50d2ff"/>
+      <line x1="120" y1="127" x2="138" y2="127" stroke="#50d2ff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="141" cy="127" r="3" fill="#50d2ff"/>
+      <text x="148" y="150" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="82" font-weight="400" letter-spacing="4" fill="#e8f4ff">ENTR</text>
+      <text x="408" y="150" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="82" font-weight="400" letter-spacing="4" fill="#e8f4ff">TEC</text>
+    </svg>
+  </div>
+
+  <div class="icon-wrap">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#50d2ff" stroke-width="1.5">
+      <line x1="1" y1="1" x2="23" y2="23"/>
+      <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/>
+    </svg>
+  </div>
+
   <h1>Sin conexión</h1>
   <p>Revisa tu conexión a internet e intenta nuevamente.</p>
   <button onclick="location.reload()">Reintentar</button>
+  <p class="note">Centrotec requiere conexión para funcionar</p>
 </body>
 </html>
