@@ -17,7 +17,7 @@ $planes = [
 <link rel="icon" type="image/png" sizes="32x32" href="<?= BASE ?>/assets/img/favicon-32x32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="<?= BASE ?>/assets/img/favicon-16x16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="<?= BASE ?>/assets/img/apple-touch-icon.png">
-<link rel="manifest" href="<?= BASE ?>/site.webmanifest">
+<link rel="manifest" href="<?= BASE ?>/manifest.php">
 <meta name="theme-color" content="#030507">
 <meta name="description" content="Digitaliza tu servicio técnico con Centrotec. Órdenes de trabajo, clientes, repuestos y estadísticas en un solo lugar.">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/landing.css?v=<?= filemtime(__DIR__.'/assets/css/landing.css') ?>">
@@ -527,5 +527,7 @@ foreach($planes as $plan):
 </script>
 
 <script src="<?= BASE ?>/assets/js/landing.js?v=<?= filemtime(__DIR__.'/assets/js/landing.js') ?>"></script>
+<meta name="base-path" content="<?= BASE ?>">
+<script src="<?= BASE ?>/assets/js/sw-register.js" defer></script>
 </body>
 </html>
