@@ -234,6 +234,15 @@ if ($method === 'PUT') {
         ? ($in['id_repuesto_usado'] ? (int) $in['id_repuesto_usado'] : null)
         : ($row['id_repuesto_usado'] ?? null);
 
+    // Validar pertenencia del repuesto a esta empresa ANTES de guardarlo — de lo contrario un
+    // id_repuesto de otra empresa quedaba escrito en reparaciones.id_repuesto_usado cuando el
+    // estado nuevo era 'Reparado' (esa rama salta el chequeo de reserva/descuento mas abajo).
+    if ($id_repuesto_nuevo !== null) {
+        $chkRep = $db->prepare("SELECT 1 FROM inventario WHERE id_repuesto = ? AND id_empresa = ?");
+        $chkRep->execute([$id_repuesto_nuevo, $eid]);
+        if (!$chkRep->fetch()) json_err('Repuesto no encontrado.', 404);
+    }
+
     $obs_txt = trim($in['obs'] ?? '');
 
     $nuevo_tel = null;

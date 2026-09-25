@@ -1,11 +1,24 @@
 # ── Bloquear listado de directorios ──────────────────────────
 Options -Indexes
 
+# --- Indice por defecto ---
+DirectoryIndex index.php index.html index.htm
+
 # ── Bloquear acceso directo a archivos sensibles ─────────────
-<FilesMatch "\.(sql|log|env|md|gitignore)$">
+<FilesMatch "\.(sql|log|env|md|gitignore|ini|bak|old|example)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+# ── Config de BD del hosting (no forma parte del repo) ───────
+<Files "config-db.php">
+    Order allow,deny
+    Deny from all
+</Files>
+<Files "config-db.ejemplo.php">
+    Order allow,deny
+    Deny from all
+</Files>
 
 # ── Permitir .well-known (Digital Asset Links para TWA/Play Store) ──
 <IfModule mod_rewrite.c>
@@ -13,7 +26,7 @@ Options -Indexes
     RewriteRule ^\.well-known/ - [L]
 </IfModule>
 
-# ── URL amigable: /reparo/seguimiento → seguimiento.php ──────
+# ── URL amigable: /seguimiento → seguimiento.php ──────────────
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^seguimiento/?$ seguimiento.php [L,QSA]
@@ -53,10 +66,23 @@ Options -Indexes
     </FilesMatch>
 </IfModule>
 
+# --- Codificacion ---
+AddDefaultCharset UTF-8
+
+# --- Cache de estaticos ---
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp  "access plus 1 month"
+    ExpiresByType image/png   "access plus 1 month"
+    ExpiresByType image/jpeg  "access plus 1 month"
+    ExpiresByType text/css    "access plus 1 week"
+    ExpiresByType text/javascript "access plus 1 week"
+</IfModule>
+
 # ── Ocultar versión del servidor ─────────────────────────────
 ServerSignature Off
 
-# ── Forzar HTTPS en producción (descomentar cuando tengas SSL) ─
+# ── Forzar HTTPS en producción (Cloudflare ya termina TLS; activar solo si hace falta) ─
 # RewriteEngine On
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

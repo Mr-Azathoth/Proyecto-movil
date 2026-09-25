@@ -16,4 +16,6 @@ $st->execute([$id]);
 $nuevo = $st->fetchColumn();
 if ($nuevo === false) sadmin_json_err('Empresa no encontrada.', 404);
 
+log_accion($db, 'sadmin_toggle_empresa', null, ['sadmin_user' => sadmin_user(), 'activa' => (bool)$nuevo], null, $id);
+
 sadmin_json_ok(['activa' => (bool)$nuevo]);

@@ -11,6 +11,7 @@
 })();
 
 define('DB_HOST',    $_ENV['DB_HOST'] ?? 'localhost');
+define('DB_PORT',    (int)($_ENV['DB_PORT'] ?? 3306));
 define('DB_NAME',    $_ENV['DB_NAME'] ?? 'centrotec_db');
 define('DB_USER',    $_ENV['DB_USER'] ?? 'root');
 define('DB_PASS',    $_ENV['DB_PASS'] ?? '');
@@ -103,7 +104,7 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-sr
 function getDB(): PDO {
     static $pdo = null;
     if ($pdo === null) {
-        $dsn = "mysql:host=".DB_HOST.";dbname=".DB_NAME.";charset=".DB_CHARSET;
+        $dsn = "mysql:host=".DB_HOST.";port=".DB_PORT.";dbname=".DB_NAME.";charset=".DB_CHARSET;
         $pdo = new PDO($dsn, DB_USER, DB_PASS, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -379,18 +380,59 @@ function guard(): void {
     }
 }
 
+// Rangos IP publicados por Cloudflare (https://www.cloudflare.com/ips/) — solo si la conexion TCP
+// (REMOTE_ADDR) viene realmente de uno de estos rangos confiamos en la cabecera CF-Connecting-IP;
+// de lo contrario cualquier cliente podria falsificarla para que el log de auditoria registre una
+// IP arbitraria en vez de la real.
+const CLOUDFLARE_IP_RANGES = [
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+    '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+    '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+    '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+    '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+];
+
+function ip_en_rango(string $ip, string $cidr): bool {
+    [$subnet, $bits] = explode('/', $cidr);
+    $ipBin = @inet_pton($ip);
+    $subBin = @inet_pton($subnet);
+    if ($ipBin === false || $subBin === false || strlen($ipBin) !== strlen($subBin)) return false;
+    $bits    = (int)$bits;
+    $bytes   = intdiv($bits, 8);
+    $remBits = $bits % 8;
+    if ($bytes > 0 && substr($ipBin, 0, $bytes) !== substr($subBin, 0, $bytes)) return false;
+    if ($remBits === 0) return true;
+    $mask = chr((0xFF << (8 - $remBits)) & 0xFF);
+    return (substr($ipBin, $bytes, 1) & $mask) === (substr($subBin, $bytes, 1) & $mask);
+}
+
+// IP real del cliente para el log de auditoria: solo confia en CF-Connecting-IP cuando la conexion
+// TCP directa (REMOTE_ADDR) es realmente de Cloudflare; nunca confia en X-Forwarded-For, que
+// cualquier cliente puede enviar libremente.
+function client_ip_real(): string {
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $cf     = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
+    if ($cf !== '') {
+        foreach (CLOUDFLARE_IP_RANGES as $rango) {
+            if (ip_en_rango($remote, $rango)) return $cf;
+        }
+    }
+    return $remote;
+}
+
 // Registra acciones críticas en la tabla log_acciones
-function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null, ?array $entrada = null, ?array $salida = null): void {
+function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null, ?array $entrada = null, ?array $salida = null, ?int $id_empresa = null): void {
     $pdo->prepare(
         "INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip, datos_entrada, datos_salida)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )->execute([
-        eid(),
+        $id_empresa ?? eid(),
         $_SESSION['user_id'] ?? null,
         $_SESSION['user']    ?? null,
         $accion,
         $id_reparacion,
-        explode(',', $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0')[0],
+        client_ip_real(),
         $entrada !== null ? json_encode($entrada, JSON_UNESCAPED_UNICODE) : null,
         $salida  !== null ? json_encode($salida,  JSON_UNESCAPED_UNICODE) : null,
     ]);

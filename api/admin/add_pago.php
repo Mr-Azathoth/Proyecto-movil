@@ -23,6 +23,9 @@ $db->prepare("INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion
    ->execute([$id, $fecha, $monto, $desc, $estado]);
 
 $nuevo_id = $db->lastInsertId();
+
+log_accion($db, 'sadmin_add_pago', null, ['sadmin_user' => sadmin_user(), 'monto' => $monto, 'descripcion' => $desc, 'estado' => $estado], null, $id);
+
 sadmin_json_ok([
     'id'          => $nuevo_id,
     'fecha'       => $fecha,

@@ -84,7 +84,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 $intentos  = login_fallo($ip);
-                log_accion(getDB(), 'login_fallo', null, ['user' => $_POST['user'] ?? '']);
+                // Solo se registra si el usuario existe (para saber a que empresa atribuirlo);
+                // sin fila no hay id_empresa y aun no hay sesion, asi que no se puede loguear.
+                if ($row) {
+                    log_accion(getDB(), 'login_fallo', null, ['user' => $_POST['user'] ?? ''], null, (int)$row['id_empresa']);
+                }
                 $bloqueado = login_segundos_restantes($ip) > 0;
                 $restantes = $bloqueado ? 0 : max(0, 5 - $intentos);
                 $err = $restantes > 0

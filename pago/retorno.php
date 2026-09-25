@@ -25,6 +25,11 @@ try { $db->exec("ALTER TABLE empresas ADD COLUMN IF NOT EXISTS mp_preapproval_id
 
 function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string $gateway = '', string $paymentId = ''): bool {
     try {
+        // Migracion silenciosa: registro permanente de payment_id ya acreditados. A diferencia de
+        // empresas.mp_preapproval_id (que se limpia al cancelar la suscripcion), esta columna nunca
+        // se borra, así que un payment_id ya usado no puede volver a acreditarse tras cancelar/reactivar.
+        try { $db->exec("ALTER TABLE historial_pagos ADD COLUMN IF NOT EXISTS mp_payment_id VARCHAR(40) NULL DEFAULT NULL"); } catch (PDOException $e) {}
+
         $db->beginTransaction();
 
         if ($paymentId !== '') {
@@ -32,6 +37,12 @@ function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string
             $lock = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1 FOR UPDATE");
             $lock->execute([$eid]);
             if ($lock->fetchColumn() === $paymentId) {
+                $db->rollBack();
+                return false;
+            }
+            $yaPagado = $db->prepare("SELECT 1 FROM historial_pagos WHERE id_empresa = ? AND mp_payment_id = ? LIMIT 1");
+            $yaPagado->execute([$eid, $paymentId]);
+            if ($yaPagado->fetch()) {
                 $db->rollBack();
                 return false;
             }
@@ -57,8 +68,8 @@ function activar_plan(PDO $db, int $eid, array $planInfo, string $estado, string
         }
 
         $db->prepare(
-            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado) VALUES (?, ?, ?, ?, ?)"
-        )->execute([$eid, date('Y-m-d'), $planInfo['precio'], $label, $estado]);
+            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado, mp_payment_id) VALUES (?, ?, ?, ?, ?, ?)"
+        )->execute([$eid, date('Y-m-d'), $planInfo['precio'], $label, $estado, $paymentId !== '' ? $paymentId : null]);
 
         $db->commit();
         return true;
@@ -109,7 +120,10 @@ if ($gateway === 'mp_checkout') {
 
                     if ($code === 200) {
                         $payment = json_decode($resp, true);
-                        if (($payment['status'] ?? '') === 'approved') {
+                        // El external_reference debe venir confirmado por la API de MP, nunca solo del GET:
+                        // de lo contrario cualquier pago propio aprobado podria usarse para acreditar
+                        // el plan de OTRA empresa cambiando el parametro external_reference en la URL.
+                        if (($payment['status'] ?? '') === 'approved' && ($payment['external_reference'] ?? '') === $extRef) {
                             $planInfo = MP_PLANES[$planKey];
 
                             try {

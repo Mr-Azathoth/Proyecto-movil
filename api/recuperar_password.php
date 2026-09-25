@@ -5,6 +5,16 @@ header('Content-Type: application/json; charset=utf-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }
 
+// Igual que ingresar.php/api/registro.php: sin esto, el endpoint se podia golpear sin limite
+// para bombardear una casilla con correos de reset o para medir tiempos de respuesta y
+// enumerar cuentas existentes (una cuenta real dispara un envio SMTP real, mas lento).
+$ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+if (!login_check_rate($ip)) {
+    $seg = login_segundos_restantes($ip);
+    json_err('Demasiados intentos. Espera ' . ceil($seg / 60) . ' minuto(s).', 429);
+}
+login_fallo($ip);
+
 $db = getDB();
 
 // Crear tabla si no existe

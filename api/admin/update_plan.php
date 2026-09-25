@@ -36,4 +36,6 @@ if (empty($sets)) sadmin_json_err('Nada que actualizar.');
 $params[] = $id;
 $db->prepare("UPDATE empresas SET " . implode(', ', $sets) . " WHERE id_empresa = ?")->execute($params);
 
+log_accion($db, 'sadmin_update_plan', null, ['sadmin_user' => sadmin_user(), 'plan_tipo' => $tipo, 'plan_estado' => $estado, 'plan_vencimiento' => $venc], null, $id);
+
 sadmin_json_ok(['msg' => 'Plan actualizado.']);

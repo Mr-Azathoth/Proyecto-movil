@@ -37,19 +37,24 @@ if (MP_WEBHOOK_SECRET) {
         if (trim($k) === 'v1') $v1 = trim($v);
     }
 
-    // Si el proxy (Cloudflare) stripeó x-signature o x-request-id, no podemos validar HMAC.
-    // Fallback: la verificación contra la API de MP garantiza que el pago es legítimo.
-    if ($v1 === '' || $xRequestId === '') {
-        error_log('[webhook_mp] skip HMAC (headers ausentes) | v1=' . ($v1 ?: 'vacío') . ' | xreqid=' . ($xRequestId ?: 'vacío'));
-    } else {
-        // El manifest usa data.id en minúsculas según la doc de MP
-        $manifest = 'id:' . strtolower($id) . ';request-id:' . $xRequestId . ';ts:' . $ts;
-        $expected = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
+    // Con secreto configurado, la firma es obligatoria: cabeceras ausentes o invalidas
+    // se rechazan (antes se dejaba pasar sin firma, lo cual anulaba la verificacion).
+    if ($v1 === '' || $xRequestId === '' || $ts === '') {
+        error_log('[webhook_mp] rechazado: cabeceras de firma ausentes | v1=' . ($v1 ?: 'vacío') . ' | xreqid=' . ($xRequestId ?: 'vacío'));
+        exit;
+    }
+    // La notificacion no debe ser mas vieja que 5 minutos (evita reintento/repeticion de una firma capturada)
+    if (!ctype_digit($ts) || abs(time() - (int)$ts) > 300) {
+        error_log('[webhook_mp] rechazado: ts fuera de rango | ts=' . $ts);
+        exit;
+    }
+    // El manifest usa data.id en minúsculas según la doc de MP
+    $manifest = 'id:' . strtolower($id) . ';request-id:' . $xRequestId . ';ts:' . $ts;
+    $expected = hash_hmac('sha256', $manifest, MP_WEBHOOK_SECRET);
 
-        if (!hash_equals($expected, $v1)) {
-            error_log('[webhook_mp] HMAC fail | manifest=' . $manifest . ' | xsig=' . $xSignature . ' | xreqid=' . $xRequestId);
-            exit;
-        }
+    if (!hash_equals($expected, $v1)) {
+        error_log('[webhook_mp] HMAC fail | manifest=' . $manifest . ' | xsig=' . $xSignature . ' | xreqid=' . $xRequestId);
+        exit;
     }
 }
 
@@ -83,11 +88,22 @@ $db = getDB();
 // Activar plan con idempotencia atómica (SELECT FOR UPDATE evita race condition con retorno.php)
 function activar_plan_webhook(PDO $db, int $eid, array $planInfo, string $estado, string $paymentId): bool {
     try {
+        // Migracion silenciosa: columna para recordar de forma permanente que payment_id ya se acredito
+        // (a diferencia de empresas.mp_preapproval_id, que se pone en NULL al cancelar la suscripcion
+        // y por eso no sirve por si sola para bloquear el reenvio/repeticion de un pago viejo).
+        try { $db->exec("ALTER TABLE historial_pagos ADD COLUMN IF NOT EXISTS mp_payment_id VARCHAR(40) NULL DEFAULT NULL"); } catch (PDOException $e) {}
+
         $db->beginTransaction();
 
         $lock = $db->prepare("SELECT mp_preapproval_id FROM empresas WHERE id_empresa=? LIMIT 1 FOR UPDATE");
         $lock->execute([$eid]);
         if ($lock->fetchColumn() === (string)$paymentId) {
+            $db->rollBack();
+            return false;
+        }
+        $yaPagado = $db->prepare("SELECT 1 FROM historial_pagos WHERE id_empresa = ? AND mp_payment_id = ? LIMIT 1");
+        $yaPagado->execute([$eid, $paymentId]);
+        if ($yaPagado->fetch()) {
             $db->rollBack();
             return false;
         }
@@ -103,8 +119,8 @@ function activar_plan_webhook(PDO $db, int $eid, array $planInfo, string $estado
         )->execute([$planInfo['nombre'], $nuevaFecha, $paymentId, $eid]);
 
         $db->prepare(
-            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado) VALUES (?,?,?,?,?)"
-        )->execute([$eid, date('Y-m-d'), $planInfo['precio'], 'Pago Centrotec — Plan ' . $planInfo['nombre'] . ' — Mercado Pago', $estado]);
+            "INSERT INTO historial_pagos (id_empresa, fecha, monto, descripcion, estado, mp_payment_id) VALUES (?,?,?,?,?,?)"
+        )->execute([$eid, date('Y-m-d'), $planInfo['precio'], 'Pago Centrotec — Plan ' . $planInfo['nombre'] . ' — Mercado Pago', $estado, $paymentId]);
 
         $db->commit();
         return true;

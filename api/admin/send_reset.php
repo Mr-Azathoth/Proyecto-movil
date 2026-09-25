@@ -45,4 +45,6 @@ try {
     sadmin_json_err('No se pudo enviar el correo. Intente nuevamente.', 502);
 }
 
+log_accion($db, 'sadmin_send_reset', null, ['sadmin_user' => sadmin_user(), 'id_usuario' => $id_usuario, 'correo' => $row['correo']], null, (int)$row['id_empresa']);
+
 sadmin_json_ok(['msg' => 'Correo enviado a ' . $row['correo']]);

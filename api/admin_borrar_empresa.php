@@ -75,4 +75,13 @@ try {
     echo json_encode(['ok' => false, 'msg' => 'Error al borrar empresa en base de datos.']); exit;
 }
 
+// Se registra despues del commit (la propia empresa ya fue borrada, junto con su log_acciones
+// previo) para que quede constancia de quien elimino que empresa; si fallara por cualquier motivo
+// no debe impedir informar al cliente de que el borrado ya se realizo.
+try {
+    log_accion($db, 'sadmin_borrar_empresa', null, ['sadmin_user' => sadmin_user(), 'empresa' => $empresa['nombre']], null, $id);
+} catch (Throwable $e) {
+    error_log("[admin_borrar_empresa] eid={$id} log_accion failed: " . $e->getMessage());
+}
+
 echo json_encode(['ok' => true, 'msg' => 'Empresa "' . $empresa['nombre'] . '" eliminada correctamente.']);

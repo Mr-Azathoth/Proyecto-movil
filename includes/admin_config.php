@@ -56,7 +56,7 @@ function sadmin_remember_check(): bool {
             "SELECT sa.id, sa.user, sa.nombre
              FROM sadmin_remember_tokens rt
              JOIN super_admins sa ON sa.id = rt.sadmin_id
-             WHERE rt.token_hash = ? AND rt.expira_en > NOW()"
+             WHERE rt.token_hash = ? AND rt.expira_en > NOW() AND sa.activo = 1"
         );
         $row->execute([$hash]);
         $row = $row->fetch(PDO::FETCH_ASSOC);
@@ -99,7 +99,24 @@ function requireSuperAdmin(): void {
         header('Location: '.BASE.'/admin_login.php?timeout=1');
         exit;
     }
+    if (!sadmin_sigue_activo(sadmin_id())) {
+        sadmin_remember_clear();
+        session_destroy();
+        header('Location: '.BASE.'/admin_login.php');
+        exit;
+    }
     $_SESSION['sadmin_last'] = time();
+}
+
+// Revalida contra la BD que la cuenta sigue activa (igual que guard() hace para usuarios de tenant) —
+// sin esto, desactivar a un super admin no le quita el acceso a una sesion ya iniciada.
+function sadmin_sigue_activo(int $sadmin_id): bool {
+    static $cache = [];
+    if (isset($cache[$sadmin_id])) return $cache[$sadmin_id];
+    $st = getDB()->prepare("SELECT activo FROM super_admins WHERE id = ? LIMIT 1");
+    $st->execute([$sadmin_id]);
+    $row = $st->fetch();
+    return $cache[$sadmin_id] = ($row && (bool)$row['activo']);
 }
 
 function sadmin_id(): int      { return (int)($_SESSION['sadmin_id']    ?? 0); }
@@ -122,6 +139,10 @@ function sadmin_guard(): void {
     if (isset($_SESSION['sadmin_last']) && time() - $_SESSION['sadmin_last'] > SADMIN_TIMEOUT) {
         session_destroy();
         sadmin_json_err('Sesión expirada.', 401);
+    }
+    if (!sadmin_sigue_activo(sadmin_id())) {
+        session_destroy();
+        sadmin_json_err('Cuenta desactivada.', 401);
     }
     $_SESSION['sadmin_last'] = time();
 }

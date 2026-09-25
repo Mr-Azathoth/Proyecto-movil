@@ -27,9 +27,29 @@ if ($sin_codigo) {
 // Rate limit: max 10 búsquedas por minuto por IP (server-side, no depende de cookies)
 $ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 $rl_file = sys_get_temp_dir() . '/ct_seg_rl_' . md5($ip) . '.json';
-$rl_data = file_exists($rl_file) ? @json_decode(file_get_contents($rl_file), true) : null;
-if (!$rl_data || time() - ($rl_data['ts'] ?? 0) > 60) $rl_data = ['cnt' => 0, 'ts' => time()];
-$rate_ok = $rl_data['cnt'] < 10;
+
+// Verifica y consume un intento de forma atomica (flock cubre todo el ciclo lectura+escritura,
+// a diferencia de un file_put_contents suelto, que permite que peticiones en paralelo lean el
+// mismo contador antes de que se escriba y así se salten el limite de 10/minuto).
+function seg_rate_check_and_bump(string $rl_file): bool {
+    $fp = @fopen($rl_file, 'c+');
+    if (!$fp) return true;
+    flock($fp, LOCK_EX);
+    $raw     = stream_get_contents($fp);
+    $rl_data = $raw !== false && $raw !== '' ? json_decode($raw, true) : null;
+    if (!is_array($rl_data) || time() - ($rl_data['ts'] ?? 0) > 60) $rl_data = ['cnt' => 0, 'ts' => time()];
+    $ok = $rl_data['cnt'] < 10;
+    if ($ok) {
+        $rl_data['cnt']++;
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($rl_data));
+        fflush($fp);
+    }
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return $ok;
+}
 
 // Búsqueda
 $codigo = strtoupper(trim($_GET['codigo'] ?? ''));
@@ -46,13 +66,11 @@ $estado_labels = [
 ];
 
 if ($codigo !== '') {
-    if (!$rate_ok) {
-        $error = 'Demasiadas búsquedas. Espera un momento e intenta de nuevo.';
-    } elseif (!preg_match('/^[A-Z3-9]{6}$/', $codigo)) {
+    if (!preg_match('/^[A-Z3-9]{6}$/', $codigo)) {
         $error = 'Código inválido. Debe tener 6 caracteres (letras y números).';
+    } elseif (!seg_rate_check_and_bump($rl_file)) {
+        $error = 'Demasiadas búsquedas. Espera un momento e intenta de nuevo.';
     } else {
-        $rl_data['cnt']++;
-        @file_put_contents($rl_file, json_encode($rl_data));
         $st = $db->prepare(
             "SELECT r.id_ingreso, r.nombre_cliente, r.tipo_ingreso, r.marca_ingreso, r.modelo_ingreso,
                     r.dano_ingreso, r.status, r.fecha_ingreso, r.obs, r.ingresado_por, r.valor_ingreso,
