@@ -13,13 +13,21 @@ $venc   = trim($_POST['plan_vencimiento'] ?? '');
 
 if (!$id) sadmin_json_err('Datos incompletos.');
 
-$estados_validos = ['Activo','Vencido','Suspendido','Gratis','Trial'];
-$tipos_validos   = ['1mes','3meses','6meses','12meses','manual'];
-if ($estado && !in_array($estado, $estados_validos, true)) sadmin_json_err('Estado inválido.');
-if ($tipo  && !in_array($tipo,   $tipos_validos,   true)) sadmin_json_err('Tipo de plan inválido.');
-if ($venc && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $venc)) sadmin_json_err('Fecha inválida.');
-
 $db = getDB();
+
+$estados_validos = ['Activo','Vencido','Suspendido','Gratis','Trial'];
+$tipos_validos    = ['Trial','Trimestral','Semestral','Anual','Para siempre'];
+// Ademas de las 5 opciones del combo, se acepta sin cambios el valor que la empresa ya tenia
+// (ej. "3 meses" de una compra real por Mercado Pago) — el select del panel lo inyecta como una
+// opcion extra "(actual)" cuando no calza con ninguna de las 5, para no bloquear un guardado que
+// no toco el tipo de plan.
+if ($tipo !== '' && !in_array($tipo, $tipos_validos, true)) {
+    $actualRow = $db->prepare("SELECT plan_tipo FROM empresas WHERE id_empresa = ? LIMIT 1");
+    $actualRow->execute([$id]);
+    if ($tipo !== ($actualRow->fetchColumn() ?: '')) sadmin_json_err('Tipo de plan inválido.');
+}
+if ($estado && !in_array($estado, $estados_validos, true)) sadmin_json_err('Estado inválido.');
+if ($venc && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $venc)) sadmin_json_err('Fecha inválida.');
 $sets = [];
 $params = [];
 if ($tipo  !== '') { $sets[] = 'plan_tipo = ?';        $params[] = $tipo; }

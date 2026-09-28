@@ -161,7 +161,18 @@ $iniciales = sadmin_iniciales($emp['nombre']);
           <div class="plan-row2">
             <div class="fg">
               <label>Tipo de plan</label>
-              <input id="plan-tipo" type="text" value="<?= htmlspecialchars($emp['plan_tipo'] ?? '') ?>" placeholder="Básico, Pro, Enterprise...">
+              <?php
+                $planTipoOpciones = ['Trial', 'Trimestral', 'Semestral', 'Anual', 'Para siempre'];
+                $planTipoActual   = $emp['plan_tipo'] ?? '';
+              ?>
+              <select id="plan-tipo">
+                <?php if ($planTipoActual !== '' && !in_array($planTipoActual, $planTipoOpciones, true)): ?>
+                <option value="<?= htmlspecialchars($planTipoActual) ?>" selected><?= htmlspecialchars($planTipoActual) ?> (actual)</option>
+                <?php endif; ?>
+                <?php foreach ($planTipoOpciones as $opt): ?>
+                <option value="<?= $opt ?>" <?= $planTipoActual === $opt ? 'selected' : '' ?>><?= $opt ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="fg">
               <label>Estado</label>

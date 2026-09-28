@@ -241,6 +241,37 @@ document.getElementById('btn-guardar-pago')?.addEventListener('click', async fun
   });
 })();
 
+// ── Autocompletar fecha de vencimiento segun el tipo de plan elegido ──
+(function () {
+  const DIAS_POR_TIPO       = { 'Trial': 7 };
+  const MESES_POR_TIPO      = { 'Trimestral': 3, 'Semestral': 6, 'Anual': 12 };
+  const FECHA_FIJA_POR_TIPO = { 'Para siempre': '2099-12-31' };
+
+  function fechaISO(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  document.getElementById('plan-tipo')?.addEventListener('change', function () {
+    const vencInput = document.getElementById('plan-venc');
+    if (!vencInput) return;
+    const tipo = this.value;
+    if (FECHA_FIJA_POR_TIPO[tipo]) {
+      vencInput.value = FECHA_FIJA_POR_TIPO[tipo];
+      return;
+    }
+    const hoy = new Date();
+    if (DIAS_POR_TIPO[tipo] != null) {
+      hoy.setDate(hoy.getDate() + DIAS_POR_TIPO[tipo]);
+      vencInput.value = fechaISO(hoy);
+    } else if (MESES_POR_TIPO[tipo] != null) {
+      hoy.setMonth(hoy.getMonth() + MESES_POR_TIPO[tipo]);
+      vencInput.value = fechaISO(hoy);
+    }
+    // Tipo desconocido (ej. la opcion "(actual)" inyectada con el valor legacy del servidor):
+    // se deja la fecha tal cual estaba.
+  });
+})();
+
 // ── Guardar plan ──────────────────────────────────────────────
 document.getElementById('btn-save-plan')?.addEventListener('click', async function () {
   const fd = new FormData();
