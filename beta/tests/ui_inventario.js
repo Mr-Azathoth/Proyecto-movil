@@ -84,11 +84,14 @@ const fs=require('fs'), vm=require('vm');
   ctx._repuestosCache=null;
   await T.refrescarRepuestosNuevo();
   const cN=T.cache.get(String(ids.nor)).find(x=>x.id===INV['Pantalla A54']);
-  ok('formulario nuevo con sucursal Norte: la lista muestra stock de Norte (20)', cN && /stock: 20\)/.test(cN.label), cN&&cN.label);
+  ok('formulario nuevo con sucursal Norte: la lista muestra stock de Norte (20)', cN && /disp\. 20\)/.test(cN.label), cN&&cN.label);
   els['nuevo-sucursal'].value=String(ids.cen);
   await T.refrescarRepuestosNuevo();
   const cC=T.cache.get(String(ids.cen)).find(x=>x.id===INV['Pantalla A54']);
-  ok('...y con Centro muestra el de Centro (6)', cC && /stock: 6\)/.test(cC.label), cC&&cC.label);
+  ok('...y con Centro muestra el de Centro (6)', cC && /disp\. 6\)/.test(cC.label), cC&&cC.label);
+  const raroN=T.cache.get(String(ids.nor)).find(x=>x.id===INV['Repuesto Raro']);
+  ok('repuesto agotado en Norte: queda deshabilitado y dice donde hay (Bodega 1)', raroN && raroN.disabled===true && /Bodega 1/.test(raroN.hint), JSON.stringify(raroN));
+  ok('...y uno con stock en Norte NO esta deshabilitado', cN && !cN.disabled, JSON.stringify(cN));
 
 
   // ── Respuestas fuera de orden: solo la ultima carga pinta la tabla ──

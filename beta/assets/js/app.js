@@ -153,7 +153,7 @@ class SearchableSelect {
     const filtered = q ? this.items.filter(it => it.label.toLowerCase().includes(lower)) : this.items;
 
     let html = filtered.map((it, i) =>
-      `<div class="ss-opt" tabindex="-1" data-v="${esc(it.value)}" data-id="${it.id||''}" data-lbl="${esc(it.label)}">${esc(it.label)}</div>`
+      `<div class="ss-opt${it.disabled ? ' ss-opt-dis' : ''}" tabindex="-1"${it.disabled ? ' aria-disabled="true"' : ''} data-v="${esc(it.value)}" data-id="${it.id||''}" data-lbl="${esc(it.label)}">${esc(it.label)}${it.hint ? `<span class="ss-hint">${esc(it.hint)}</span>` : ''}</div>`
     ).join('');
 
     if (!filtered.length && !this.allowAdd) {
@@ -167,10 +167,11 @@ class SearchableSelect {
 
     this.list.innerHTML = html;
     this.list.querySelectorAll('.ss-opt').forEach((opt, i) => {
-      opt.addEventListener('click', () => this._pick(opt.dataset.v, opt.dataset.lbl, opt.dataset.id));
+      const bloqueada = opt.classList.contains('ss-opt-dis'); // sin stock: se ve pero no se puede elegir
+      opt.addEventListener('click', () => { if (!bloqueada) this._pick(opt.dataset.v, opt.dataset.lbl, opt.dataset.id); });
       opt.addEventListener('keydown', e => {
         const opts = this.list.querySelectorAll('.ss-opt');
-        if (e.key === 'Enter')     { e.preventDefault(); this._pick(opt.dataset.v, opt.dataset.lbl, opt.dataset.id); }
+        if (e.key === 'Enter')     { e.preventDefault(); if (!bloqueada) this._pick(opt.dataset.v, opt.dataset.lbl, opt.dataset.id); }
         if (e.key === 'ArrowDown') { e.preventDefault(); if (opts[i+1]) opts[i+1].focus(); }
         if (e.key === 'ArrowUp')   { e.preventDefault(); if (i > 0) opts[i-1].focus(); else this.input.focus(); }
         if (e.key === 'Escape')    { this._close(); this.btn.focus(); }
@@ -1269,11 +1270,20 @@ async function _fetchRepuestosCache(idSuc) {
   if (mapa.has(key)) return mapa.get(key);
   const r  = await apiFetch('/reparo/api/inventario.php' + (key ? `?sucursal=${encodeURIComponent(key)}` : ''));
   const ji = await r.json();
-  const lista = (ji.data || []).map(i => ({
-    id:    i.id_repuesto,
-    value: String(i.id_repuesto),
-    label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
-  }));
+  const aqui  = key ? Number(key) : null;
+  const lista = (ji.data || []).map(i => {
+    const nombre = `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''}`;
+    const base   = { id: i.id_repuesto, value: String(i.id_repuesto) };
+    if (aqui === null) return { ...base, label: `${nombre} (stock: ${i.cantidad})` }; // sin sucursal: total
+    const disp = (i.cantidad || 0) - (i.cantidad_reservada || 0);
+    if (disp > 0) return { ...base, label: `${nombre} (disp. ${disp})` };
+    // Agotado (o todo reservado) en esta sucursal: se muestra donde SI hay para pedir un traspaso.
+    const otras = (i.stock || [])
+      .filter(x => x.id_sucursal !== aqui && x.cantidad - x.cantidad_reservada > 0)
+      .map(x => `${window.SUC ? SUC.nombre(x.id_sucursal) : 'otra sucursal'} ${x.cantidad - x.cantidad_reservada}`);
+    return { ...base, label: nombre, disabled: true,
+             hint: otras.length ? `Agotado aquí · disponible en ${otras.join(', ')}` : 'Sin stock disponible' };
+  });
   // Si la cache se invalido mientras llegaba la respuesta (p. ej. tras agregar un repuesto), no se guarda.
   if (_repuestosCache === mapa) mapa.set(key, lista);
   return lista;
