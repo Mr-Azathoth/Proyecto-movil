@@ -476,6 +476,17 @@ function exigir_escritura_reparacion(PDO $db, int $id_reparacion, int $eid): voi
     }
 }
 
+// Telefono solo con digitos y prefijo de pais, para enlaces tel: y wa.me. Un numero chileno de 9 digitos
+// (celular o fijo con codigo de area) recibe el 56; si ya trae 56 se deja; menos de 8 digitos = no se puede
+// enlazar ('').
+function telefono_normalizado(string $t): string {
+    $d = preg_replace('/\D/', '', $t);
+    if ($d === '' || strlen($d) < 8) return '';
+    $d = ltrim($d, '0');
+    if (strlen($d) === 9) return '56' . $d; // numeros chilenos: 9 digitos (celular 9XXXXXXXX o fijo con codigo de area)
+    return $d;
+}
+
 // Datos de contacto que se imprimen para una sucursal (boleta/orden de servicio). Lo que la sucursal deja
 // vacio (direccion o telefono) lo hereda de la casa matriz, es decir, de los datos de la empresa. Varias
 // sucursales pueden compartir el mismo telefono: no hay restriccion de unicidad.

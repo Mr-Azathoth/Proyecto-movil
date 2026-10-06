@@ -29,11 +29,13 @@ $mkSuc = function (int $eid, string $n, int $bodega = 0) use ($db) {
     $db->prepare("INSERT INTO sucursales (id_empresa, nombre, es_bodega) VALUES (?,?,?)")->execute([$eid, $n, $bodega]);
     return (int) $db->lastInsertId();
 };
-$mkRep = function (int $eid, int $suc, string $cli, string $by) use ($db) {
+// Codigo de seguimiento con el alfabeto que acepta la pagina publica (sin 0, 1, 2 ni letras ambiguas)
+$codigoValido = function () { $c = 'ABCDEFGHJKMNPQRSTUVWXY3456789'; $o = ''; for ($i = 0; $i < 6; $i++) $o .= $c[random_int(0, strlen($c) - 1)]; return $o; };
+$mkRep = function (int $eid, int $suc, string $cli, string $by) use ($db, $codigoValido) {
     $db->prepare("INSERT INTO reparaciones (id_empresa, nombre_cliente, telefono_cliente, tipo_ingreso, marca_ingreso, modelo_ingreso,
                   dano_ingreso, valor_ingreso, status, ingresado_por, id_sucursal, codigo_seguimiento)
                   VALUES (?,?,'+56911111111','Telefono','Samsung','A54','Pantalla',10000,'Ingresado',?,?,?)")
-       ->execute([$eid, $cli, $by, $suc, strtoupper(substr(md5($cli . microtime()), 0, 6))]);
+       ->execute([$eid, $cli, $by, $suc, $codigoValido()]);
     return (int) $db->lastInsertId();
 };
 

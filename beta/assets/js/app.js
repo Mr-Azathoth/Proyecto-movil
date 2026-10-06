@@ -499,9 +499,13 @@ function waLink(rep) {
   const codigo     = rep.codigo_seguimiento || '';
   if (!codigo) return base;
   const nombre = rep.nombre_cliente || 'cliente';
-  const local  = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+  const empresa = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+  // Si la empresa tiene varias sucursales, se indica en cual esta el equipo y como llegar / llamar.
+  const c      = window.SUC ? SUC.contacto(rep.id_sucursal) : null;
+  const local  = c && c.multi && c.nombre ? `${empresa} — Sucursal ${c.nombre}` : empresa;
+  const donde  = c ? [c.direccion ? `Dirección: ${c.direccion}` : '', c.telefono ? `Teléfono: ${c.telefono}` : ''].filter(Boolean).join('\n') : '';
   const url    = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
-  const msg    = `Hola ${nombre}! Tu equipo está en *${local}*.\nCódigo de seguimiento: *${codigo}*\nConsulta el estado en: ${url}`;
+  const msg    = `Hola ${nombre}! Tu equipo está en *${local}*.\n${donde ? donde + '\n' : ''}Código de seguimiento: *${codigo}*\nConsulta el estado en: ${url}`;
   return `${base}?text=${encodeURIComponent(msg)}`;
 }
 

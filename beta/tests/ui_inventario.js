@@ -18,7 +18,7 @@ const fs=require('fs'), vm=require('vm');
   ctx.window=ctx; vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(BETA_DIR + '/assets/js/sucursales.js','utf8'),ctx);
   const app=fs.readFileSync(BETA_DIR + '/assets/js/app.js','utf8').split("document.addEventListener('DOMContentLoaded', async () => {")[0];
-  vm.runInContext(app+'\n;globalThis.__t={loadServicios,loadInventario,alterStock,submitEditRepuesto,openInvEdit,refrescarRepuestosNuevo,get inv(){return Array.from(_invMap.values())},get cache(){return _repuestosCache}};',ctx);
+  vm.runInContext(app+'\n;globalThis.__t={loadServicios,loadInventario,alterStock,submitEditRepuesto,openInvEdit,refrescarRepuestosNuevo,waLink,get inv(){return Array.from(_invMap.values())},get cache(){return _repuestosCache}};',ctx);
   await ctx.SUC.ready;
   const msgs=[]; ctx.toast=(m,t)=>msgs.push(t+': '+m);
   const fx=fixtures(); const INV=fx.inv;
@@ -126,6 +126,19 @@ const fs=require('fs'), vm=require('vm');
   els['usc-base'].value = String(ids.nor); els['usc-base'].onchange();
   ex = els['usc-extras'].innerHTML;
   ok('al cambiar la base a Norte: Norte sale de la lista y Centro queda disponible', !new RegExp('value="' + ids.nor + '"').test(ex) && new RegExp('value="' + ids.cen + '"').test(ex), ex);
+
+  // ── Mensaje de WhatsApp con la sucursal (direccion y telefono, con herencia de la casa matriz) ──
+  await cli.put('/api/sucursales.php', { id_sucursal: ids.cen, direccion: 'Calle Centro 123', telefono: '+56 9 1111 2222' });
+  await S.load();
+  const texto = rep => decodeURIComponent(T.waLink(rep).split('?text=')[1] || '');
+  const base = { nombre_cliente: 'Ana', telefono_cliente: '+56 9 8888 7777', codigo_seguimiento: 'ABC234' };
+  const m1 = texto({ ...base, id_sucursal: ids.cen });
+  ok('WhatsApp: indica la sucursal, direccion y telefono del local', /Sucursal Centro/.test(m1) && /Dirección: Calle Centro 123/.test(m1) && /Teléfono: \+56 9 1111 2222/.test(m1) && /ABC234/.test(m1), m1);
+  S.matriz = { direccion: 'Av. Matriz 100, Santiago', telefono: '+56 2 2000 0000' };
+  const m2 = texto({ ...base, id_sucursal: ids.nor });
+  ok('WhatsApp: sucursal sin datos propios hereda los de la casa matriz', /Sucursal Norte/.test(m2) && /Dirección: Av\. Matriz 100, Santiago/.test(m2) && /Teléfono: \+56 2 2000 0000/.test(m2), m2);
+  ok('WhatsApp: el enlace sigue apuntando al numero del cliente y al seguimiento', /^https:\/\/wa\.me\/56988887777\?text=/.test(T.waLink({ ...base, id_sucursal: ids.cen })) && /seguimiento\.php\?codigo=ABC234/.test(m1), m1);
+  ok('WhatsApp: sin codigo de seguimiento devuelve solo el enlace base', T.waLink({ ...base, codigo_seguimiento: '', id_sucursal: ids.cen }) === 'https://wa.me/56988887777', '');
 
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

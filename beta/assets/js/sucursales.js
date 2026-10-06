@@ -177,6 +177,18 @@
       this._admin = rows;
     },
 
+    // Direccion y telefono efectivos de una sucursal (lo vacio se hereda de la casa matriz): se usan en el mensaje de WhatsApp.
+    contacto(id) {
+      const s = this.list.find(x => x.id_sucursal === Number(id));
+      const m = this.matriz || {};
+      return {
+        nombre:    s ? s.nombre : '',
+        direccion: (s && s.direccion) || m.direccion || '',
+        telefono:  (s && s.telefono)  || m.telefono  || '',
+        multi:     this.multi(),
+      };
+    },
+
     // Direccion y telefono de una sucursal; lo que deja vacio lo hereda de la casa matriz (se muestra atenuado).
     contactoHtml(s) {
       const m = this.matriz || {};

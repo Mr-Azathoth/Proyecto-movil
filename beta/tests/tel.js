@@ -58,6 +58,19 @@ const nueva = (cl, e) => cl.postForm('/api/reparaciones.php', { nombre_cliente: 
   ok('...y NO los de la casa matriz', !bC.includes('Av. Matriz 100') && !bC.includes('+56 2 2000 0000'), '');
   ok('boleta de Norte (campos vacios): hereda direccion y telefono de la casa matriz', bN.includes('Av. Matriz 100, Santiago') && bN.includes('+56 2 2000 0000'), '');
   ok('la boleta indica la sucursal (hay mas de una con atencion)', bC.includes('Sucursal Centro') && bN.includes('Sucursal Norte'), '');
+  // Pagina publica de seguimiento (sin sesion): muestra donde esta el equipo
+  const codigo = id => php('echo $db->query("SELECT codigo_seguimiento FROM reparaciones WHERE id_ingreso=' + id + '")->fetchColumn();');
+  const pub = new Client();
+  const sC = (await pub.get('/seguimiento.php?codigo=' + codigo(repC))).text;
+  const sN = (await pub.get('/seguimiento.php?codigo=' + codigo(repN))).text;
+  ok('seguimiento publico (Centro): direccion y telefono de la sucursal', sC.includes('Calle Centro 123') && sC.includes('+56 9 1111 2222') && sC.includes('Sucursal Centro'), '');
+  ok('...con enlace para llamar y para WhatsApp', sC.includes('href="tel:+56911112222"') && sC.includes('href="https://wa.me/56911112222"'), '');
+  ok('...y enlace al mapa con la direccion codificada', sC.includes('google.com/maps/search/?api=1&amp;query=Calle%20Centro%20123'), '');
+  ok('seguimiento publico (Norte, sin datos propios): hereda de la casa matriz', sN.includes('Av. Matriz 100, Santiago') && sN.includes('+56 2 2000 0000') && sN.includes('Sucursal Norte'), '');
+  ok('...y el fijo de la matriz se enlaza con el 56 (tel:+56220000000)', sN.includes('href="tel:+56220000000"'), '');
+  ok('el seguimiento muestra el nombre de la empresa', sC.includes('Test Sucursales A'), '');
+  ok('el seguimiento no filtra datos de la otra sucursal', !sC.includes('Av. Matriz 100') && !sN.includes('Calle Centro 123'), '');
+
   // Direccion propia pero telefono heredado
   await adm.put('/api/sucursales.php', { id_sucursal: ids.nor, direccion: 'Calle Norte 456', telefono: '' });
   const bN2 = (await adm.get('/orden.php?id=' + repN)).text;
@@ -66,6 +79,8 @@ const nueva = (cl, e) => cl.postForm('/api/reparaciones.php', { nombre_cliente: 
   await adm.put('/api/sucursales.php', { id_sucursal: ids.nor, direccion: '<script>alert(1)</script>', telefono: '' });
   const bX = (await adm.get('/orden.php?id=' + repN)).text;
   ok('la boleta escapa el HTML de la direccion', !bX.includes('<script>alert(1)</script>') && bX.includes('&lt;script&gt;'), '');
+  const sX = (await pub.get('/seguimiento.php?codigo=' + codigo(repN))).text;
+  ok('el seguimiento publico tambien escapa el HTML de la direccion', !sX.includes('<script>alert(1)</script>') && sX.includes('&lt;script&gt;'), '');
   r = await adb.get('/orden.php?id=' + repC);
   ok('otra empresa no puede ver la boleta (no encontrada)', /no encontrada/i.test(r.text) && !r.text.includes('Calle Centro 123'), r.text.slice(0, 80));
   await adm.put('/api/sucursales.php', { id_sucursal: ids.nor, direccion: '', telefono: '' });

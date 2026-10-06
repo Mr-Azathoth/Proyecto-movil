@@ -1,0 +1,405 @@
+﻿<?php
+require_once __DIR__ . '/includes/config.php';
+
+$db = getDB();
+
+// Migración silenciosa
+try { $db->exec("ALTER TABLE reparaciones ADD COLUMN codigo_seguimiento VARCHAR(6) NULL"); } catch(PDOException $e) {}
+try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (codigo_seguimiento)"); } catch(PDOException $e) {}
+
+// Poblar registros existentes sin código
+$sin_codigo = $db->query("SELECT id_ingreso FROM reparaciones WHERE codigo_seguimiento IS NULL")->fetchAll(PDO::FETCH_COLUMN);
+if ($sin_codigo) {
+    $chars = 'ABCDEFGHJKMNPQRSTUVWXY3456789';
+    $len   = strlen($chars);
+    $upd   = $db->prepare("UPDATE reparaciones SET codigo_seguimiento = ? WHERE id_ingreso = ?");
+    foreach ($sin_codigo as $id) {
+        for ($try = 0; $try < 30; $try++) {
+            $code = '';
+            for ($i = 0; $i < 6; $i++) $code .= $chars[random_int(0, $len - 1)];
+            $chk = $db->prepare("SELECT 1 FROM reparaciones WHERE codigo_seguimiento = ?");
+            $chk->execute([$code]);
+            if (!$chk->fetch()) { $upd->execute([$code, $id]); break; }
+        }
+    }
+}
+
+// Rate limit: max 10 búsquedas por minuto por IP (server-side, no depende de cookies)
+$ip      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$rl_file = sys_get_temp_dir() . '/ct_seg_rl_' . md5($ip) . '.json';
+
+// Verifica y consume un intento de forma atomica (flock cubre todo el ciclo lectura+escritura,
+// a diferencia de un file_put_contents suelto, que permite que peticiones en paralelo lean el
+// mismo contador antes de que se escriba y así se salten el limite de 10/minuto).
+function seg_rate_check_and_bump(string $rl_file): bool {
+    $fp = @fopen($rl_file, 'c+');
+    if (!$fp) return true;
+    flock($fp, LOCK_EX);
+    $raw     = stream_get_contents($fp);
+    $rl_data = $raw !== false && $raw !== '' ? json_decode($raw, true) : null;
+    if (!is_array($rl_data) || time() - ($rl_data['ts'] ?? 0) > 60) $rl_data = ['cnt' => 0, 'ts' => time()];
+    $ok = $rl_data['cnt'] < 10;
+    if ($ok) {
+        $rl_data['cnt']++;
+        ftruncate($fp, 0);
+        rewind($fp);
+        fwrite($fp, json_encode($rl_data));
+        fflush($fp);
+    }
+    flock($fp, LOCK_UN);
+    fclose($fp);
+    return $ok;
+}
+
+// Búsqueda
+$codigo = strtoupper(trim($_GET['codigo'] ?? ''));
+$orden  = null;
+$local  = null; // donde esta el equipo: empresa + sucursal con direccion y telefono
+$historial_items = [];
+$error  = '';
+
+$estado_labels = [
+    'Ingresado'     => ['label' => 'Ingresado',          'icon' => 'inbox',        'class' => 'seg-ingresado'],
+    'En Reparacion' => ['label' => 'En reparación',      'icon' => 'build',        'class' => 'seg-proceso'],
+    'Reparado'      => ['label' => 'Listo para entrega', 'icon' => 'check_circle', 'class' => 'seg-listo'],
+    'Entregado'     => ['label' => 'Entregado',          'icon' => 'done_all',     'class' => 'seg-entregado'],
+    'Garantia'      => ['label' => 'En garantía',        'icon' => 'verified',     'class' => 'seg-garantia'],
+];
+
+if ($codigo !== '') {
+    if (!preg_match('/^[A-Z3-9]{6}$/', $codigo)) {
+        $error = 'Código inválido. Debe tener 6 caracteres (letras y números).';
+    } elseif (!seg_rate_check_and_bump($rl_file)) {
+        $error = 'Demasiadas búsquedas. Espera un momento e intenta de nuevo.';
+    } else {
+        $st = $db->prepare(
+            "SELECT r.id_ingreso, r.nombre_cliente, r.tipo_ingreso, r.marca_ingreso, r.modelo_ingreso,
+                    r.dano_ingreso, r.status, r.fecha_ingreso, r.obs, r.ingresado_por, r.valor_ingreso,
+                    r.id_empresa, r.id_sucursal
+               FROM reparaciones r
+              WHERE r.codigo_seguimiento = ? AND r.deleted_at IS NULL LIMIT 1"
+        );
+        $st->execute([$codigo]);
+        $orden = $st->fetch();
+
+        if (!$orden) {
+            $error = 'No encontramos una orden con ese código. Verifica e intenta de nuevo.';
+        } else {
+            $id = $orden['id_ingreso'];
+
+            // ── Historial de estados ─────────────────────────────────────
+            $id_empresa = (int) $orden['id_empresa'];
+
+            // Datos del local donde esta el equipo (sucursal; lo vacio hereda de la casa matriz)
+            $local = sucursal_contacto($db, $id_empresa, $orden['id_sucursal'] !== null ? (int) $orden['id_sucursal'] : null);
+            $en = $db->prepare("SELECT nombre FROM empresas WHERE id_empresa = ?");
+            $en->execute([$id_empresa]);
+            $local['empresa']  = (string) $en->fetchColumn();
+            $local['tel_norm'] = telefono_normalizado($local['telefono']);
+
+            $h = $db->prepare(
+                "SELECT 'estado' AS tipo, fecha_cambio AS fecha, status_cambio AS contenido,
+                        status_anterior, user
+                   FROM historial
+                  WHERE id_reparacion = ? AND id_empresa = ?
+                  ORDER BY fecha_cambio ASC"
+            );
+            $h->execute([$id, $id_empresa]);
+            $estados = $h->fetchAll();
+
+            // ── Observaciones con timestamp ──────────────────────────────
+            $o = $db->prepare(
+                "SELECT 'obs' AS tipo, fecha, obs AS contenido, '' AS status_anterior, user
+                   FROM observaciones
+                  WHERE id_registro = ? AND id_empresa = ?
+                  ORDER BY fecha ASC"
+            );
+            $o->execute([$id, $id_empresa]);
+            $obs_rows = $o->fetchAll();
+
+            // ── obs heredada del campo reparaciones (sin timestamp) ──────
+            $obs_legacy = trim($orden['obs'] ?? '');
+
+            // Fotos del servicio
+            $fotos_seg = [];
+            try {
+                $fq = $db->prepare(
+                    "SELECT 'foto' AS tipo, fecha, url, etiqueta, subida_por AS user
+                       FROM reparacion_fotos WHERE id_reparacion = ? AND id_empresa = ? ORDER BY fecha ASC"
+                );
+                $fq->execute([$id, $id_empresa]);
+                $fotos_seg = $fq->fetchAll();
+            } catch(PDOException $e) {}
+
+            // Mezclar y ordenar por fecha
+            $historial_items = array_merge($estados, $obs_rows, $fotos_seg);
+            usort($historial_items, fn($a, $b) => strcmp($a['fecha'], $b['fecha']));
+        }
+    }
+}
+
+function fmt_fecha(string $fecha): string {
+    return date('d/m/Y H:i', strtotime($fecha));
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguimiento de reparación — Centrotec.cl</title>
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/seguimiento.css?v=<?= filemtime(__DIR__.'/assets/css/seguimiento.css') ?>">
+<link rel="manifest" href="<?= BASE ?>/manifest.php">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="<?= BASE ?>/assets/img/icon.php?s=192">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Centrotec">
+</head>
+<body>
+
+<nav class="seg-nav">
+  <a href="<?= BASE ?>/landing.php" class="seg-nav-logo">
+    <svg viewBox="0 0 400 110" xmlns="http://www.w3.org/2000/svg" aria-label="Centrotec">
+      <path d="M 62 38 A 20 20 0 1 0 62 65" stroke="#50d2ff" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <line x1="62" y1="38" x2="72" y2="38" stroke="#50d2ff" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="74" cy="38" r="2" fill="#50d2ff"/>
+      <line x1="74" y1="38" x2="74" y2="29" stroke="rgba(80,210,255,.45)" stroke-width="1"/>
+      <line x1="62" y1="65" x2="72" y2="65" stroke="#50d2ff" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="74" cy="65" r="2" fill="#50d2ff"/>
+      <line x1="74" y1="65" x2="74" y2="74" stroke="rgba(80,210,255,.45)" stroke-width="1"/>
+      <line x1="26" y1="48" x2="36" y2="48" stroke="rgba(80,210,255,.4)" stroke-width="1"/>
+      <circle cx="24" cy="48" r="2" fill="rgba(80,210,255,.55)"/>
+      <line x1="26" y1="56" x2="36" y2="56" stroke="rgba(80,210,255,.4)" stroke-width="1"/>
+      <circle cx="24" cy="56" r="2" fill="rgba(80,210,255,.55)"/>
+      <text x="82" y="77" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="44" font-weight="400" letter-spacing="2" fill="#e8f4ff">ENTROTEC</text>
+    </svg>
+  </a>
+</nav>
+
+<main class="seg-main">
+  <div class="seg-card">
+    <div class="seg-header">
+      <span class="material-icons-round seg-header-icon">manage_search</span>
+      <h1>Seguimiento de reparación</h1>
+      <p>Ingresa el código de 6 caracteres que te entregaron al dejar tu equipo.</p>
+    </div>
+
+    <form class="seg-form" method="GET" action="<?= BASE ?>/seguimiento.php">
+      <div class="seg-input-wrap">
+        <input
+          type="text"
+          name="codigo"
+          class="seg-input <?= $error ? 'seg-input-error' : '' ?>"
+          placeholder="ABC123"
+          value="<?= htmlspecialchars($codigo) ?>"
+          maxlength="6"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          <?= !$orden ? 'autofocus' : '' ?>
+        >
+        <button type="submit" class="seg-btn">
+          <span class="material-icons-round">search</span>
+          Buscar
+        </button>
+      </div>
+      <?php if ($error): ?>
+        <div class="seg-error">
+          <span class="material-icons-round">error_outline</span>
+          <?= htmlspecialchars($error) ?>
+        </div>
+      <?php endif; ?>
+    </form>
+
+    <?php if ($orden): ?>
+      <?php
+        $st_info = $estado_labels[$orden['status']] ?? ['label' => $orden['status'], 'icon' => 'help', 'class' => 'seg-ingresado'];
+        $equipo  = trim($orden['marca_ingreso'] . ' ' . $orden['modelo_ingreso']) ?: $orden['tipo_ingreso'];
+      ?>
+      <div class="seg-result">
+
+        <!-- Estado actual + código -->
+        <div class="seg-result-top">
+          <div class="seg-codigo-tag">Código: <?= htmlspecialchars($codigo) ?></div>
+          <span class="seg-estado <?= $st_info['class'] ?>">
+            <span class="material-icons-round"><?= $st_info['icon'] ?></span>
+            <?= $st_info['label'] ?>
+          </span>
+        </div>
+
+        <!-- Datos del servicio -->
+        <div class="seg-fields">
+          <div class="seg-field">
+            <div class="seg-field-label">Cliente</div>
+            <div class="seg-field-val"><?= htmlspecialchars($orden['nombre_cliente']) ?></div>
+          </div>
+          <div class="seg-field">
+            <div class="seg-field-label">Equipo</div>
+            <div class="seg-field-val"><?= htmlspecialchars($equipo) ?></div>
+          </div>
+          <div class="seg-field">
+            <div class="seg-field-label">Falla reportada</div>
+            <div class="seg-field-val"><?= htmlspecialchars($orden['dano_ingreso']) ?></div>
+          </div>
+          <div class="seg-field">
+            <div class="seg-field-label">Valor del servicio</div>
+            <div class="seg-field-val seg-valor">$<?= number_format($orden['valor_ingreso'], 0, ',', '.') ?></div>
+          </div>
+          <div class="seg-field">
+            <div class="seg-field-label">Ingresado por</div>
+            <div class="seg-field-val"><?= htmlspecialchars($orden['ingresado_por']) ?></div>
+          </div>
+          <div class="seg-field">
+            <div class="seg-field-label">Fecha de ingreso</div>
+            <div class="seg-field-val"><?= fmt_fecha($orden['fecha_ingreso']) ?></div>
+          </div>
+        </div>
+
+        <!-- Dónde está el equipo -->
+        <?php if ($local && ($local['empresa'] !== '' || $local['direccion'] !== '' || $local['telefono'] !== '')): ?>
+        <div class="seg-local">
+          <div class="seg-local-title"><span class="material-icons-round">storefront</span> Dónde está tu equipo</div>
+          <div class="seg-local-nombre"><?= htmlspecialchars($local['empresa']) ?><?php if ($local['sucursales_atencion'] > 1 && $local['nombre'] !== ''): ?> · Sucursal <?= htmlspecialchars($local['nombre']) ?><?php endif; ?></div>
+          <?php if ($local['direccion'] !== ''): ?>
+          <div class="seg-local-line">
+            <span class="material-icons-round">place</span>
+            <span class="seg-local-txt"><?= htmlspecialchars($local['direccion']) ?></span>
+            <a class="seg-local-link" href="https://www.google.com/maps/search/?api=1&amp;query=<?= rawurlencode($local['direccion']) ?>" target="_blank" rel="noopener noreferrer">Ver en el mapa</a>
+          </div>
+          <?php endif; ?>
+          <?php if ($local['telefono'] !== ''): ?>
+          <div class="seg-local-line">
+            <span class="material-icons-round">call</span>
+            <?php if ($local['tel_norm'] !== ''): ?>
+              <a class="seg-local-txt" href="tel:+<?= htmlspecialchars($local['tel_norm']) ?>"><?= htmlspecialchars($local['telefono']) ?></a>
+              <a class="seg-local-link" href="https://wa.me/<?= htmlspecialchars($local['tel_norm']) ?>" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <?php else: ?>
+              <span class="seg-local-txt"><?= htmlspecialchars($local['telefono']) ?></span>
+            <?php endif; ?>
+          </div>
+          <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <!-- Aviso si está listo o entregado -->
+        <?php if ($orden['status'] === 'Reparado'): ?>
+        <div class="seg-aviso seg-aviso-ok">
+          <span class="material-icons-round">notifications_active</span>
+          <strong>Tu equipo está listo.</strong> Puedes pasar a retirarlo cuando quieras.
+        </div>
+        <?php elseif ($orden['status'] === 'Entregado'): ?>
+        <div class="seg-aviso seg-aviso-done">
+          <span class="material-icons-round">done_all</span>
+          Este equipo ya fue entregado. Si tienes alguna consulta, contacta al servicio técnico.
+        </div>
+        <?php endif; ?>
+
+        <!-- Línea de tiempo -->
+        <?php if ($historial_items || $obs_legacy): ?>
+        <div class="seg-timeline-wrap">
+          <div class="seg-timeline-title">
+            <span class="material-icons-round">history</span>
+            Historial del servicio
+          </div>
+          <div class="seg-timeline">
+
+            <?php
+            // Si hay obs legacy (campo obs de reparaciones) y no hay duplicado en observaciones, mostrar al inicio
+            if ($obs_legacy && !array_filter($historial_items, fn($i) => $i['tipo'] === 'obs' && trim($i['contenido']) === $obs_legacy)):
+            ?>
+            <div class="seg-tl-item seg-tl-obs">
+              <div class="seg-tl-dot"><span class="material-icons-round">chat</span></div>
+              <div class="seg-tl-body">
+                <div class="seg-tl-meta">
+                  <span class="seg-tl-fecha"><?= fmt_fecha($orden['fecha_ingreso']) ?></span>
+                  <span class="seg-tl-user"><?= htmlspecialchars($orden['ingresado_por']) ?></span>
+                </div>
+                <div class="seg-tl-contenido"><?= nl2br(htmlspecialchars($obs_legacy)) ?></div>
+              </div>
+            </div>
+            <?php endif; ?>
+
+            <?php foreach ($historial_items as $item): ?>
+
+              <?php if ($item['tipo'] === 'estado'): ?>
+              <div class="seg-tl-item seg-tl-estado">
+                <div class="seg-tl-dot"><span class="material-icons-round">swap_horiz</span></div>
+                <div class="seg-tl-body">
+                  <div class="seg-tl-meta">
+                    <span class="seg-tl-fecha"><?= fmt_fecha($item['fecha']) ?></span>
+                    <span class="seg-tl-user"><?= htmlspecialchars($item['user']) ?></span>
+                  </div>
+                  <div class="seg-tl-contenido">
+                    <?php if ($item['status_anterior']): ?>
+                      <span class="seg-tl-badge seg-tl-badge-from"><?= htmlspecialchars($item['status_anterior']) ?></span>
+                      <span class="material-icons-round seg-tl-arrow">arrow_forward</span>
+                    <?php endif; ?>
+                    <span class="seg-tl-badge seg-tl-badge-to <?= $estado_labels[$item['contenido']]['class'] ?? '' ?>">
+                      <?= htmlspecialchars($estado_labels[$item['contenido']]['label'] ?? $item['contenido']) ?>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <?php elseif ($item['tipo'] === 'foto'): ?>
+              <div class="seg-tl-item seg-tl-foto">
+                <div class="seg-tl-dot"><span class="material-icons-round">photo_camera</span></div>
+                <div class="seg-tl-body">
+                  <div class="seg-tl-meta">
+                    <span class="seg-tl-fecha"><?= fmt_fecha($item['fecha']) ?></span>
+                    <span class="seg-tl-user"><?= htmlspecialchars($item['user']) ?></span>
+                  </div>
+                  <div class="seg-tl-contenido seg-tl-contenido-foto">
+                    <div class="seg-foto-strip">
+                      <img src="<?= htmlspecialchars($item['url']) ?>"
+                           alt="Foto <?= htmlspecialchars($item['etiqueta'] ?? '') ?>"
+                           loading="lazy">
+                    </div>
+                    <span class="seg-foto-label">Foto · <?= htmlspecialchars($item['etiqueta'] ?? 'Reparación') ?></span>
+                  </div>
+                </div>
+              </div>
+              <?php else: ?>
+              <div class="seg-tl-item seg-tl-obs">
+                <div class="seg-tl-dot"><span class="material-icons-round">chat</span></div>
+                <div class="seg-tl-body">
+                  <div class="seg-tl-meta">
+                    <span class="seg-tl-fecha"><?= fmt_fecha($item['fecha']) ?></span>
+                    <span class="seg-tl-user"><?= htmlspecialchars($item['user']) ?></span>
+                  </div>
+                  <div class="seg-tl-contenido"><?= nl2br(htmlspecialchars($item['contenido'])) ?></div>
+                </div>
+              </div>
+              <?php endif; ?>
+
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
+
+      </div><!-- /seg-result -->
+    <?php endif; ?>
+
+  </div>
+</main>
+
+<footer class="seg-footer">
+  <a href="<?= BASE ?>/landing.php">Centrotec</a> — Software para servicios técnicos
+</footer>
+
+
+<div id="_seg-lb">
+  <div id="_seg-lb-bg"></div>
+  <div id="_seg-lb-inner">
+    <img id="_seg-lb-img" src="" alt="">
+    <button id="_seg-lb-close" aria-label="Cerrar">
+      <span class="material-icons-round">close</span>
+    </button>
+  </div>
+</div>
+<script src="<?= BASE ?>/assets/js/seg_lightbox.js?v=<?= filemtime(__DIR__.'/assets/js/seg_lightbox.js') ?>"></script>
+</body>
+</html>
