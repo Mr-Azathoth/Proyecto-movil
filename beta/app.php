@@ -500,14 +500,14 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             </div>
           </div>
           <p class="usr-filtro-info hidden" id="usr-filtro-info"></p>
-          <table class="tbl mt-8">
+          <div class="table-scroll"><table class="tbl mt-8">
             <thead>
               <tr><th>Nombre</th><th>Usuario</th><th>Cargo</th><th>Sucursal</th><th>Acciones</th></tr>
             </thead>
             <tbody id="tbl-usuarios">
               <tr><td colspan="5" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
 
@@ -522,14 +522,14 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
               </button>
             </div>
           </div>
-          <table class="tbl mt-8">
+          <div class="table-scroll"><table class="tbl mt-8">
             <thead>
               <tr><th>Sucursal</th><th>Usuarios</th><th>Servicios</th><th>Acciones</th></tr>
             </thead>
             <tbody id="tbl-sucursales">
               <tr><td colspan="4" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>
             </tbody>
-          </table>
+          </table></div>
         </div>
       </div>
 

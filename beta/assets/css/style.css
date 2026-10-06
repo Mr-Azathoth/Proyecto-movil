@@ -1665,3 +1665,18 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 .ss-opt-dis { opacity: .6; cursor: not-allowed; }
 .ss-opt-dis:hover, .ss-opt-dis:focus { background: transparent; }
 .ss-opt .ss-hint { display: block; font-size: 11px; line-height: 1.35; color: var(--txt2); margin-top: 2px; }
+
+/* Configuracion en movil: pestanas con scroll propio, tablas dentro de su contenedor y acciones que envuelven */
+@media (max-width:640px) {
+  .cfg-tabs { overflow-x:auto; flex-wrap:nowrap; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .cfg-tabs::-webkit-scrollbar { display:none; }
+  .cfg-tab { flex:0 0 auto; padding:9px 14px; white-space:nowrap; }
+  .cfg-usuarios-actions { flex-wrap:wrap; }
+  #cfg-usuarios .tbl { min-width:480px; }
+  #cfg-usuarios .tbl th:nth-child(2), #cfg-usuarios .tbl td:nth-child(2) { display:none; } /* Usuario (login): menos util que ver las acciones */
+  #cfg-sucursales .tbl { min-width:340px; }
+  #cfg-sucursales .tbl th:nth-child(3), #cfg-sucursales .tbl td:nth-child(3) { display:none; } /* Servicios: la accion es mas util en el telefono */
+  #tbl-usuarios .row-actions, #tbl-sucursales .row-actions { flex-wrap:wrap; }
+  .usr-suc-filtro { flex-wrap:wrap; }
+  .est-rango-custom { flex-wrap:wrap; max-width:100%; }
+}
