@@ -16,21 +16,38 @@ $eid = eid();
 $formato  = $_GET['formato'] ?? 'csv';
 $q        = trim($_GET['q']  ?? '');
 $valid_sort = [
-    'id'     => 'id_repuesto',
-    'nombre' => 'nombre', 'marca' => 'marca_compatible',
-    'modelo' => 'modelo_compatible', 'precio' => 'precio_venta',
+    'id'     => 'i.id_repuesto',
+    'nombre' => 'i.nombre', 'marca' => 'i.marca_compatible',
+    'modelo' => 'i.modelo_compatible', 'precio' => 'i.precio_venta',
     'stock'  => 'cantidad',
 ];
-$sort_col = $valid_sort[$_GET['sort_col'] ?? ''] ?? 'nombre';
+$sort_col = $valid_sort[$_GET['sort_col'] ?? ''] ?? 'i.nombre';
 $sort_dir = ($_GET['sort_dir'] ?? '') === 'desc' ? 'DESC' : 'ASC';
 
-$sql    = "SELECT id_repuesto, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad
-             FROM inventario WHERE id_empresa = ? AND deleted_at IS NULL";
-$params = [$eid];
+// Stock de una sucursal (?sucursal=ID) o el total de todas.
+$suc       = sucursal_filtro($db, $eid);
+$sucNombre = '';
+if ($suc !== null) {
+    $sn = $db->prepare("SELECT nombre FROM sucursales WHERE id_sucursal = ? AND id_empresa = ?");
+    $sn->execute([$suc, $eid]);
+    $sucNombre = (string) $sn->fetchColumn();
+    $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(s.cantidad, 0) AS cantidad
+                 FROM inventario i
+                 LEFT JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
+                WHERE i.id_empresa = ? AND i.deleted_at IS NULL";
+    $params = [$suc, $eid];
+} else {
+    $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(t.c, 0) AS cantidad
+                 FROM inventario i
+                 LEFT JOIN (SELECT id_repuesto, SUM(cantidad) AS c FROM inventario_stock WHERE id_empresa = ? GROUP BY id_repuesto) t
+                        ON t.id_repuesto = i.id_repuesto
+                WHERE i.id_empresa = ? AND i.deleted_at IS NULL";
+    $params = [$eid, $eid];
+}
 
 if ($q) {
     $like    = '%' . $q . '%';
-    $sql    .= " AND (nombre LIKE ? OR marca_compatible LIKE ? OR modelo_compatible LIKE ?)";
+    $sql    .= " AND (i.nombre LIKE ? OR i.marca_compatible LIKE ? OR i.modelo_compatible LIKE ?)";
     $params  = array_merge($params, [$like, $like, $like]);
 }
 $sql .= " ORDER BY $sort_col $sort_dir";
@@ -135,6 +152,7 @@ $total  = count($rows);
 $stock  = array_sum(array_column($rows, 'cantidad'));
 
 $filtros = [];
+if ($sucNombre) $filtros[] = 'Sucursal: ' . $sucNombre; else $filtros[] = 'Sucursal: todas (stock total)';
 if ($q) $filtros[] = 'Búsqueda: "' . $q . '"';
 $sortLabels = ['nombre'=>'Repuesto','marca'=>'Marca','modelo'=>'Modelo','precio'=>'Precio','stock'=>'Stock'];
 $sortKey    = array_search($sort_col, $valid_sort);

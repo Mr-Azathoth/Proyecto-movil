@@ -137,6 +137,11 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
     </div>
     <?php endif; ?>
 
+    <div class="suc-switch hidden" id="suc-switch">
+      <label for="suc-select"><span class="material-icons-round">storefront</span> Sucursal</label>
+      <select id="suc-select" class="form-sel" aria-label="Filtrar por sucursal"></select>
+    </div>
+
     <nav class="sidebar-nav">
       <a class="nav-link active" data-view="servicios">
         <span class="material-icons-round">build</span><span>Servicios</span>
@@ -345,6 +350,10 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <span class="material-icons-round search-ic">search</span>
           <input id="search-inv" type="search" name="buscar-inv" class="search-input" placeholder="Buscar por nombre, marca o modelo..." autocomplete="nope" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="search">
         </div>
+        <div class="inv-suc-wrap hidden" id="suc-inv-wrap">
+          <label for="inv-suc-select"><span class="material-icons-round">storefront</span> Stock de</label>
+          <select id="inv-suc-select" class="inv-per-page-sel"></select>
+        </div>
         <div class="inv-per-page-wrap">
           <label for="inv-per-page">Mostrar</label>
           <select id="inv-per-page" class="inv-per-page-sel">
@@ -393,6 +402,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       <div class="cfg-tabs">
         <button class="cfg-tab active" data-tab="mi-cuenta">Mi cuenta</button>
         <button class="cfg-tab" data-tab="usuarios">Usuarios</button>
+        <button class="cfg-tab" data-tab="sucursales">Sucursales</button>
         <button class="cfg-tab" data-tab="suscripcion">Mi suscripción</button>
       </div>
 
@@ -479,43 +489,114 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="cfg-usuarios-header">
             <h3 class="cfg-section-title">Usuarios de la cuenta</h3>
             <div class="cfg-usuarios-actions">
+              <div class="usr-suc-filtro hidden" id="usr-suc-filtro-wrap">
+                <label for="usr-suc-filtro"><span class="material-icons-round">storefront</span> Sucursal</label>
+                <select id="usr-suc-filtro" class="inv-per-page-sel"></select>
+              </div>
               <span class="cfg-tecnicos-count hidden" id="cfg-tecnicos-count"></span>
               <button type="button" class="btn-primary btn-sm" id="btn-nuevo-tecnico">
                 <span class="material-icons-round">person_add</span> Agregar técnico
               </button>
             </div>
           </div>
+          <p class="usr-filtro-info hidden" id="usr-filtro-info"></p>
           <table class="tbl mt-8">
             <thead>
-              <tr><th>Nombre</th><th>Usuario</th><th>Cargo</th><th>Acciones</th></tr>
+              <tr><th>Nombre</th><th>Usuario</th><th>Cargo</th><th>Sucursal</th><th>Acciones</th></tr>
             </thead>
             <tbody id="tbl-usuarios">
+              <tr><td colspan="5" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Panel: Sucursales -->
+      <div class="cfg-panel hidden" id="cfg-sucursales">
+        <div class="cfg-section">
+          <div class="cfg-usuarios-header">
+            <h3 class="cfg-section-title">Sucursales</h3>
+            <div class="cfg-usuarios-actions">
+              <button type="button" class="btn-primary btn-sm" id="btn-nueva-sucursal">
+                <span class="material-icons-round">add_business</span> Nueva sucursal
+              </button>
+            </div>
+          </div>
+          <table class="tbl mt-8">
+            <thead>
+              <tr><th>Sucursal</th><th>Usuarios</th><th>Servicios</th><th>Acciones</th></tr>
+            </thead>
+            <tbody id="tbl-sucursales">
               <tr><td colspan="4" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Modal: Nuevo técnico -->
-      <div class="modal-bg" id="modal-nuevo-tecnico">
-        <div class="modal-box modal-sm">
-          <div class="modal-header">
-            <span class="modal-title">Agregar técnico</span>
-            <button type="button" class="modal-close" id="modal-tecnico-close" aria-label="Cerrar">
-              <span class="material-icons-round">close</span>
-            </button>
+      <!-- Modal: Sucursal -->
+      <div class="modal-bg" id="modal-sucursal">
+        <div class="modal-box modal-box-sm">
+          <div class="modal-hd">
+            <h3 id="suc-modal-titulo">Nueva sucursal</h3>
+            <button type="button" class="modal-close" data-modal="modal-sucursal" aria-label="Cerrar"><span class="material-icons-round">close</span></button>
           </div>
           <div class="modal-body">
-            <label class="form-label">Nombre completo</label>
-            <input type="text" id="tecnico-nombre" class="form-inp" placeholder="Ej: Juan Pérez" maxlength="80" autocomplete="off">
-            <label class="form-label mt-8">Nombre de usuario</label>
-            <input type="text" id="tecnico-user" class="form-inp" placeholder="Ej: juan.perez" maxlength="40" autocomplete="off">
-            <label class="form-label mt-8">Contraseña</label>
-            <input type="password" id="tecnico-pass" class="form-inp" placeholder="Mínimo 6 caracteres" maxlength="60">
-            <label class="form-label mt-8">Confirmar contraseña</label>
-            <input type="password" id="tecnico-pass2" class="form-inp" placeholder="Repetir contraseña" maxlength="60">
+            <input type="hidden" id="suc-id">
+            <div class="fg"><label>Nombre</label><input type="text" id="suc-nombre" placeholder="Ej: Local Centro" maxlength="80" autocomplete="off"></div>
+            <div class="fg"><label>Dirección</label><input type="text" id="suc-direccion" placeholder="Opcional" maxlength="150" autocomplete="off"></div>
+            <div class="fg"><label>Teléfono</label><input type="text" id="suc-telefono" placeholder="Opcional" maxlength="30" autocomplete="off" inputmode="tel"></div>
+            <p class="suc-nota" id="suc-nota-matriz"></p>
+            <label class="usc-chk"><input type="checkbox" id="suc-bodega"> <span>Es una bodega (solo guarda stock, no atiende servicios)</span></label>
           </div>
-          <div class="modal-footer">
+          <div class="modal-ft">
+            <button type="button" class="btn-sec" data-modal="modal-sucursal">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn-suc-guardar">
+              <span class="material-icons-round">save</span> Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Sucursal de un usuario -->
+      <div class="modal-bg" id="modal-usr-sucursal">
+        <div class="modal-box modal-box-sm">
+          <div class="modal-hd">
+            <h3>Sucursal de <span id="usc-nombre"></span></h3>
+            <button type="button" class="modal-close" data-modal="modal-usr-sucursal" aria-label="Cerrar"><span class="material-icons-round">close</span></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="usc-uid">
+            <div class="fg"><label>Sucursal base</label><select id="usc-base"></select></div>
+            <div id="usc-extras-wrap" class="usc-group">
+              <span class="usc-lbl">También puede trabajar en</span>
+              <div id="usc-extras" class="usc-list"></div>
+              <p class="suc-nota">Puede ver todas las sucursales, pero solo modifica servicios y stock de estas.</p>
+            </div>
+          </div>
+          <div class="modal-ft">
+            <button type="button" class="btn-sec" data-modal="modal-usr-sucursal">Cancelar</button>
+            <button type="button" class="btn-primary" id="btn-usc-guardar">
+              <span class="material-icons-round">save</span> Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Nuevo técnico -->
+      <div class="modal-bg" id="modal-nuevo-tecnico">
+        <div class="modal-box modal-box-sm">
+          <div class="modal-hd">
+            <h3>Agregar técnico</h3>
+            <button type="button" class="modal-close" id="modal-tecnico-close" aria-label="Cerrar"><span class="material-icons-round">close</span></button>
+          </div>
+          <div class="modal-body">
+            <div class="fg"><label>Nombre completo</label><input type="text" id="tecnico-nombre" placeholder="Ej: Juan Pérez" maxlength="80" autocomplete="off"></div>
+            <div class="fg"><label>Nombre de usuario</label><input type="text" id="tecnico-user" placeholder="Ej: juan.perez" maxlength="40" autocomplete="off"></div>
+            <div class="fg"><label>Contraseña</label><input type="password" id="tecnico-pass" placeholder="Mínimo 6 caracteres" maxlength="60" autocomplete="new-password"></div>
+            <div class="fg"><label>Confirmar contraseña</label><input type="password" id="tecnico-pass2" placeholder="Repetir contraseña" maxlength="60" autocomplete="new-password"></div>
+            <div class="fg hidden" id="fg-tecnico-sucursal"><label>Sucursal</label><select id="tecnico-sucursal"></select></div>
+          </div>
+          <div class="modal-ft">
             <button type="button" class="btn-sec" id="modal-tecnico-cancel">Cancelar</button>
             <button type="button" class="btn-primary" id="btn-tecnico-guardar">
               <span class="material-icons-round">save</span> Guardar
@@ -642,6 +723,8 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <button class="btn-primary btn-sm" id="est-btn-aplicar">Aplicar</button>
         </div>
       </div>
+
+      <div id="est-sucursales" class="hidden"></div>
 
       <!-- KPIs -->
       <div class="est-kpis" id="est-kpis">
@@ -854,6 +937,10 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 
     <form id="form-nuevo">
       <div class="modal-body">
+        <div class="fg hidden" id="fg-nuevo-sucursal">
+          <label>Sucursal</label>
+          <select name="id_sucursal" id="nuevo-sucursal" class="form-sel" disabled></select>
+        </div>
         <p class="section-label">Datos del cliente</p>
         <div class="form-grid4 form-grid-cliente">
           <div class="fg"><label>Nombre <span class="req">*</span></label><input type="text" name="nombre_cliente" placeholder="Juan Pérez" required></div>
@@ -956,6 +1043,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <p><span class="info-lbl">Teléfono</span><span class="info-tel-wrap"><input class="info-val info-val-input" id="det-tel" type="tel" placeholder="+56 9 XXXX XXXX" maxlength="30" readonly><button type="button" class="tel-edit-btn" id="det-tel-edit" title="Editar teléfono"><span class="material-icons-round">edit</span></button></span></p>
             <p><span class="info-lbl">Equipo</span><span class="info-val" id="det-equipo"></span></p>
             <p class="info-sm"><span class="info-lbl">Ingresado por</span><span class="info-val" id="det-tecnico"></span></p>
+            <p class="info-sm hidden" id="det-sucursal-row"><span class="info-lbl">Sucursal</span><span class="info-val" id="det-sucursal"></span></p>
             <p class="info-sm"><span class="info-lbl">Código seguimiento</span><span class="info-val" id="det-codigo"></span></p>
             <p class="info-full"><span class="info-lbl">Falla reportada</span><span class="info-val" id="det-daño"></span></p>
             <p class="info-full"><span class="info-lbl">IMEI / Clave</span><span class="info-val" id="det-imei"></span></p>
@@ -981,6 +1069,14 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 
         <!-- Derecha: controles de edición -->
         <div class="det-right">
+          <p class="suc-aviso hidden" id="det-solo-lectura">
+            <span class="material-icons-round ic-xs">lock</span>
+            Esta reparación es de otra sucursal: solo lectura.
+          </p>
+          <div class="fg hidden" id="grp-det-sucursal">
+            <label>Sucursal</label>
+            <select id="det-sucursal-sel" class="form-sel"></select>
+          </div>
           <div class="fg"><label>Estado</label>
             <select id="det-status" class="form-sel">
               <option value="Ingresado">Ingresado</option>
@@ -1053,7 +1149,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <input type="hidden" name="modelo_compatible" id="hid-nuevo-modelo">
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" name="precio_venta" placeholder="0" value="0" min="0"></div>
-          <div class="fg"><label>Stock inicial</label><input type="number" name="cantidad" placeholder="0" value="0" min="0"></div>
+          <div class="fg"><label id="lbl-rep-stock-nuevo">Stock inicial</label><input type="number" name="cantidad" placeholder="0" value="0" min="0"></div>
         </div>
         <datalist id="dl-marcas-inv"></datalist>
       </div>
@@ -1108,6 +1204,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
         </a>
       </div>
 
+      <p class="suc-nota" id="imp-suc-note"></p>
       <div class="imp-dropzone" id="imp-dropzone">
         <span class="material-icons-round imp-upload-icon">upload_file</span>
         <p class="imp-drop-txt">Arrastra tu archivo aquí o <label class="imp-file-label" for="imp-file-input">selecciona archivo</label></p>
@@ -1125,9 +1222,36 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       <div class="imp-result hidden" id="imp-result"></div>
 
     </div>
-    <div class="modal-footer">
+    <div class="modal-ft">
       <button type="button" class="btn-primary" id="btn-importar-confirm" disabled>
         <span class="material-icons-round">cloud_upload</span> Importar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     MODAL: Traspasar stock entre sucursales (admin)
+══════════════════════════════════════════════════ -->
+<div class="modal-bg" id="modal-traspaso">
+  <div class="modal-box modal-box-sm">
+    <div class="modal-hd">
+      <h3>Traspasar stock</h3>
+      <button type="button" class="modal-close" data-modal="modal-traspaso" aria-label="Cerrar"><span class="material-icons-round">close</span></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tr-rep">
+      <p class="tr-nombre" id="tr-nombre"></p>
+      <div class="fg"><label>Desde</label><select id="tr-origen"></select></div>
+      <div class="fg"><label>Hacia</label><select id="tr-destino"></select></div>
+      <div class="fg"><label>Cantidad</label><input type="number" id="tr-cant" min="1" value="1"></div>
+      <div class="fg"><label>Nota (opcional)</label><input type="text" id="tr-nota" maxlength="200" placeholder="Ej: reabastecer local" autocomplete="off"></div>
+      <div id="tr-hist" class="tr-hist"></div>
+    </div>
+    <div class="modal-ft">
+      <button type="button" class="btn-sec" data-modal="modal-traspaso">Cancelar</button>
+      <button type="button" class="btn-primary" id="btn-tr-guardar">
+        <span class="material-icons-round">swap_horiz</span> Traspasar
       </button>
     </div>
   </div>
@@ -1153,7 +1277,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="edit-rep-precio" placeholder="0" min="0"></div>
         </div>
-        <div class="fg w-half-mt"><label>Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
+        <div class="fg w-half-mt"><label id="lbl-edit-stock">Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
       </div>
       <div class="modal-ft">
         <button type="button" class="btn-sec" data-modal="modal-edit-repuesto">Cancelar</button>
@@ -1357,6 +1481,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
 <script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
 <script src="<?= BASE ?>/assets/js/xlsx.mini.min.js"></script>
+<script src="<?= BASE ?>/assets/js/sucursales.js?v=<?= filemtime(__DIR__.'/assets/js/sucursales.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/rep_fotos.js?v=<?= filemtime(__DIR__.'/assets/js/rep_fotos.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/ticket_img.js?v=<?= filemtime(__DIR__.'/assets/js/ticket_img.js') ?>"></script>

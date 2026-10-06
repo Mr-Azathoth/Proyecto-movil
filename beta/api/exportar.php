@@ -37,6 +37,9 @@ $sql = "SELECT r.id_ingreso, r.fecha_ingreso, r.nombre_cliente, r.telefono_clien
          WHERE r.id_empresa = ? AND r.deleted_at IS NULL";
 $params = [$eid];
 
+$suc = sucursal_filtro($db, $eid);
+if ($suc !== null) { $sql .= " AND r.id_sucursal = ?"; $params[] = $suc; }
+
 if ($fecha_desde && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha_desde)) {
     $sql .= " AND DATE(r.fecha_ingreso) >= ?"; $params[] = $fecha_desde;
 }

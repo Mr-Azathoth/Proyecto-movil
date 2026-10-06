@@ -9,7 +9,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // Migración silenciosa: añadir columnas si no existen
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN id_repuesto_usado INT NULL"); } catch(PDOException $e) {}
-try { $db->exec("ALTER TABLE inventario ADD COLUMN cantidad_reservada INT NOT NULL DEFAULT 0"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN stock_descontado TINYINT(1) NOT NULL DEFAULT 0"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD COLUMN codigo_seguimiento VARCHAR(6) NULL"); } catch(PDOException $e) {}
 try { $db->exec("ALTER TABLE reparaciones ADD UNIQUE KEY uq_codigo_seguimiento (codigo_seguimiento)"); } catch(PDOException $e) {}
@@ -25,39 +24,6 @@ try { $db->exec("CREATE TABLE IF NOT EXISTS reparacion_fotos (
   fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_rrf (id_reparacion, id_empresa)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"); } catch(PDOException $e) {}
-
-// Backfill: sincronizar cantidad_reservada para trabajos activos creados antes del sistema de reservas.
-// Calcula el total correcto (inicial + adicionales) y hace SET solo donde cantidad_reservada = 0.
-// Idempotente: tras la primera corrida los repuestos afectados quedan con valor > 0 y el INNER JOIN
-// no los vuelve a tocar (WHERE cantidad_reservada = 0 no aplica).
-try {
-    $db->exec("
-        UPDATE inventario i
-        INNER JOIN (
-            SELECT id_repuesto, id_empresa, SUM(total) AS cnt
-            FROM (
-                SELECT id_repuesto_usado AS id_repuesto, id_empresa, COUNT(*) AS total
-                FROM reparaciones
-                WHERE id_repuesto_usado IS NOT NULL
-                  AND stock_descontado = 0
-                  AND deleted_at IS NULL
-                  AND status NOT IN ('Reparado','Entregado')
-                GROUP BY id_repuesto_usado, id_empresa
-                UNION ALL
-                SELECT rr.id_repuesto, rr.id_empresa, SUM(rr.cantidad)
-                FROM reparacion_repuestos rr
-                JOIN reparaciones r ON r.id_ingreso = rr.id_reparacion
-                WHERE rr.stock_desc = 0
-                  AND r.deleted_at IS NULL
-                  AND r.status NOT IN ('Reparado','Entregado')
-                GROUP BY rr.id_repuesto, rr.id_empresa
-            ) combined
-            GROUP BY id_repuesto, id_empresa
-        ) x ON i.id_repuesto = x.id_repuesto AND i.id_empresa = x.id_empresa
-        SET i.cantidad_reservada = LEAST(i.cantidad, x.cnt)
-        WHERE i.cantidad_reservada = 0
-    ");
-} catch(PDOException $e) {}
 
 function generar_codigo_seguimiento(PDO $db): string {
     $chars = 'ABCDEFGHJKMNPQRSTUVWXY3456789';
@@ -81,12 +47,21 @@ if ($method === 'GET') {
         json_err('Estado inválido.');
     }
 
-    $sql = "SELECT r.*, i.nombre AS nombre_repuesto_usado
+    $suc = sucursal_filtro($db, $eid);
+
+    $sql = "SELECT r.*, i.nombre AS nombre_repuesto_usado, su.nombre AS nombre_sucursal
               FROM reparaciones r
               LEFT JOIN inventario i
                      ON i.id_repuesto = r.id_repuesto_usado AND i.id_empresa = r.id_empresa
+              LEFT JOIN sucursales su
+                     ON su.id_sucursal = r.id_sucursal AND su.id_empresa = r.id_empresa
              WHERE r.id_empresa = ? AND r.deleted_at IS NULL";
     $p   = [$eid];
+
+    if ($suc !== null) {
+        $sql .= " AND r.id_sucursal = ?";
+        $p[]  = $suc;
+    }
 
     if ($q) {
         $sql .= " AND (r.nombre_cliente LIKE ? OR r.marca_ingreso LIKE ? OR r.modelo_ingreso LIKE ? OR r.id_ingreso = ?)";
@@ -153,19 +128,19 @@ if ($method === 'POST') {
         else if (empty($f['tipo_ingreso'])) $f['tipo_ingreso'] = 'Otro';
     }
 
-    // Repuesto inicial opcional
+    // Sucursal: la indicada o la base del usuario; con permiso de escritura, activa y que atienda servicios.
+    $id_sucursal = sucursal_para_escritura($db, $eid, $_POST['id_sucursal'] ?? null, true);
+
+    // Repuesto inicial opcional: se reserva del stock de la sucursal donde se ingresa el servicio.
     $id_repuesto_inicial = null;
     if (!empty($_POST['id_repuesto_usado'])) {
         $id_rp = (int) $_POST['id_repuesto_usado'];
-        $chkRp = $db->prepare(
-            "SELECT id_repuesto, cantidad, cantidad_reservada
-               FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND deleted_at IS NULL"
-        );
+        $chkRp = $db->prepare("SELECT 1 FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND deleted_at IS NULL");
         $chkRp->execute([$id_rp, $eid]);
-        $inv_row = $chkRp->fetch();
-        if ($inv_row) {
-            $disp = (int)$inv_row['cantidad'] - (int)$inv_row['cantidad_reservada'];
-            if ($disp <= 0) json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
+        if ($chkRp->fetchColumn()) {
+            if (stock_disponible($db, $eid, $id_rp, $id_sucursal) <= 0) {
+                json_err('Sin stock disponible en esta sucursal — el repuesto está agotado o reservado para otro trabajo.');
+            }
             $id_repuesto_inicial = $id_rp;
         }
     }
@@ -178,26 +153,21 @@ if ($method === 'POST') {
     // ninguna reparacion queda apuntando a un repuesto que en realidad no se reservo.
     $db->beginTransaction();
     try {
-        if ($id_repuesto_inicial) {
-            $resv = $db->prepare("UPDATE inventario SET cantidad_reservada = cantidad_reservada + 1
-                                   WHERE id_repuesto = ? AND id_empresa = ? AND (cantidad - cantidad_reservada) > 0");
-            $resv->execute([$id_repuesto_inicial, $eid]);
-            if ($resv->rowCount() === 0) {
-                $db->rollBack();
-                json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
-            }
+        if ($id_repuesto_inicial && !stock_reservar($db, $eid, $id_repuesto_inicial, $id_sucursal, 1)) {
+            $db->rollBack();
+            json_err('Sin stock disponible en esta sucursal — el repuesto está reservado para otro trabajo.');
         }
 
         $db->prepare("INSERT INTO reparaciones
             (id_empresa, nombre_cliente, telefono_cliente, rut_cliente, tipo_ingreso,
              marca_ingreso, modelo_ingreso, imei, pass_ingreso, dano_ingreso,
-             valor_ingreso, status, obs, ingresado_por, id_repuesto_usado, codigo_seguimiento)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+             valor_ingreso, status, obs, ingresado_por, id_repuesto_usado, codigo_seguimiento, id_sucursal)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
            ->execute([
                 $eid, $f['nombre_cliente'], $f['telefono_cliente'], $f['rut_cliente'],
                 $f['tipo_ingreso'], $f['marca_ingreso'], $f['modelo_ingreso'], $f['imei'],
                 $f['pass_ingreso'], $f['dano_ingreso'], $f['valor_ingreso'],
-                $f['status'], $f['obs'], uname(), $id_repuesto_inicial, $codigo,
+                $f['status'], $f['obs'], uname(), $id_repuesto_inicial, $codigo, $id_sucursal,
             ]);
         $newId = (int) $db->lastInsertId();
         $db->commit();
@@ -237,6 +207,24 @@ if ($method === 'PUT') {
     $row = $cur->fetch();
     if (!$row) json_err('Registro no encontrado.', 404);
 
+    // Un tecnico solo modifica reparaciones de las sucursales donde esta habilitado.
+    if ($row['id_sucursal'] !== null && !puede_escribir_sucursal((int)$row['id_sucursal'])) {
+        json_err('Esta reparación pertenece a otra sucursal: solo lectura.', 403);
+    }
+
+    // Traslado de la reparacion a otra sucursal (solo admin).
+    $nueva_sucursal = $row['id_sucursal'] !== null ? (int)$row['id_sucursal'] : null;
+    $traslado_txt   = '';
+    if (isset($in['id_sucursal']) && $in['id_sucursal'] !== '' && (int)$in['id_sucursal'] !== $nueva_sucursal) {
+        if (!isAdmin()) json_err('Solo un administrador puede trasladar una reparación de sucursal.', 403);
+        $destino = (int) $in['id_sucursal'];
+        $dest = sucursal_de_empresa($db, $eid, $destino);
+        if (!$dest || !(int)$dest['activa'])  json_err('Sucursal inválida.');
+        if ((int)$dest['es_bodega'])          json_err('Una bodega no atiende servicios técnicos.');
+        $nueva_sucursal = $destino;
+        $traslado_txt   = "Trasladado a la sucursal: {$dest['nombre']}";
+    }
+
     $nuevo_status = $in['status'] ?? $row['status'];
     if (!in_array($nuevo_status, VALID_STATUS, true)) json_err('Estado inválido.');
 
@@ -273,12 +261,45 @@ if ($method === 'PUT') {
     $ya_descontado = (bool) ($row['stock_descontado'] ?? 0);
     $stock_dec = 0;
 
+    // Las reservas y descuentos de stock viven en la sucursal de la reparacion. Un traslado solo
+    // se permite sin reservas pendientes (no se mueven reservas entre sucursales).
+    $suc_actual = reparacion_sucursal($db, $eid, $row['id_sucursal'] !== null ? (int)$row['id_sucursal'] : null);
+    $suc_stock = $traslado_txt ? $nueva_sucursal : $suc_actual;
+    if ($nueva_sucursal === null) $nueva_sucursal = $suc_actual;
+
     $db->beginTransaction();
     try {
+        // Se bloquea la fila de la reparacion: rep_servicio.php hace lo mismo antes de reservar, asi que
+        // un traslado y la reserva de un repuesto adicional no pueden cruzarse. Si otra peticion cambio
+        // la sucursal o los repuestos desde que se leyo la fila, se aborta en vez de contabilizar mal.
+        $lk = $db->prepare("SELECT id_sucursal, id_repuesto_usado, stock_descontado FROM reparaciones
+                             WHERE id_ingreso = ? AND id_empresa = ? FOR UPDATE");
+        $lk->execute([$id, $eid]);
+        $lock = $lk->fetch();
+        $mismoRep = fn($a, $b) => ($a === null ? null : (int)$a) === ($b === null ? null : (int)$b);
+        if (!$lock || !$mismoRep($lock['id_sucursal'], $row['id_sucursal'])
+                   || !$mismoRep($lock['id_repuesto_usado'], $row['id_repuesto_usado'])
+                   || (int)$lock['stock_descontado'] !== (int)($row['stock_descontado'] ?? 0)) {
+            $db->rollBack();
+            json_err('La reparación fue modificada por otra persona mientras se guardaba. Recarga e inténtalo de nuevo.', 409);
+        }
+        if ($traslado_txt) {
+            $pend = ($row['id_repuesto_usado'] && !$ya_descontado) ? 1 : 0;
+            if (!$pend) {
+                $pq = $db->prepare("SELECT COUNT(*) FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0");
+                $pq->execute([$id, $eid]);
+                $pend = (int) $pq->fetchColumn();
+            }
+            if ($pend) {
+                $db->rollBack();
+                json_err('Esta reparación tiene repuestos reservados en el stock de su sucursal actual. Quítalos antes de trasladarla.');
+            }
+        }
+
         $db->prepare("UPDATE reparaciones
-                      SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?, telefono_cliente = ?
+                      SET status = ?, valor_ingreso = ?, id_repuesto_usado = ?, telefono_cliente = ?, id_sucursal = ?
                       WHERE id_ingreso = ? AND id_empresa = ?")
-           ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $nuevo_tel, $id, $eid]);
+           ->execute([$nuevo_status, $nuevo_valor, $id_repuesto_nuevo, $nuevo_tel, $nueva_sucursal, $id, $eid]);
 
         // Gestión de reservas al cambiar el repuesto inicial
         $id_rep_ant_v            = $row['id_repuesto_usado'] !== null ? (int)$row['id_repuesto_usado'] : null;
@@ -287,18 +308,13 @@ if ($method === 'PUT') {
         if ($repuesto_changed) {
             // Liberar reserva anterior si el stock aún no fue consumido
             if ($id_rep_ant_v && !$ya_descontado) {
-                $db->prepare("UPDATE inventario SET cantidad_reservada = GREATEST(0, cantidad_reservada - 1)
-                               WHERE id_repuesto = ? AND id_empresa = ?")
-                   ->execute([$id_rep_ant_v, $eid]);
+                stock_liberar($db, $eid, $id_rep_ant_v, $suc_stock, 1);
             }
             // Reservar nuevo repuesto (si no va directo a Reparado, que se descuenta abajo)
             if ($id_repuesto_nuevo && $nuevo_status !== 'Reparado') {
-                $resv = $db->prepare("UPDATE inventario SET cantidad_reservada = cantidad_reservada + 1
-                                       WHERE id_repuesto = ? AND id_empresa = ? AND (cantidad - cantidad_reservada) > 0");
-                $resv->execute([$id_repuesto_nuevo, $eid]);
-                if ($resv->rowCount() === 0) {
+                if (!stock_reservar($db, $eid, $id_repuesto_nuevo, $suc_stock, 1)) {
                     $db->rollBack();
-                    json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
+                    json_err('Sin stock disponible en esta sucursal — el repuesto está reservado para otro trabajo.');
                 }
                 $repuesto_ini_reservado = true; // reserva creada en este mismo PUT
             }
@@ -309,14 +325,13 @@ if ($method === 'PUT') {
         if (in_array($nuevo_status, ['Reparado', 'Entregado'], true)) {
             // Descontar repuesto inicial
             if ($id_repuesto_nuevo && !$ya_descontado) {
-                $chk = $db->prepare("SELECT nombre FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0");
-                $chk->execute([$id_repuesto_nuevo, $eid]);
+                $chk = $db->prepare("SELECT i.nombre FROM inventario i
+                                       JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
+                                      WHERE i.id_repuesto = ? AND i.id_empresa = ? AND s.cantidad > 0");
+                $chk->execute([$suc_stock, $id_repuesto_nuevo, $eid]);
                 $rep_row = $chk->fetch();
                 if ($rep_row) {
-                    $sql_desc = $repuesto_ini_reservado
-                        ? "UPDATE inventario SET cantidad = cantidad - 1, cantidad_reservada = GREATEST(0, cantidad_reservada - 1) WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0"
-                        : "UPDATE inventario SET cantidad = cantidad - 1 WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0";
-                    $db->prepare($sql_desc)->execute([$id_repuesto_nuevo, $eid]);
+                    stock_consumir($db, $eid, $id_repuesto_nuevo, $suc_stock, 1, $repuesto_ini_reservado);
                     $db->prepare("UPDATE reparaciones SET stock_descontado = 1 WHERE id_ingreso = ? AND id_empresa = ?")
                        ->execute([$id, $eid]);
                     $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
@@ -330,13 +345,8 @@ if ($method === 'PUT') {
             );
             $adicionales->execute([$id, $eid]);
             foreach ($adicionales->fetchAll() as $ar) {
-                $upd = $db->prepare("UPDATE inventario
-                                SET cantidad = GREATEST(0, cantidad - ?),
-                                    cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
-                              WHERE id_repuesto = ? AND id_empresa = ? AND cantidad > 0");
-                $upd->execute([(int)$ar['cantidad'], (int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid]);
                 // Solo marcar como descontado si la UPDATE afectó filas (había stock)
-                if ($upd->rowCount() > 0) {
+                if (stock_consumir($db, $eid, (int)$ar['id_repuesto'], $suc_stock, (int)$ar['cantidad'], true)) {
                     $db->prepare("UPDATE reparacion_repuestos SET stock_desc = 1 WHERE id = ?")
                        ->execute([(int)$ar['id']]);
                     $db->prepare("INSERT INTO observaciones (id_empresa, id_registro, obs, user) VALUES (?,?,?,?)")
@@ -396,6 +406,10 @@ if ($method === 'PUT') {
         if ($rep_add_txt) {
             $rep_txt = $rep_txt ? $rep_txt . "\n" . implode("\n", $rep_add_txt) : implode("\n", $rep_add_txt);
         }
+        if ($traslado_txt) {
+            $rep_txt = $rep_txt ? $rep_txt . "\n" . $traslado_txt : $traslado_txt;
+            log_accion($db, 'cambio_sucursal', $id, ['sucursal_anterior' => $row['id_sucursal'], 'sucursal_nueva' => $nueva_sucursal]);
+        }
 
         if ($nuevo_status !== $row['status']) {
             // Consolidar valor, repuesto y nota en el mismo registro de historial
@@ -439,23 +453,20 @@ if ($method === 'DELETE') {
     $id = (int) ($in['id'] ?? $_GET['id'] ?? 0);
     if (!$id) json_err('ID inválido.');
 
-    $cur = $db->prepare("SELECT id_ingreso, id_repuesto_usado, stock_descontado FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ? AND deleted_at IS NULL");
+    $cur = $db->prepare("SELECT id_ingreso, id_repuesto_usado, stock_descontado, id_sucursal FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ? AND deleted_at IS NULL");
     $cur->execute([$id, $eid]);
     $rep_del = $cur->fetch();
     if (!$rep_del) json_err('Registro no encontrado.', 404);
+    $suc_del = reparacion_sucursal($db, $eid, $rep_del['id_sucursal'] !== null ? (int)$rep_del['id_sucursal'] : null);
 
-    // Liberar reservas pendientes (repuesto no consumido aún)
+    // Liberar reservas pendientes (repuesto no consumido aún) en el stock de su sucursal
     if ($rep_del['id_repuesto_usado'] && !(int)$rep_del['stock_descontado']) {
-        $db->prepare("UPDATE inventario SET cantidad_reservada = GREATEST(0, cantidad_reservada - 1)
-                       WHERE id_repuesto = ? AND id_empresa = ?")
-           ->execute([(int)$rep_del['id_repuesto_usado'], $eid]);
+        stock_liberar($db, $eid, (int)$rep_del['id_repuesto_usado'], $suc_del, 1);
     }
     $adic_del = $db->prepare("SELECT id_repuesto, cantidad FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0");
     $adic_del->execute([$id, $eid]);
     foreach ($adic_del->fetchAll() as $ar_del) {
-        $db->prepare("UPDATE inventario SET cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
-                       WHERE id_repuesto = ? AND id_empresa = ?")
-           ->execute([(int)$ar_del['cantidad'], (int)$ar_del['id_repuesto'], $eid]);
+        stock_liberar($db, $eid, (int)$ar_del['id_repuesto'], $suc_del, (int)$ar_del['cantidad']);
     }
 
     // Eliminar fotos físicas + registros de BD antes del soft delete

@@ -77,24 +77,27 @@ if ($method === 'POST') {
 
     // Verificar servicio
     $chk = $db->prepare(
-        "SELECT id_ingreso FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?"
+        "SELECT id_ingreso, id_sucursal FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?"
     );
     $chk->execute([$id_reparacion, $eid]);
-    if (!$chk->fetch()) json_err('Servicio no encontrado.', 404);
+    $servicio = $chk->fetch();
+    if (!$servicio) json_err('Servicio no encontrado.', 404);
+    // El repuesto se reserva del stock de la sucursal donde esta la reparacion.
+    $id_suc = reparacion_sucursal($db, $eid, $servicio['id_sucursal'] !== null ? (int)$servicio['id_sucursal'] : null);
 
     // Snapshot del repuesto + verificar disponibilidad
     $ri = $db->prepare(
-        "SELECT nombre, marca_compatible, modelo_compatible, precio_venta, cantidad, cantidad_reservada
+        "SELECT nombre, marca_compatible, modelo_compatible, precio_venta
            FROM inventario WHERE id_repuesto = ? AND id_empresa = ? AND deleted_at IS NULL"
     );
     $ri->execute([$id_repuesto, $eid]);
     $rep = $ri->fetch();
     if (!$rep) json_err('Repuesto no encontrado.', 404);
 
-    $disponible = (int)$rep['cantidad'] - (int)$rep['cantidad_reservada'];
+    $disponible = stock_disponible($db, $eid, $id_repuesto, $id_suc);
     if ($disponible < $cantidad) {
         if ($disponible <= 0) {
-            json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
+            json_err('Sin stock disponible en la sucursal de esta reparación — el repuesto está agotado o reservado para otro trabajo.');
         }
         json_err("Solo hay {$disponible} unidad" . ($disponible !== 1 ? 'es' : '') . " disponible" . ($disponible !== 1 ? 's' : '') . " (las demás están reservadas).");
     }
@@ -105,15 +108,20 @@ if ($method === 'POST') {
 
     $db->beginTransaction();
     try {
+        // Se bloquea la fila de la reparacion (igual que un traslado en reparaciones.php) y se relee su
+        // sucursal: la reserva siempre cae en la sucursal donde la reparacion esta de verdad.
+        $lk = $db->prepare("SELECT id_sucursal FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ? FOR UPDATE");
+        $lk->execute([$id_reparacion, $eid]);
+        $lkRow = $lk->fetch();
+        if (!$lkRow) { $db->rollBack(); json_err('Servicio no encontrado.', 404); }
+        $id_suc = reparacion_sucursal($db, $eid, $lkRow['id_sucursal'] !== null ? (int)$lkRow['id_sucursal'] : null);
+
         // Reserva atomica: el WHERE vuelve a exigir disponibilidad justo en este UPDATE,
         // cerrando la ventana de carrera entre el chequeo de arriba y este punto (dos
         // peticiones en paralelo ya no pueden reservar mas unidades de las que hay).
-        $resv = $db->prepare("UPDATE inventario SET cantidad_reservada = cantidad_reservada + ?
-                               WHERE id_repuesto = ? AND id_empresa = ? AND (cantidad - cantidad_reservada) >= ?");
-        $resv->execute([$cantidad, $id_repuesto, $eid, $cantidad]);
-        if ($resv->rowCount() === 0) {
+        if (!stock_reservar($db, $eid, $id_repuesto, $id_suc, $cantidad)) {
             $db->rollBack();
-            json_err('Sin stock disponible — el repuesto está reservado para otro trabajo.');
+            json_err('Sin stock disponible en la sucursal de esta reparación — el repuesto está reservado para otro trabajo.');
         }
 
         $db->prepare(
@@ -173,9 +181,10 @@ if ($method === 'DELETE') {
 
     // Liberar reserva si el stock no fue consumido aún
     if (!(int)$row['stock_desc']) {
-        $db->prepare("UPDATE inventario SET cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
-                       WHERE id_repuesto = ? AND id_empresa = ?")
-           ->execute([(int)$row['cantidad'], (int)$row['id_repuesto'], $eid]);
+        $sq = $db->prepare("SELECT id_sucursal FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+        $sq->execute([(int)$row['id_reparacion'], $eid]);
+        $sid = $sq->fetchColumn();
+        stock_liberar($db, $eid, (int)$row['id_repuesto'], reparacion_sucursal($db, $eid, $sid !== false && $sid !== null ? (int)$sid : null), (int)$row['cantidad']);
     }
 
     // Restar precio al valor del servicio

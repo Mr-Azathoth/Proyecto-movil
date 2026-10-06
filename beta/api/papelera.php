@@ -37,15 +37,14 @@ if ($accion === 'restaurar') {
             // detras, permitiendo que otro trabajo se quede con esa misma unidad.
             $sinStock = 0;
 
-            $repRow = $db->prepare("SELECT id_repuesto_usado, stock_descontado FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+            $repRow = $db->prepare("SELECT id_repuesto_usado, stock_descontado, id_sucursal FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
             $repRow->execute([$id, $eid]);
             $repRow = $repRow->fetch();
+            // Las reservas se rehacen en el stock de la sucursal donde esta la reparacion.
+            $sucRep = reparacion_sucursal($db, $eid, ($repRow && $repRow['id_sucursal'] !== null) ? (int)$repRow['id_sucursal'] : null);
             if ($repRow && $repRow['id_repuesto_usado'] && !(int)$repRow['stock_descontado']) {
                 $idRp = (int) $repRow['id_repuesto_usado'];
-                $resv = $db->prepare("UPDATE inventario SET cantidad_reservada = cantidad_reservada + 1
-                                       WHERE id_repuesto = ? AND id_empresa = ? AND (cantidad - cantidad_reservada) > 0");
-                $resv->execute([$idRp, $eid]);
-                if ($resv->rowCount() === 0) {
+                if (!stock_reservar($db, $eid, $idRp, $sucRep, 1)) {
                     // Ya no hay stock disponible: se desvincula en vez de dejar una referencia sin reserva.
                     $db->prepare("UPDATE reparaciones SET id_repuesto_usado = NULL WHERE id_ingreso = ? AND id_empresa = ?")
                        ->execute([$id, $eid]);
@@ -56,10 +55,7 @@ if ($accion === 'restaurar') {
             $adic = $db->prepare("SELECT id, id_repuesto, cantidad FROM reparacion_repuestos WHERE id_reparacion = ? AND id_empresa = ? AND stock_desc = 0");
             $adic->execute([$id, $eid]);
             foreach ($adic->fetchAll() as $ar) {
-                $resv = $db->prepare("UPDATE inventario SET cantidad_reservada = cantidad_reservada + ?
-                                       WHERE id_repuesto = ? AND id_empresa = ? AND (cantidad - cantidad_reservada) >= ?");
-                $resv->execute([(int)$ar['cantidad'], (int)$ar['id_repuesto'], $eid, (int)$ar['cantidad']]);
-                if ($resv->rowCount() === 0) {
+                if (!stock_reservar($db, $eid, (int)$ar['id_repuesto'], $sucRep, (int)$ar['cantidad'])) {
                     $db->prepare("DELETE FROM reparacion_repuestos WHERE id = ? AND id_empresa = ?")
                        ->execute([(int)$ar['id'], $eid]);
                     $sinStock++;

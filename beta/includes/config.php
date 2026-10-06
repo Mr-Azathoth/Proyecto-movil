@@ -1,0 +1,707 @@
+<?php
+// Cargar .env desde la raíz del proyecto (nunca commitear .env)
+(static function (): void {
+    $file = dirname(__DIR__) . '/.env';
+    if (!is_file($file)) return;
+    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        if (str_starts_with(ltrim($line), '#')) continue;
+        [$k, $v] = explode('=', $line, 2) + ['', ''];
+        $_ENV[trim($k)] = trim($v, " \t\"'");
+    }
+})();
+
+define('DB_HOST',    $_ENV['DB_HOST'] ?? 'localhost');
+define('DB_PORT',    (int)($_ENV['DB_PORT'] ?? 3306));
+define('DB_NAME',    $_ENV['DB_NAME'] ?? 'centrotec_db');
+define('DB_USER',    $_ENV['DB_USER'] ?? 'root');
+define('DB_PASS',    $_ENV['DB_PASS'] ?? '');
+define('DB_CHARSET', 'utf8mb4');
+define('APP_ENV',    $_ENV['APP_ENV'] ?? 'development');
+define('EMPRESA_ID', 1);
+define('APP_URL',    $_ENV['APP_URL'] ?? 'http://localhost/centrotec');
+// BASE = prefijo de ruta para links y redirects (ej: '/centrotec' en dev, '' en producción con dominio propio)
+// APP_URL debe incluir esquema (https://...) para que parse_url funcione correctamente
+$_aurl = APP_URL;
+if (!preg_match('#^https?://#', $_aurl)) $_aurl = 'https://' . $_aurl;
+define('BASE', rtrim(parse_url($_aurl, PHP_URL_PATH) ?: '', '/'));
+unset($_aurl);
+
+date_default_timezone_set('America/Santiago');
+
+define('VALID_STATUS', ['Ingresado', 'En Reparacion', 'Reparado', 'Entregado', 'Garantia']);
+
+// Google Maps API key para autocompletado de dirección en registro.php
+// Activa con: console.cloud.google.com → Maps JavaScript API + Places API
+// Al activar, agregar a la cabecera CSP (línea ~31):
+//   script-src 'self' https://maps.googleapis.com https://maps.gstatic.com
+//   img-src    'self' data: https://maps.gstatic.com https://maps.googleapis.com
+// define('GOOGLE_MAPS_KEY', 'AIza...');
+
+// Configuración segura de sesión — debe ir ANTES de session_start()
+ini_set('session.cookie_httponly', '1');
+ini_set('session.cookie_samesite', 'Lax');
+ini_set('session.use_strict_mode', '1');
+
+// Detectar HTTPS real o proxy (Cloudflare, LB) en cualquier entorno
+$_is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+          || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+          || (($_SERVER['HTTP_CF_VISITOR'] ?? '') !== '' && str_contains($_SERVER['HTTP_CF_VISITOR'] ?? '', '"https"'));
+define('IS_HTTPS', $_is_https);
+unset($_is_https);
+
+if (defined('APP_ENV') && APP_ENV === 'production') {
+    ini_set('display_errors', '0');
+} else {
+    ini_set('display_errors', '1');
+}
+
+// Secure cookie siempre que la conexión sea HTTPS (producción o staging detrás de proxy)
+if (IS_HTTPS) ini_set('session.cookie_secure', '1');
+
+session_start();
+
+// ── Handlers globales: errores PHP siempre retornan JSON (nunca HTML) ──────
+// Esto previene que un error de PHP cause que el JS no pueda parsear la respuesta
+// y muestre "Error de red" en lugar del error real.
+set_exception_handler(function (Throwable $e): void {
+    while (ob_get_level() > 0) ob_end_clean();
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    $msg = (APP_ENV === 'production')
+        ? 'Error interno del servidor.'
+        : $e->getMessage() . ' — ' . basename($e->getFile()) . ':' . $e->getLine();
+    echo json_encode(['ok' => false, 'msg' => $msg]);
+    exit;
+});
+
+register_shutdown_function(function (): void {
+    $err = error_get_last();
+    if (!$err || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) return;
+    while (ob_get_level() > 0) ob_end_clean();
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+    }
+    $msg = (APP_ENV === 'production')
+        ? 'Error interno del servidor.'
+        : $err['message'] . ' — ' . basename($err['file']) . ':' . $err['line'];
+    echo json_encode(['ok' => false, 'msg' => $msg]);
+});
+
+// Headers de seguridad HTTP
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+if (IS_HTTPS) header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+// Google Fonts y Material Icons necesitan fonts.googleapis.com / fonts.gstatic.com
+$_csp_nonce = base64_encode(random_bytes(16));
+define('CSP_NONCE', $_csp_nonce);
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'nonce-" . CSP_NONCE . "' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'");
+
+function getDB(): PDO {
+    static $pdo = null;
+    if ($pdo === null) {
+        $dsn = "mysql:host=".DB_HOST.";port=".DB_PORT.";dbname=".DB_NAME.";charset=".DB_CHARSET;
+        $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
+        // Intenta timezone con nombre (maneja DST automáticamente).
+        // Fallback a offset fijo si las tablas de timezone de MySQL no están pobladas.
+        try {
+            $pdo->exec("SET time_zone = 'America/Santiago'");
+        } catch (PDOException $e) {
+            $offset = (new DateTimeZone('America/Santiago'))->getOffset(new DateTime()) / 3600;
+            $sign   = $offset >= 0 ? '+' : '-';
+            $pdo->exec(sprintf("SET time_zone = '%s%02d:00'", $sign, abs($offset)));
+        }
+    }
+    return $pdo;
+}
+
+function logueado(): bool { return isset($_SESSION['user_id']); }
+
+// Destruye la sesión si lleva más de $segundos sin actividad y redirige a login
+function session_check_timeout(int $segundos = 3600): void {
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $segundos) {
+        session_unset();
+        session_destroy();
+        // Eliminar cookie de sesión
+        if (ini_get('session.use_cookies')) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+        }
+        header('Location: '.BASE.'/ingresar.php?expired=1');
+        exit;
+    }
+}
+
+function requireLogin(): void {
+    remember_check();
+    if (!logueado()) {
+        $here = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+              . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $_SESSION['redirect_after_login'] = $here;
+        header('Location: '.BASE.'/ingresar.php'); exit;
+    }
+    session_check_timeout();
+    $_SESSION['last_activity'] = time();
+}
+
+// ── REMEMBER ME ──────────────────────────────────────────────
+function _remember_table(PDO $db): void {
+    $db->exec("CREATE TABLE IF NOT EXISTS remember_tokens (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        id_usuario INT NOT NULL,
+        id_empresa INT NOT NULL,
+        token_hash VARCHAR(64) NOT NULL,
+        expira_en  DATETIME NOT NULL,
+        creado_en  DATETIME NOT NULL DEFAULT NOW(),
+        UNIQUE KEY uq_token (token_hash),
+        KEY idx_usuario (id_usuario)
+    )");
+}
+
+function remember_set(int $id_usuario, int $id_empresa): void {
+    $token  = bin2hex(random_bytes(32));
+    $hash   = hash('sha256', $token);
+    $expira = date('Y-m-d H:i:s', time() + 30 * 86400);
+    $db     = getDB();
+    _remember_table($db);
+    $db->prepare("DELETE FROM remember_tokens WHERE id_usuario = ? AND expira_en < NOW()")->execute([$id_usuario]);
+    $db->prepare("INSERT INTO remember_tokens (id_usuario, id_empresa, token_hash, expira_en) VALUES (?,?,?,?)")
+       ->execute([$id_usuario, $id_empresa, $hash, $expira]);
+    setcookie('rp_rem', $token, [
+        'expires'  => time() + 30 * 86400,
+        'path'     => BASE ?: '/',
+        'httponly' => true,
+        'samesite' => 'Strict',
+        'secure'   => IS_HTTPS,
+    ]);
+}
+
+function remember_check(): bool {
+    if (logueado()) return true;
+    $token = $_COOKIE['rp_rem'] ?? '';
+    if (!$token || strlen($token) !== 64) return false;
+    $hash = hash('sha256', $token);
+    try {
+        $db = getDB();
+        _remember_table($db);
+        $st = $db->prepare(
+            "SELECT rt.id, rt.id_usuario, rt.id_empresa,
+                    u.user, u.nombre, u.cargo, e.activa
+             FROM remember_tokens rt
+             JOIN usuarios u ON u.id_usuario = rt.id_usuario
+             JOIN empresas e ON e.id_empresa = rt.id_empresa
+             WHERE rt.token_hash = ? AND rt.expira_en > NOW() AND u.activo = 1
+             LIMIT 1"
+        );
+        $st->execute([$hash]);
+        $row = $st->fetch();
+    } catch (Throwable $e) {
+        return false;
+    }
+    if (!$row || !(bool)$row['activa']) return false;
+    // Rotar token: eliminar el viejo, emitir uno nuevo
+    $db->prepare("DELETE FROM remember_tokens WHERE id = ?")->execute([$row['id']]);
+    session_regenerate_id(true);
+    $_SESSION['user_id']       = $row['id_usuario'];
+    $_SESSION['user']          = $row['user'];
+    $_SESSION['nombre']        = $row['nombre'];
+    $_SESSION['cargo']         = $row['cargo'];
+    $_SESSION['empresa_id']    = $row['id_empresa'];
+    $_SESSION['last_activity'] = time();
+    remember_set($row['id_usuario'], $row['id_empresa']);
+    return true;
+}
+
+function remember_clear(): void {
+    $token = $_COOKIE['rp_rem'] ?? '';
+    if ($token && strlen($token) === 64) {
+        try {
+            getDB()->prepare("DELETE FROM remember_tokens WHERE token_hash = ?")
+                   ->execute([hash('sha256', $token)]);
+        } catch (Throwable $ignored) {}
+    }
+    setcookie('rp_rem', '', ['expires' => time() - 86400, 'path' => BASE ?: '/', 'httponly' => true, 'samesite' => 'Strict', 'secure' => IS_HTTPS]);
+}
+
+// ── SMTP (recuperación de contraseña) ────────────────────────
+// Usar una cuenta Gmail con contraseña de aplicación habilitada.
+// Generar en: myaccount.google.com → Seguridad → Contraseñas de aplicaciones
+define('SMTP_HOST', $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com');
+define('SMTP_PORT', (int)($_ENV['SMTP_PORT'] ?? 587));
+define('SMTP_USER', $_ENV['SMTP_USER'] ?? '');
+define('SMTP_PASS', $_ENV['SMTP_PASS'] ?? '');
+define('SMTP_FROM', $_ENV['SMTP_FROM'] ?? '');
+define('SMTP_NAME', $_ENV['SMTP_NAME'] ?? 'Centrotec - Servicios Técnicos');
+
+// ── SUSCRIPCIÓN / PAGOS ──────────────────────────────────────
+// Mercado Pago — https://www.mercadopago.cl/developers/
+define('MP_ACCESS_TOKEN',    $_ENV['MP_ACCESS_TOKEN']    ?? '');
+define('MP_PUBLIC_KEY',      $_ENV['MP_PUBLIC_KEY']      ?? '');
+define('MP_ENV',             $_ENV['MP_ENV']             ?? 'sandbox');   // 'sandbox' | 'production'
+define('MP_WEBHOOK_SECRET',  $_ENV['MP_WEBHOOK_SECRET']  ?? '');  // firma HMAC — opcional en sandbox
+
+// Planes de pago único (Checkout Pro — un solo cobro por período)
+define('MP_PLANES', [
+    '1mes'    => ['nombre' => '1 mes',    'meses' => 1,  'precio' => 4990],
+    '3meses'  => ['nombre' => '3 meses',  'meses' => 3,  'precio' => 13990],
+    '6meses'  => ['nombre' => '6 meses',  'meses' => 6,  'precio' => 25990],
+    '12meses' => ['nombre' => '12 meses', 'meses' => 12, 'precio' => 49990],
+]);
+
+// Crea una preference de Checkout Pro y devuelve la URL de pago correcta según entorno.
+// Retorna '' si la API falla.
+function mp_crear_preferencia(int $eid, string $planKey, array $plan): string {
+    $body = [
+        'items' => [[
+            'title'       => 'Centrotec — Plan ' . $plan['nombre'],
+            'quantity'    => 1,
+            'unit_price'  => (float)$plan['precio'],
+            'currency_id' => 'CLP',
+        ]],
+        'back_urls' => [
+            'success' => APP_URL . '/pago/retorno.php',
+            'failure' => APP_URL . '/pago/retorno.php?mp_result=failure',
+            'pending' => APP_URL . '/pago/retorno.php?mp_result=pending',
+        ],
+        'auto_return'        => 'approved',
+        'external_reference' => 'eid_' . $eid . '_plan_' . $planKey,
+        'notification_url'   => APP_URL . '/api/webhook_mp.php',
+    ];
+
+    $ch = curl_init('https://api.mercadopago.com/checkout/preferences');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($body),
+        CURLOPT_HTTPHEADER     => [
+            'Authorization: Bearer ' . MP_ACCESS_TOKEN,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_TIMEOUT => 15,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code !== 201) {
+        error_log('[mp_crear_preferencia] HTTP ' . $code . ' body=' . substr($resp ?? '', 0, 300));
+        return '';
+    }
+    $pref = json_decode($resp, true);
+    // Siempre usar init_point — sandbox_init_point causa pantallas de error aunque el pago quede aprobado
+    return $pref['init_point'] ?? '';
+}
+
+// Webpay Plus (Transbank)
+// Credenciales de integración pública (funcionan sin registro para pruebas)
+// Para producción: https://www.transbankdevelopers.cl/
+define('WP_COMMERCE_CODE', $_ENV['WP_COMMERCE_CODE'] ?? '597055555532');
+define('WP_API_KEY',       $_ENV['WP_API_KEY']       ?? '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C');
+define('WP_ENV',           $_ENV['WP_ENV']           ?? 'integration');   // 'integration' | 'production'
+
+function eid(): int {
+    if (!isset($_SESSION['empresa_id'])) {
+        // Sin sesión activa: no hay empresa. Fallar explícitamente evita
+        // que operaciones corran contra empresa 1 (fallback peligroso).
+        http_response_code(401);
+        exit(json_encode(['ok' => false, 'msg' => 'Sesión no válida.']));
+    }
+    return (int)$_SESSION['empresa_id'];
+}
+function uid(): int           { return (int)($_SESSION['user_id']    ?? 0); }
+function uname(): string      { return $_SESSION['user']   ?? ''; }
+function unombre(): string    { return $_SESSION['nombre'] ?? ''; }
+function ucargo(): string     { return $_SESSION['cargo']  ?? ''; }
+function isAdmin(): bool      { return ucargo() === 'Admin'; }
+
+function json_ok(mixed $d): void {
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true, 'data' => $d]);
+    exit;
+}
+function json_err(string $m, int $c = 400): void {
+    http_response_code($c);
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => false, 'msg' => $m]);
+    exit;
+}
+function guard(): void {
+    if (!logueado()) json_err('No autorizado', 401);
+    session_check_timeout();
+    $_SESSION['last_activity'] = time();
+    $db = getDB();
+    schema_sucursales_asegurar($db);
+
+    // Verificar que el usuario sigue activo
+    $u = $db->prepare("SELECT activo FROM usuarios WHERE id_usuario = ? LIMIT 1");
+    $u->execute([uid()]);
+    $urow = $u->fetch();
+    if ($urow && !(bool)$urow['activo']) {
+        remember_clear();
+        session_unset(); session_destroy();
+        json_err('Cuenta desactivada.', 403);
+    }
+
+    $s = $db->prepare("SELECT activa, plan_estado, plan_vencimiento FROM empresas WHERE id_empresa = ? LIMIT 1");
+    $s->execute([eid()]);
+    $emp = $s->fetch();
+
+    // Trial o Cancelado activo pero con fecha vencida (cron aún no corrió hoy)
+    if ($emp && (bool)$emp['activa'] && in_array($emp['plan_estado'], ['Trial', 'Cancelado'], true)) {
+        $venc = $emp['plan_vencimiento'] ?? null;
+        if ($venc && strtotime($venc) < strtotime('today')) {
+            json_err('trial_vencido', 402);
+        }
+    }
+
+    // Vencido con activa=1 (estado puede quedar así si el cron no actualizó activa todavía)
+    if ($emp && (bool)$emp['activa'] && $emp['plan_estado'] === 'Vencido') {
+        json_err('trial_vencido', 402);
+    }
+
+    if ($emp && !(bool)$emp['activa']) {
+        // Trial/plan vencido: NO destruir sesión — el usuario puede suscribirse desde el muro
+        if (in_array($emp['plan_estado'], ['Trial', 'Vencido'], true)) {
+            json_err('trial_vencido', 402);
+        }
+        remember_clear();
+        session_unset(); session_destroy();
+        $msg = ($emp['plan_estado'] === 'Pendiente')
+            ? 'Pago pendiente. Completa tu suscripción para continuar.'
+            : 'Tu suscripción ha vencido.';
+        json_err($msg, 403);
+    }
+}
+
+// ── SUCURSALES ───────────────────────────────────────────────
+// Lectura: todos los usuarios de la empresa ven todas las sucursales.
+// Escritura: el Admin en cualquiera; el Tecnico solo en su sucursal base y en las
+// habilitadas en usuario_sucursales. Siempre se consulta la BD (no la sesion), asi un
+// cambio de sucursal hecho por el admin rige en la siguiente peticion.
+
+// Sucursal por defecto de la empresa: la mas antigua activa y con atencion al publico (nunca una
+// bodega); la crea como "Principal" si no hay ninguna.
+function sucursal_default(PDO $db, int $eid): int {
+    $s = $db->prepare("SELECT id_sucursal FROM sucursales WHERE id_empresa = ? AND activa = 1 AND es_bodega = 0 ORDER BY id_sucursal LIMIT 1");
+    $s->execute([$eid]);
+    $id = (int) $s->fetchColumn();
+    if ($id) return $id;
+    $db->prepare("INSERT IGNORE INTO sucursales (id_empresa, nombre) VALUES (?, 'Principal')")->execute([$eid]);
+    $s->execute([$eid]);
+    $id = (int) $s->fetchColumn();
+    if (!$id) {
+        // Ya existia una 'Principal' inactiva o convertida en bodega: se rehabilita.
+        $db->prepare("UPDATE sucursales SET activa = 1, es_bodega = 0 WHERE id_empresa = ? AND nombre = 'Principal'")->execute([$eid]);
+        $s->execute([$eid]);
+        $id = (int) $s->fetchColumn();
+    }
+    return $id;
+}
+
+// Sucursal base del usuario en sesion (0 si no hay sesion).
+function sucursal_base(): int {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    if (!uid()) return $cache = 0;
+    $db = getDB();
+    $s = $db->prepare("SELECT id_sucursal FROM usuarios WHERE id_usuario = ? AND id_empresa = ? LIMIT 1");
+    $s->execute([uid(), eid()]);
+    $id = (int) $s->fetchColumn();
+    if ($id) {
+        $v = $db->prepare("SELECT 1 FROM sucursales WHERE id_sucursal = ? AND id_empresa = ?");
+        $v->execute([$id, eid()]);
+        if (!$v->fetchColumn()) $id = 0;
+    }
+    if (!$id) {
+        $id = sucursal_default($db, eid());
+        $db->prepare("UPDATE usuarios SET id_sucursal = ? WHERE id_usuario = ? AND id_empresa = ?")->execute([$id, uid(), eid()]);
+    }
+    return $cache = $id;
+}
+
+// IDs de sucursal (de esta empresa) en los que el usuario puede escribir.
+function sucursales_escritura(): array {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    $db  = getDB();
+    $eid = eid();
+    if (isAdmin()) {
+        $s = $db->prepare("SELECT id_sucursal FROM sucursales WHERE id_empresa = ?");
+        $s->execute([$eid]);
+        return $cache = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
+    }
+    $s = $db->prepare(
+        "SELECT us.id_sucursal FROM usuario_sucursales us
+           JOIN sucursales su ON su.id_sucursal = us.id_sucursal
+          WHERE us.id_usuario = ? AND su.id_empresa = ?"
+    );
+    $s->execute([uid(), $eid]);
+    $ids = array_map('intval', $s->fetchAll(PDO::FETCH_COLUMN));
+    $ids[] = sucursal_base();
+    return $cache = array_values(array_unique(array_filter($ids)));
+}
+
+function puede_escribir_sucursal(?int $id_sucursal): bool {
+    return $id_sucursal !== null && in_array($id_sucursal, sucursales_escritura(), true);
+}
+
+// Valida el filtro ?sucursal= de un GET. null = todas. Cualquier id ajeno a la empresa se rechaza.
+function sucursal_filtro(PDO $db, int $eid): ?int {
+    $raw = trim((string) ($_GET['sucursal'] ?? ''));
+    if ($raw === '' || $raw === 'todas') return null;
+    $id = (int) $raw;
+    $s  = $db->prepare("SELECT 1 FROM sucursales WHERE id_sucursal = ? AND id_empresa = ?");
+    $s->execute([$id, $eid]);
+    if (!$s->fetchColumn()) json_err('Sucursal inválida.');
+    return $id;
+}
+
+// Corta con 403 si el usuario no puede escribir sobre una reparacion de otra sucursal.
+function exigir_escritura_reparacion(PDO $db, int $id_reparacion, int $eid): void {
+    $s = $db->prepare("SELECT id_sucursal FROM reparaciones WHERE id_ingreso = ? AND id_empresa = ?");
+    $s->execute([$id_reparacion, $eid]);
+    $row = $s->fetch();
+    if (!$row) json_err('Registro no encontrado.', 404);
+    if ($row['id_sucursal'] === null) return;
+    if (!puede_escribir_sucursal((int) $row['id_sucursal'])) {
+        json_err('Esta reparación pertenece a otra sucursal: solo lectura.', 403);
+    }
+}
+
+// Datos de contacto que se imprimen para una sucursal (boleta/orden de servicio). Lo que la sucursal deja
+// vacio (direccion o telefono) lo hereda de la casa matriz, es decir, de los datos de la empresa. Varias
+// sucursales pueden compartir el mismo telefono: no hay restriccion de unicidad.
+function sucursal_contacto(PDO $db, int $eid, ?int $id_sucursal): array {
+    $e = $db->prepare("SELECT direccion, comuna, telefono FROM empresas WHERE id_empresa = ?");
+    $e->execute([$eid]);
+    $m = $e->fetch() ?: [];
+    $matrizDir = trim(implode(', ', array_filter([trim((string)($m['direccion'] ?? '')), trim((string)($m['comuna'] ?? ''))])));
+    $out = ['nombre' => '', 'direccion' => $matrizDir, 'telefono' => trim((string)($m['telefono'] ?? '')),
+            'direccion_propia' => false, 'telefono_propio' => false, 'sucursales_atencion' => 0];
+
+    $n = $db->prepare("SELECT COUNT(*) FROM sucursales WHERE id_empresa = ? AND activa = 1 AND es_bodega = 0");
+    $n->execute([$eid]);
+    $out['sucursales_atencion'] = (int) $n->fetchColumn();
+
+    if ($id_sucursal) {
+        $s = sucursal_de_empresa($db, $eid, $id_sucursal);
+        if ($s) {
+            $out['nombre'] = (string) $s['nombre'];
+            $d = trim((string) $s['direccion']);
+            $t = trim((string) $s['telefono']);
+            if ($d !== '') { $out['direccion'] = $d; $out['direccion_propia'] = true; }
+            if ($t !== '') { $out['telefono']  = $t; $out['telefono_propio']  = true; }
+        }
+    }
+    return $out;
+}
+
+// Fila de una sucursal si pertenece a la empresa; null si no existe o es de otra empresa.
+function sucursal_de_empresa(PDO $db, int $eid, int $id): ?array {
+    $s = $db->prepare("SELECT id_sucursal, nombre, direccion, telefono, es_bodega, activa FROM sucursales WHERE id_sucursal = ? AND id_empresa = ?");
+    $s->execute([$id, $eid]);
+    return $s->fetch() ?: null;
+}
+
+// Resuelve la sucursal sobre la que se va a ESCRIBIR (la indicada o la base del usuario) y exige:
+// permiso de escritura, que sea de esta empresa y que este activa. $sinBodega: ademas, que atienda servicios.
+function sucursal_para_escritura(PDO $db, int $eid, $raw = null, bool $sinBodega = false): int {
+    $id = ($raw !== null && $raw !== '') ? (int) $raw : sucursal_base();
+    if (!puede_escribir_sucursal($id)) json_err('No tienes permiso para escribir en esa sucursal.', 403);
+    $s = sucursal_de_empresa($db, $eid, $id);
+    if (!$s || !(int) $s['activa'])           json_err('Sucursal inválida.');
+    if ($sinBodega && (int) $s['es_bodega'])  json_err('Una bodega no atiende servicios técnicos.');
+    return $id;
+}
+
+require_once __DIR__ . '/schema_sucursales.php';
+
+// ── STOCK POR SUCURSAL ───────────────────────────────────────
+// inventario = catalogo compartido; inventario_stock = cantidad y reservas por (repuesto, sucursal).
+// Todas las modificaciones de stock pasan por estos helpers para mantener el patron atomico
+// (el WHERE vuelve a exigir disponibilidad en el mismo UPDATE).
+
+// Sucursal de una reparacion (las anteriores a las sucursales caen en la sucursal por defecto).
+function reparacion_sucursal(PDO $db, int $eid, ?int $id_sucursal): int {
+    return $id_sucursal ?: sucursal_default($db, $eid);
+}
+
+function stock_disponible(PDO $db, int $eid, int $id_repuesto, int $id_sucursal): int {
+    $s = $db->prepare("SELECT cantidad - cantidad_reservada FROM inventario_stock
+                        WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ?");
+    $s->execute([$id_repuesto, $id_sucursal, $eid]);
+    return (int) $s->fetchColumn();
+}
+
+// Reserva $cant unidades; false si no hay disponibilidad suficiente en esa sucursal.
+function stock_reservar(PDO $db, int $eid, int $id_repuesto, int $id_sucursal, int $cant): bool {
+    $s = $db->prepare("UPDATE inventario_stock SET cantidad_reservada = cantidad_reservada + ?
+                        WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ?
+                          AND (cantidad - cantidad_reservada) >= ?");
+    $s->execute([$cant, $id_repuesto, $id_sucursal, $eid, $cant]);
+    return $s->rowCount() > 0;
+}
+
+function stock_liberar(PDO $db, int $eid, int $id_repuesto, int $id_sucursal, int $cant): void {
+    $db->prepare("UPDATE inventario_stock SET cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
+                   WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ?")
+       ->execute([$cant, $id_repuesto, $id_sucursal, $eid]);
+}
+
+// Descuenta del stock fisico (y de la reserva si la unidad estaba reservada). false si no habia stock.
+function stock_consumir(PDO $db, int $eid, int $id_repuesto, int $id_sucursal, int $cant, bool $estabaReservado): bool {
+    $sql = $estabaReservado
+        ? "UPDATE inventario_stock SET cantidad = GREATEST(0, cantidad - ?), cantidad_reservada = GREATEST(0, cantidad_reservada - ?)
+            WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ? AND cantidad > 0"
+        : "UPDATE inventario_stock SET cantidad = GREATEST(0, cantidad - ?)
+            WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ? AND cantidad > 0";
+    $p = $estabaReservado ? [$cant, $cant, $id_repuesto, $id_sucursal, $eid] : [$cant, $id_repuesto, $id_sucursal, $eid];
+    $s = $db->prepare($sql);
+    $s->execute($p);
+    return $s->rowCount() > 0;
+}
+
+// Fija la cantidad fisica de un repuesto en una sucursal (crea la fila si no existe).
+function stock_fijar(PDO $db, int $eid, int $id_repuesto, int $id_sucursal, int $qty): void {
+    $db->prepare("INSERT INTO inventario_stock (id_repuesto, id_sucursal, id_empresa, cantidad)
+                  VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE cantidad = ?")
+       ->execute([$id_repuesto, $id_sucursal, $eid, $qty, $qty]);
+}
+
+// Suma (o resta) unidades de forma atomica, sin leer antes: dos ajustes simultaneos se acumulan en vez
+// de pisarse. Nunca deja la cantidad bajo 0. Devuelve la cantidad resultante.
+function stock_ajustar(PDO $db, int $eid, int $id_repuesto, int $id_sucursal, int $delta): int {
+    $db->prepare("INSERT INTO inventario_stock (id_repuesto, id_sucursal, id_empresa, cantidad)
+                  VALUES (?,?,?,GREATEST(0, ?)) ON DUPLICATE KEY UPDATE cantidad = GREATEST(0, cantidad + ?)")
+       ->execute([$id_repuesto, $id_sucursal, $eid, $delta, $delta]);
+    $s = $db->prepare("SELECT cantidad FROM inventario_stock WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ?");
+    $s->execute([$id_repuesto, $id_sucursal, $eid]);
+    return (int) $s->fetchColumn();
+}
+
+// Rangos IP publicados por Cloudflare (https://www.cloudflare.com/ips/) — solo si la conexion TCP
+// (REMOTE_ADDR) viene realmente de uno de estos rangos confiamos en la cabecera CF-Connecting-IP;
+// de lo contrario cualquier cliente podria falsificarla para que el log de auditoria registre una
+// IP arbitraria en vez de la real.
+const CLOUDFLARE_IP_RANGES = [
+    '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22',
+    '141.101.64.0/18', '108.162.192.0/18', '190.93.240.0/20', '188.114.96.0/20',
+    '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13',
+    '104.24.0.0/14', '172.64.0.0/13', '131.0.72.0/22',
+    '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32', '2405:b500::/32',
+    '2405:8100::/32', '2a06:98c0::/29', '2c0f:f248::/32',
+];
+
+function ip_en_rango(string $ip, string $cidr): bool {
+    [$subnet, $bits] = explode('/', $cidr);
+    $ipBin = @inet_pton($ip);
+    $subBin = @inet_pton($subnet);
+    if ($ipBin === false || $subBin === false || strlen($ipBin) !== strlen($subBin)) return false;
+    $bits    = (int)$bits;
+    $bytes   = intdiv($bits, 8);
+    $remBits = $bits % 8;
+    if ($bytes > 0 && substr($ipBin, 0, $bytes) !== substr($subBin, 0, $bytes)) return false;
+    if ($remBits === 0) return true;
+    $mask = chr((0xFF << (8 - $remBits)) & 0xFF);
+    return (substr($ipBin, $bytes, 1) & $mask) === (substr($subBin, $bytes, 1) & $mask);
+}
+
+// IP real del cliente para el log de auditoria: solo confia en CF-Connecting-IP cuando la conexion
+// TCP directa (REMOTE_ADDR) es realmente de Cloudflare; nunca confia en X-Forwarded-For, que
+// cualquier cliente puede enviar libremente.
+function client_ip_real(): string {
+    $remote = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $cf     = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? '';
+    if ($cf !== '') {
+        foreach (CLOUDFLARE_IP_RANGES as $rango) {
+            if (ip_en_rango($remote, $rango)) return $cf;
+        }
+    }
+    return $remote;
+}
+
+// Registra acciones críticas en la tabla log_acciones
+function log_accion(PDO $pdo, string $accion, ?int $id_reparacion = null, ?array $entrada = null, ?array $salida = null, ?int $id_empresa = null): void {
+    $pdo->prepare(
+        "INSERT INTO log_acciones (id_empresa, id_usuario, usuario, accion, id_reparacion, ip, datos_entrada, datos_salida)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([
+        $id_empresa ?? eid(),
+        $_SESSION['user_id'] ?? null,
+        $_SESSION['user']    ?? null,
+        $accion,
+        $id_reparacion,
+        client_ip_real(),
+        $entrada !== null ? json_encode($entrada, JSON_UNESCAPED_UNICODE) : null,
+        $salida  !== null ? json_encode($salida,  JSON_UNESCAPED_UNICODE) : null,
+    ]);
+}
+
+// ── CSRF ─────────────────────────────────────────────────────
+function csrf_token(): string {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+// Valida el token enviado por el cliente (header o campo POST)
+function csrf_check(): void {
+    $enviado = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? '');
+    $guardado = $_SESSION['csrf_token'] ?? '';
+    if (!$guardado || !hash_equals($guardado, $enviado)) {
+        json_err('Token de seguridad inválido.', 403);
+    }
+}
+
+// ── Rate limiting de login (basado en archivo por IP) ─────────
+// Persiste en sys_get_temp_dir() — sobrevive cambios de cookie/sesión.
+function _lr_file(string $ip): string {
+    return sys_get_temp_dir() . '/ct_lr_' . md5($ip) . '.json';
+}
+
+function _lr_read(string $ip): array {
+    $f = _lr_file($ip);
+    if (!file_exists($f)) return ['intentos' => 0, 'bloqueado_hasta' => 0];
+    $d = @json_decode(file_get_contents($f), true);
+    return is_array($d) ? $d : ['intentos' => 0, 'bloqueado_hasta' => 0];
+}
+
+function _lr_write(string $ip, array $d): void {
+    @file_put_contents(_lr_file($ip), json_encode($d), LOCK_EX);
+}
+
+function login_check_rate(string $ip): bool {
+    $d     = _lr_read($ip);
+    $ahora = time();
+    if ($d['bloqueado_hasta'] > $ahora) return false;
+    if ($d['bloqueado_hasta'] > 0) _lr_write($ip, ['intentos' => 0, 'bloqueado_hasta' => 0]);
+    return true;
+}
+
+function login_fallo(string $ip): int {
+    $d = _lr_read($ip);
+    $d['intentos']++;
+    if ($d['intentos'] >= 5) {
+        $d['bloqueado_hasta'] = time() + 900;
+        $d['intentos']        = 0;
+    }
+    _lr_write($ip, $d);
+    return $d['intentos'];
+}
+
+function login_ok(string $ip): void {
+    @unlink(_lr_file($ip));
+}
+
+function login_segundos_restantes(string $ip): int {
+    return max(0, _lr_read($ip)['bloqueado_hasta'] - time());
+}

@@ -6,8 +6,8 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 header('Content-Type: application/json; charset=utf-8');
 guard();
-if (!isAdmin()) { http_response_code(403); json_err('Acceso denegado.'); }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); json_err('Método no permitido.'); }
+if (!isAdmin()) json_err('Acceso denegado.', 403);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') json_err('Método no permitido.', 405);
 csrf_check();
 
 $db  = getDB();
@@ -99,18 +99,23 @@ $errors   = [];
 $cambios  = [];
 $rowNum   = 1;
 
+// El stock del archivo se aplica a UNA sucursal (la indicada o la base del usuario).
+$sucDestino = sucursal_para_escritura($db, $eid, $_POST['id_sucursal'] ?? null);
+
 $stmtInsert = $db->prepare(
-    "INSERT INTO inventario (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta, cantidad)
-     VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO inventario (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta)
+     VALUES (?, ?, ?, ?, ?, ?)"
 );
 $stmtUpdate = $db->prepare(
     "UPDATE inventario
-        SET nombre = ?, marca_compatible = ?, modelo_compatible = ?, precio_venta = ?, cantidad = ?, deleted_at = NULL
+        SET nombre = ?, marca_compatible = ?, modelo_compatible = ?, precio_venta = ?, deleted_at = NULL
       WHERE id_repuesto = ? AND id_empresa = ?"
 );
 $stmtFetch = $db->prepare(
-    "SELECT nombre, marca_compatible, modelo_compatible, precio_venta, cantidad
-       FROM inventario WHERE id_repuesto = ? AND id_empresa = ? LIMIT 1"
+    "SELECT i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(s.cantidad, 0) AS cantidad
+       FROM inventario i
+       LEFT JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
+      WHERE i.id_repuesto = ? AND i.id_empresa = ? LIMIT 1"
 );
 
 $db->beginTransaction();
@@ -134,7 +139,7 @@ try {
 
         try {
             if ($id > 0) {
-                $stmtFetch->execute([$id, $eid]);
+                $stmtFetch->execute([$sucDestino, $id, $eid]);
                 $actual = $stmtFetch->fetch();
 
                 if ($actual) {
@@ -149,7 +154,8 @@ try {
                             $diffs[] = "$label: «{$actual[$field]}» → «{$nuevos[$field]}»";
                         }
                     }
-                    $stmtUpdate->execute([$nombre, $marca, $modelo, $precio, $stock, $id, $eid]);
+                    $stmtUpdate->execute([$nombre, $marca, $modelo, $precio, $id, $eid]);
+                    stock_fijar($db, $eid, $id, $sucDestino, $stock);
                     $updated++;
                     if ($diffs) $cambios[] = ['id' => $id, 'nombre' => $nombre, 'diffs' => $diffs];
                     continue;
@@ -159,7 +165,8 @@ try {
             $slug   = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $nombre));
             $prefix = substr($slug, 0, 6) ?: 'REP';
             $codigo = $prefix . '-' . substr(uniqid(), -5);
-            $stmtInsert->execute([$eid, $codigo, $nombre, $marca, $modelo, $precio, $stock]);
+            $stmtInsert->execute([$eid, $codigo, $nombre, $marca, $modelo, $precio]);
+            stock_fijar($db, $eid, (int)$db->lastInsertId(), $sucDestino, $stock);
             $inserted++;
         } catch (\PDOException $e) {
             $errors[] = "Fila $rowNum: error al guardar el repuesto.";
@@ -173,7 +180,7 @@ try {
 }
 
 if ($inserted > 0 || $updated > 0) {
-    log_accion($db, 'importacion_inv_xlsx', null, ['archivo' => $_FILES['archivo']['name'] ?? ''], ['insertados' => $inserted, 'actualizados' => $updated]);
+    log_accion($db, 'importacion_inv_xlsx', null, ['archivo' => $_FILES['archivo']['name'] ?? '', 'id_sucursal' => $sucDestino], ['insertados' => $inserted, 'actualizados' => $updated]);
 }
 
 json_ok([

@@ -369,7 +369,7 @@ function _buildServicioRow(rep) {
         <div class="cell-sub">${esc(rep.tipo_ingreso)}</div>
       </td>
       <td class="cell-val">${v}</td>
-      <td class="cell-sub">${esc(rep.ingresado_por)}</td>
+      <td class="cell-sub">${esc(rep.ingresado_por)}${window.SUC ? SUC.badge(rep) : ''}</td>
       <td class="cell-sub">${fmtDate(rep.fecha_ingreso)}</td>
       <td><span class="pill ${pill}">${lbl}</span></td>
       <td class="action-col">
@@ -443,15 +443,20 @@ function _renderRepPagination(total, pageSize, totalPages) {
   footer.querySelector('#rep-pag-next').addEventListener('click', () => { _repPage++; _applySortServicios(); });
 }
 
+let _repReqSeq = 0; // solo la respuesta de la ultima carga puede pintar la lista
 async function loadServicios() {
+  const seq   = ++_repReqSeq;
   const q     = document.getElementById('search-bar').value;
   const st    = document.getElementById('filter-status').value;
   const tbody = document.getElementById('tbl-servicios');
   tbody.innerHTML = `<tr><td colspan="8" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
 
   try {
-    const r = await apiFetch(`/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}`);
+    if (window.SUC) await SUC.ready;
+    if (seq !== _repReqSeq) return;
+    const r = await apiFetch(`/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}${window.SUC ? SUC.qs() : ''}`);
     const json = await r.json();
+    if (seq !== _repReqSeq) return; // otra sucursal o busqueda se pidio mientras tanto
     if (!json.ok) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
     const rows = json.data;
 
@@ -469,7 +474,7 @@ async function loadServicios() {
     _applySortServicios();
   } catch(e) {
     _handleErr('loadServicios', e);
-    if (e?.message !== 'session_expired')
+    if (e?.message !== 'session_expired' && seq === _repReqSeq)
       tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error de red.</td></tr>`;
   }
 }
@@ -550,6 +555,7 @@ function openDetalle(rep) {
 
   document.getElementById('det-wa-link').href = waLink(rep);
   _updateHintEntregado(rep.status);
+  if (window.SUC) SUC.onOpenDetalle(rep);
 
   // Cargar repuestos y preparar select adicional
   document.getElementById('det-rep-list').innerHTML =
@@ -570,16 +576,11 @@ function openDetalle(rep) {
 async function _loadRepuestosEditor(idServicio) {
   const status = document.getElementById('det-status').value;
   try {
-    if (!_repuestosCache) {
-      const ri = await apiFetch('/reparo/api/inventario.php');
-      const ji = await ri.json();
-      _repuestosCache = (ji.data || []).map(i => ({
-        id:    i.id_repuesto,
-        value: String(i.id_repuesto),
-        label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
-      }));
-    }
-    if (_selRepAdicional) _selRepAdicional.populate(_repuestosCache);
+    // El stock que se muestra y reserva es el de la sucursal donde esta la reparacion.
+    const sucServ = _repMap.get(parseInt(idServicio))?.id_sucursal;
+    const listaRep = await _fetchRepuestosCache(sucServ);
+    if (String(idServicio) !== document.getElementById('det-hidden-id').value) return;
+    if (_selRepAdicional) _selRepAdicional.populate(listaRep);
 
     const r = await apiFetch(`/reparo/api/rep_servicio.php?id=${idServicio}`);
     const j = await r.json();
@@ -887,6 +888,7 @@ async function submitActualizar(e) {
     obs:               document.getElementById('det-obs').value.trim(),
     rep_cambios:       _repCambios,
     telefono_cliente:  telRaw || null,
+    id_sucursal:       window.SUC ? SUC.detSelected() : null,
   };
   const btnGuardar = document.querySelector('#form-actualizar button[type="submit"]');
   if (btnGuardar) { btnGuardar.disabled = true; }
@@ -933,8 +935,11 @@ function _buildInventarioRow(rep) {
       <button type="button" class="btn-row-action btn-inv-del" data-id="${rep.id_repuesto}" data-nombre="${esc(rep.nombre)}" title="Eliminar repuesto" style="color:#f87171">
         <span class="material-icons-round">delete</span>
       </button>
-      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${parseInt(rep.cantidad)+1}" title="Aumentar">+</button>
-      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-qty="${Math.max(0,parseInt(rep.cantidad)-1)}" title="Disminuir">−</button>` : ''}
+      ${window.SUC && SUC.multiInv() ? `<button type="button" class="btn-row-action btn-inv-traspaso" data-traspaso="${rep.id_repuesto}" title="Traspasar stock a otra sucursal">
+        <span class="material-icons-round">swap_horiz</span>
+      </button>` : ''}
+      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-delta="1" title="Aumentar">+</button>
+      <button type="button" class="btn-stock" data-id="${rep.id_repuesto}" data-delta="-1" title="Disminuir">−</button>` : ''}
     </div>
   </td>`;
   return `<tr data-inv-id="${rep.id_repuesto}">
@@ -943,7 +948,7 @@ function _buildInventarioRow(rep) {
     <td>${esc(rep.marca_compatible||'—')}</td>
     <td>${esc(rep.modelo_compatible||'—')}</td>
     <td>$${fmt(rep.precio_venta)}</td>
-    <td><strong class="stock-qty" style="${stockColor};font-size:16px">${rep.cantidad}</strong></td>
+    <td><strong class="stock-qty" style="${stockColor};font-size:16px">${rep.cantidad}</strong>${window.SUC ? SUC.stockDesglose(rep) : ''}</td>
     ${actions}
   </tr>`;
 }
@@ -1008,13 +1013,19 @@ function _renderInvPagination(total, pageSize, totalPages) {
   footer.querySelector('#pag-next').addEventListener('click', () => { _invPage++; _applySortInventario(); });
 }
 
+let _invReqSeq = 0; // solo la respuesta de la ultima carga puede pintar la tabla
 async function loadInventario() {
+  const seq   = ++_invReqSeq;
   const q     = document.getElementById('search-inv').value;
   const tbody = document.getElementById('tbl-inventario');
   tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
   try {
-    const r = await apiFetch(`/reparo/api/inventario.php?q=${encodeURIComponent(q)}`);
+    if (window.SUC) await SUC.ready;
+    if (seq !== _invReqSeq) return;
+    const r = await apiFetch(`/reparo/api/inventario.php?q=${encodeURIComponent(q)}${window.SUC ? SUC.invQs() : ''}`);
     const j = await r.json();
+    // Si mientras llegaba la respuesta se pidio otra sucursal u otra busqueda, esta ya no corresponde.
+    if (seq !== _invReqSeq) return;
     if (!j.ok) { tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
     if (!j.data.length) {
       const addBtn = CURRENT_USER.role === 'Admin'
@@ -1027,39 +1038,37 @@ async function loadInventario() {
     _applySortInventario();
   } catch(e) {
     _handleErr('loadInventario', e);
-    if (e?.message !== 'session_expired')
+    if (e?.message !== 'session_expired' && seq === _invReqSeq)
       tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">Error de red.</td></tr>`;
   }
 }
 
-async function alterStock(id, qty) {
-  // Actualización optimista: _invMap refleja el nuevo valor antes del fetch
-  const cached = _invMap.get(id);
-  const prevQty = cached ? cached.cantidad : null;
-  if (cached) cached.cantidad = qty;
+// Los botones +/- envian un DELTA: el servidor lo suma de forma atomica y devuelve la cantidad real, asi
+// un traspaso o un consumo ocurrido desde que se cargo la lista no se pisa con un valor viejo.
+async function alterStock(id, delta) {
+  // El stock se modifica siempre sobre UNA sucursal (en la vista "Todas" se pide elegirla).
+  const sucStock = window.SUC ? SUC.requireInvTarget() : null;
+  if (window.SUC && sucStock === null) return;
 
   try {
     const r = await apiFetch('/reparo/api/inventario.php', {
-      method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, cantidad: qty})
+      method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id, cantidad_delta: delta, id_sucursal: sucStock})
     });
     const j = await r.json();
-    if (!j.ok) {
-      // Revertir en caso de error
-      if (cached && prevQty !== null) cached.cantidad = prevQty;
-      toast(j.msg, 'err'); return;
-    }
+    if (!j.ok) { toast(j.msg, 'err'); return; }
+
+    // Si la vista ya cambio de sucursal mientras tanto, esa fila ya no es la que se modifico.
+    if (window.SUC && SUC.invTarget() !== sucStock) return;
+    const qty    = j.data.cantidad;
+    const cached = _invMap.get(id);
+    if (cached) cached.cantidad = qty;
 
     // Actualiza solo la fila afectada — sin recargar la tabla completa
     const row = document.querySelector(`#tbl-inventario tr[data-inv-id="${id}"]`);
     if (!row) { loadInventario(); return; }
-
     const cell  = row.querySelector('.stock-qty');
     cell.textContent = `${qty}`;
     cell.style.color = qty > 0 ? '#e6edf3' : '#f87171';
-
-    const [btnPlus, btnMinus] = row.querySelectorAll('.btn-stock');
-    btnPlus.dataset.qty  = qty + 1;
-    btnMinus.dataset.qty = Math.max(0, qty - 1);
   } catch(e) {
     _handleErr('alterStock', e);
   }
@@ -1101,6 +1110,7 @@ function openInvEdit(item) {
   const isAdmin = CURRENT_USER.role === 'Admin';
   document.getElementById('edit-rep-id').value      = item.id_repuesto;
   document.getElementById('edit-rep-cantidad').value = item.cantidad;
+  if (window.SUC) SUC.prepararStockModales();
   const adminFields = document.getElementById('edit-rep-admin-fields');
   if (isAdmin) {
     adminFields.style.display = '';
@@ -1119,7 +1129,19 @@ async function submitEditRepuesto(e) {
   e.preventDefault();
   const isAdmin = CURRENT_USER.role === 'Admin';
   const id = parseInt(document.getElementById('edit-rep-id').value);
-  const payload = { id, cantidad: parseInt(document.getElementById('edit-rep-cantidad').value) || 0 };
+  const payload = { id };
+  // El stock solo se envia si hay una sucursal concreta donde se pueda escribir; en la vista
+  // "Todas" el admin puede editar el catalogo (nombre, marca, precio) sin tocar el stock.
+  const stockEditable = !document.getElementById('edit-rep-cantidad').disabled;
+  if (stockEditable) {
+    const sucStock = window.SUC ? SUC.requireInvTarget() : null;
+    if (window.SUC && sucStock === null) return;
+    payload.cantidad    = parseInt(document.getElementById('edit-rep-cantidad').value) || 0;
+    payload.id_sucursal = sucStock;
+  } else if (!isAdmin) {
+    toast('Elige una sucursal en «Stock de» para modificar el stock.', 'err');
+    return;
+  }
   if (isAdmin) {
     payload.nombre            = document.getElementById('edit-rep-nombre').value.trim();
     payload.marca_compatible  = document.getElementById('edit-rep-marca').value.trim();
@@ -1137,7 +1159,7 @@ async function submitEditRepuesto(e) {
       // Actualizar _invMap de inmediato para que modal muestre valores correctos si se abre antes del reload
       const cached = _invMap.get(id);
       if (cached) {
-        cached.cantidad = payload.cantidad;
+        if (payload.cantidad !== undefined) cached.cantidad = payload.cantidad;
         if (isAdmin) {
           cached.nombre             = payload.nombre;
           cached.marca_compatible   = payload.marca_compatible;
@@ -1216,6 +1238,7 @@ async function submitRepuesto(e) {
   e.preventDefault();
   document.getElementById('hid-nuevo-modelo').value = _tagModeloNuevo.getValue();
   const fd = new FormData(e.target);
+  if (window.SUC) fd.set('id_sucursal', SUC.invTargetOrBase());
   try {
     const r = await apiFetch('/reparo/api/inventario.php', {method: 'POST', body: fd});
     const j = await r.json();
@@ -1235,7 +1258,40 @@ async function submitRepuesto(e) {
 // CATÁLOGO GLOBAL: MARCAS Y MODELOS
 // ═══════════════════════════════════════════════════════════
 let _marcasCache        = null;
-let _repuestosCache     = null; // cache de items inventario para selects de repuesto
+let _repuestosCache     = null; // Map sucursal -> lista de repuestos con el stock de ESA sucursal (null = invalidada)
+
+// Lista de repuestos con el stock de UNA sucursal (la del servicio). Se devuelve la lista pedida, no
+// una variable compartida: dos cargas simultaneas de sucursales distintas no pueden mezclarse.
+async function _fetchRepuestosCache(idSuc) {
+  const key = idSuc ? String(idSuc) : '';
+  if (!_repuestosCache) _repuestosCache = new Map();
+  const mapa = _repuestosCache;
+  if (mapa.has(key)) return mapa.get(key);
+  const r  = await apiFetch('/reparo/api/inventario.php' + (key ? `?sucursal=${encodeURIComponent(key)}` : ''));
+  const ji = await r.json();
+  const lista = (ji.data || []).map(i => ({
+    id:    i.id_repuesto,
+    value: String(i.id_repuesto),
+    label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
+  }));
+  // Si la cache se invalido mientras llegaba la respuesta (p. ej. tras agregar un repuesto), no se guarda.
+  if (_repuestosCache === mapa) mapa.set(key, lista);
+  return lista;
+}
+
+// Repuestos del formulario "nuevo servicio": el stock es el de la sucursal elegida en ese formulario.
+let _repNuevoSeq = 0;
+async function refrescarRepuestosNuevo(limpiar) {
+  const seq = ++_repNuevoSeq;
+  try {
+    const sel = document.getElementById('nuevo-sucursal');
+    const suc = sel && sel.value ? sel.value : (window.SUC ? (SUC.active || SUC.base) : '');
+    const lista = await _fetchRepuestosCache(suc);
+    if (seq !== _repNuevoSeq) return; // el usuario cambio de sucursal mientras cargaba
+    if (limpiar) _selRepNuevo?.reset();
+    _selRepNuevo?.populate(lista);
+  } catch (e) { /* sin lista de repuestos: el formulario sigue siendo usable */ }
+}
 const _repMap           = new Map(); // id_ingreso → objeto rep completo
 let   _repPageSize      = 25;        // 0 = todos
 let   _repPage          = 1;
@@ -1458,6 +1514,7 @@ function doExportInv(formato) {
   const q = document.getElementById('search-inv').value;
   if (q) params.set('q', q);
   if (_invSortCol) { params.set('sort_col', _invSortCol); params.set('sort_dir', _invSortDir); }
+  if (window.SUC && SUC.invParam()) params.set('sucursal', SUC.invParam());
   const url = `${BASE_PATH}/api/exportar_inventario.php?${params.toString()}`;
   closeModal('modal-exportar-inv');
   if (formato === 'pdf') {
@@ -1477,6 +1534,7 @@ function _buildViewParams(formato) {
   if (q)  params.set('q', q);
   if (st) params.append('status[]', st);
   if (_sortCol) { params.set('sort_col', _sortCol); params.set('sort_dir', _sortDir); }
+  if (window.SUC && SUC.param()) params.set('sucursal', SUC.param());
   return params;
 }
 
@@ -1484,6 +1542,7 @@ function _buildViewParams(formato) {
 function _buildExportParams(formato) {
   const params = new URLSearchParams();
   params.set('formato', formato);
+  if (window.SUC && SUC.param()) params.set('sucursal', SUC.param());
   const q = document.getElementById('search-bar').value;
   if (q) params.set('q', q);
   if (_sortCol) { params.set('sort_col', _sortCol); params.set('sort_dir', _sortDir); }
@@ -1644,7 +1703,8 @@ async function loadUsuarios() {
   try {
     const r = await apiFetch('/reparo/api/usuarios.php');
     const j = await r.json();
-    if (!j.ok) { tbody.innerHTML = `<tr><td colspan="4" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
+    if (!j.ok) { tbody.innerHTML = `<tr><td colspan="5" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
+    if (window.SUC) await SUC.ready;
     // Actualizar contador de técnicos y estado del botón
     const tecnicos = j.data.filter(u => u.cargo === 'Tecnico').length;
     const countEl  = document.getElementById('cfg-tecnicos-count');
@@ -1658,7 +1718,13 @@ async function loadUsuarios() {
       btnNuevo.title    = tecnicos >= 5 ? 'Límite alcanzado: máximo 5 técnicos' : '';
     }
     const me = CURRENT_USER.user;
-    tbody.innerHTML = j.data.map(u => {
+    const lista = window.SUC ? SUC.filtrarLista(j.data) : j.data;
+    if (window.SUC) SUC.pintarFiltroUsuarios(lista.length, j.data.length);
+    if (!lista.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="tbl-empty">Ningún usuario en esta sucursal.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = lista.map(u => {
       const esSelf  = u.user === me;
       const esAdmin = u.cargo === 'Admin';
       const badge   = esAdmin
@@ -1672,6 +1738,11 @@ async function loadUsuarios() {
         `<button class="btn-sm btn-sec" data-action="reset-pass" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}">
            <span class="material-icons-round" style="font-size:15px">lock_reset</span> Contraseña
          </button>`;
+      const btnSuc = (window.SUC && SUC.list.filter(s => s.activa).length > 1)
+        ? `<button class="btn-sm btn-sec" data-action="asignar-sucursal" data-uid="${u.id_usuario}" title="Cambiar sucursal">
+             <span class="material-icons-round" style="font-size:15px">storefront</span> Sucursal
+           </button>`
+        : '';
       const btnDel = (!esSelf && !esAdmin)
         ? `<button class="btn-sm btn-danger" data-action="delete-tecnico" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}" title="Eliminar técnico">
              <span class="material-icons-round" style="font-size:15px">delete</span>
@@ -1682,7 +1753,8 @@ async function loadUsuarios() {
         <td><div class="usr-cell"><div class="user-av">${inicial}</div><strong>${esc(u.nombre)}</strong></div></td>
         <td><code class="code-lbl">${esc(u.user)}</code></td>
         <td>${badge}</td>
-        <td><div class="row-actions">${btnCargo}${btnPass}${btnDel}</div></td>
+        <td class="cell-sub">${window.SUC ? SUC.etiquetaUsuario(u) : ''}</td>
+        <td><div class="row-actions">${btnCargo}${btnSuc}${btnPass}${btnDel}</div></td>
       </tr>`;
     }).join('');
   } catch(e) { _handleErr('apicall', e); }
@@ -1772,7 +1844,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btn-exp-csv')?.addEventListener('click', () => doExport('csv'));
   document.getElementById('btn-exp-pdf')?.addEventListener('click', () => doExport('pdf'));
-  document.getElementById('btn-abrir-repuesto')?.addEventListener('click', () => openModal('modal-repuesto'));
+  document.getElementById('btn-abrir-repuesto')?.addEventListener('click', () => {
+    if (window.SUC) SUC.prepararStockModales();
+    openModal('modal-repuesto');
+  });
 
   // Click en headers ordenables del inventario
   document.querySelector('#tbl-inventario').closest('table').querySelector('thead')
@@ -2025,7 +2100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     const btn = e.target.closest('.btn-stock[data-id]');
-    if (btn) alterStock(parseInt(btn.dataset.id), parseInt(btn.dataset.qty));
+    if (btn) alterStock(parseInt(btn.dataset.id), parseInt(btn.dataset.delta));
   });
 
   // Doble clic en fila inventario → abre modal edición
@@ -2042,14 +2117,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadMarcasDatalist('dl-marcas-inv');
 
   // Pre-cargar inventario para los selects de repuesto
-  apiFetch('/reparo/api/inventario.php').then(r => r.json()).then(j => {
-    _repuestosCache = (j.data || []).map(i => ({
-      id:    i.id_repuesto,
-      value: String(i.id_repuesto),
-      label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
-    }));
-    _selRepNuevo?.populate(_repuestosCache);
-  }).catch(() => {});
+  (async () => { if (window.SUC) await SUC.ready; refrescarRepuestosNuevo(); })();
 
   loadServicios();
 
@@ -2455,12 +2523,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  var _estSeq = 0;
   async function cargarEstadisticas() {
+    var seq = ++_estSeq;
     var r = getRango();
     try {
-      var j = await (await apiFetch('/reparo/api/estadisticas.php?desde=' + r.desde + '&hasta=' + r.hasta)).json();
-      if (!j.ok) return;
+      if (window.SUC) await SUC.ready;
+      var j = await (await apiFetch('/reparo/api/estadisticas.php?desde=' + r.desde + '&hasta=' + r.hasta + (window.SUC ? SUC.qs() : ''))).json();
+      if (!j.ok || seq !== _estSeq) return;
       var d = j.data;
+      if (window.SUC) SUC.renderComparativa(d.por_sucursal);
 
       // KPIs
       document.getElementById('est-k-ordenes').textContent  = d.kpis.total_ordenes;
@@ -2537,7 +2609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const r = await apiFetch('/reparo/api/usuarios.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, user, password: pass })
+        body: JSON.stringify({ nombre, user, password: pass, id_sucursal: document.getElementById('tecnico-sucursal')?.value || '' })
       });
       const j = await r.json();
       if (j.ok) {
@@ -2797,6 +2869,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     document.getElementById('imp-result').classList.add('hidden');
     document.getElementById('btn-importar-confirm').disabled = true;
     if (fileInput) fileInput.value = '';
+    if (window.SUC) SUC.prepararImport();
     document.getElementById('modal-importar-inv').classList.add('active');
   });
 
@@ -2829,6 +2902,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     var fileToSend = fileInput.files[0];
     var formData = new FormData();
     formData.append('archivo', fileToSend);
+    if (window.SUC) formData.append('id_sucursal', SUC.invTargetOrBase());
 
     try {
       var res = await apiFetch('/reparo/api/importar_inventario.php', { method: 'POST', body: formData });
@@ -2856,14 +2930,8 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
         var toastMsg = partes.length ? 'Importación completada: ' + partes.map(function(p) { return p.replace(/<[^>]+>/g, ''); }).join(', ') + '.' : 'Sin cambios.';
         toast(toastMsg, 'ok');
         // Refrescar cache de repuestos para el modal de nuevo servicio
-        apiFetch('/reparo/api/inventario.php').then(r => r.json()).then(ji => {
-          _repuestosCache = (ji.data || []).map(i => ({
-            id:    i.id_repuesto,
-            value: String(i.id_repuesto),
-            label: `${i.nombre}${i.marca_compatible ? ' · '+i.marca_compatible : ''}${i.modelo_compatible ? ' · '+i.modelo_compatible : ''} (stock: ${i.cantidad})`,
-          }));
-          _selRepNuevo?.populate(_repuestosCache);
-        }).catch(() => {});
+        _repuestosCache = null;
+        refrescarRepuestosNuevo();
       } else {
         el.classList.add('err');
         el.textContent = j.msg || 'Error al importar.';
