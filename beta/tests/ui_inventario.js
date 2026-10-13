@@ -225,5 +225,78 @@ const fs=require('fs'), vm=require('vm');
   vm.runInContext("_invStockFiltro=''", ctx); vm.runInContext('_applySortInventario()', ctx);
 
 
+  // ── Navegacion rapida: precarga, tabla sin vaciar, datos de arranque ──
+  let nInv = 0, nSuc = 0; const reqOrig = cli.req.bind(cli);
+  let retardo = 0; // simula la demora de la red hacia el servidor
+  cli.req = async (m, u, o) => { if (m === 'GET' && /inventario\.php/.test(u)) { nInv++; if (retardo) await sleep(retardo); } if (m === 'GET' && /sucursales\.php/.test(u)) nSuc++; return reqOrig(m, u, o); };
+  S.onInvChange(String(ids.cen)); await sleep(1200);
+  const rutas = () => (els['tbl-inventario'].innerHTML.match(/data-inv-id=/g) || []).length;
+
+  // 1. la precarga se usa y evita pedir otra vez
+  vm.runInContext('_prefetch.clear()', ctx); nInv = 0;
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(700);
+  ok('precargar una vista hace UNA peticion', nInv === 1, nInv);
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(100);
+  ok('precargar de nuevo la misma vista no repite la peticion (dedupe)', nInv === 1, nInv);
+  await T.loadInventario();
+  ok('al abrir la vista se usa la precarga: no hay otra peticion (tiene menos de 3 s)', nInv === 1 && rutas() >= 3, nInv + ' filas ' + rutas());
+  ok('...y la precarga se consume una sola vez', vm.runInContext('_prefetch.size', ctx) === 0, '');
+
+  // 2. una precarga vieja se pinta de inmediato y se revalida en segundo plano
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(700);
+  vm.runInContext("[..._prefetch.values()].forEach(v => v.t -= 5000)", ctx); nInv = 0;
+  els['tbl-inventario'].innerHTML = '';
+  retardo = 600; const pCarga = T.loadInventario(); await sleep(150);
+  ok('con una precarga de mas de 3 s se pinta al instante, sin esperar al servidor (la red tarda 600 ms)', rutas() >= 3, rutas());
+  await pCarga; retardo = 0; await sleep(300);
+  ok('...y se vuelve a pedir en segundo plano para confirmar', nInv === 1, nInv);
+
+  // 3. una precarga con mas de 30 s se descarta
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(700);
+  vm.runInContext("[..._prefetch.values()].forEach(v => v.t -= 31000)", ctx); nInv = 0;
+  await T.loadInventario();
+  ok('una precarga de mas de 30 s no se usa: se pide de nuevo', nInv === 1, nInv);
+
+  // 4. cualquier escritura descarta las precargas
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(700);
+  ok('hay una precarga guardada', vm.runInContext('_prefetch.size', ctx) === 1, vm.runInContext('_prefetch.size', ctx));
+  await T.alterStock(INV['Pantalla A54'], 1); await sleep(400);
+  ok('un cambio de stock (PUT) descarta las precargas', vm.runInContext('_prefetch.size', ctx) === 0, vm.runInContext('_prefetch.size', ctx));
+  await T.alterStock(INV['Pantalla A54'], -1); await sleep(400);
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(700);
+  S.cambio();
+  ok('...y SUC.cambio() (traspasos, usuarios, sucursales) tambien', vm.runInContext('_prefetch.size', ctx) === 0, '');
+
+  // 5. la tabla no se vacia al recargar
+  await T.loadInventario(); await sleep(300);
+  const pendiente = T.loadInventario();
+  ok('al recargar con datos ya pintados la tabla NO se reemplaza por "Cargando..."', !/Cargando/.test(els['tbl-inventario'].innerHTML) && rutas() >= 3, els['tbl-inventario'].innerHTML.slice(0, 60));
+  await pendiente;
+  vm.runInContext('_invPintada = false', ctx);
+  const primera = T.loadInventario();
+  ok('la primera carga si muestra "Cargando..."', /Cargando/.test(els['tbl-inventario'].innerHTML), '');
+  await primera; await sleep(200);
+
+  // 6. no precarga la vista que ya esta abierta
+  const abierta = els['view-inventario'] || (els['view-inventario'] = mk('view-inventario'));
+  abierta.classList.contains = () => true; vm.runInContext('_prefetch.clear()', ctx); nInv = 0;
+  vm.runInContext("prefetchView('inventario')", ctx); await sleep(500);
+  ok('no se precarga una vista que ya esta abierta', nInv === 0, nInv);
+  abierta.classList.contains = () => false;
+
+  // 7. datos de arranque de sucursales: la primera carga no pide nada
+  const boot = (await cli.get('/api/sucursales.php')).json.data;
+  els['boot-sucursales'] = els['boot-sucursales'] || mk('boot-sucursales');
+  els['boot-sucursales'].textContent = JSON.stringify(boot);
+  S._bootUsado = false; nSuc = 0;
+  await S.load();
+  ok('SUC.load usa los datos de arranque del HTML (0 peticiones)', nSuc === 0 && S.list.length === boot.sucursales.length && S.base === boot.base, nSuc);
+  await S.load();
+  ok('...y las cargas siguientes si piden datos nuevos', nSuc === 1, nSuc);
+  S._bootUsado = false; els['boot-sucursales'].textContent = 'esto no es json';
+  nSuc = 0; await S.load();
+  ok('si los datos de arranque estan danados, cae a pedirlos al servidor', nSuc === 1 && S.list.length === boot.sucursales.length, nSuc);
+  cli.req = reqOrig;
+
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

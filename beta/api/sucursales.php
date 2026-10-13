@@ -9,37 +9,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // ── GET: sucursales de la empresa (todos los roles) ───────────
 if ($method === 'GET') {
-    $sql = "SELECT s.id_sucursal, s.nombre, s.direccion, s.telefono, s.es_bodega, s.activa,
-                   (SELECT COUNT(*) FROM usuarios u WHERE u.id_sucursal = s.id_sucursal AND u.id_empresa = s.id_empresa) AS n_usuarios,
-                   (SELECT COUNT(*) FROM reparaciones r WHERE r.id_sucursal = s.id_sucursal AND r.id_empresa = s.id_empresa AND r.deleted_at IS NULL) AS n_reparaciones
-              FROM sucursales s WHERE s.id_empresa = ?";
-    if (!isAdmin()) $sql .= " AND s.activa = 1";
-    $sql .= " ORDER BY s.es_bodega ASC, s.nombre ASC";
-    $s = $db->prepare($sql);
-    $s->execute([$eid]);
-    $rows = $s->fetchAll();
-    foreach ($rows as &$r) {
-        $r['id_sucursal']    = (int) $r['id_sucursal'];
-        $r['es_bodega']      = (int) $r['es_bodega'];
-        $r['activa']         = (int) $r['activa'];
-        $r['n_usuarios']     = (int) $r['n_usuarios'];
-        $r['n_reparaciones'] = (int) $r['n_reparaciones'];
-    }
-    unset($r);
-    // Casa matriz = datos de la empresa; las sucursales que dejan direccion/telefono vacios los heredan.
-    $m = $db->prepare("SELECT nombre, direccion, comuna, telefono FROM empresas WHERE id_empresa = ?");
-    $m->execute([$eid]);
-    $matriz = $m->fetch() ?: [];
-    json_ok([
-        'sucursales' => $rows,
-        'base'       => sucursal_base(),
-        'escritura'  => sucursales_escritura(),
-        'matriz'     => [
-            'nombre'    => (string) ($matriz['nombre'] ?? ''),
-            'direccion' => trim(implode(', ', array_filter([trim((string) ($matriz['direccion'] ?? '')), trim((string) ($matriz['comuna'] ?? ''))]))),
-            'telefono'  => trim((string) ($matriz['telefono'] ?? '')),
-        ],
-    ]);
+    json_ok(sucursales_payload($db, $eid));
 }
 
 if (!isAdmin()) json_err('Sin permisos.', 403);

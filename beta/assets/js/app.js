@@ -271,9 +271,59 @@ function debounce(fn, ms) {
 }
 
 
+// ── Navegacion rapida ─────────────────────────────────────────
+// Cada peticion dinamica tarda ~0,5 s en llegar al servidor y volver, aunque el servidor responda en milisegundos.
+// Por eso la lista de una vista se pide al pasar el mouse / tocar su enlace del menu (precarga) y, si al hacer
+// clic ya llego, se pinta al instante. Si tiene mas de 3 s se vuelve a pedir en segundo plano y solo se repinta
+// si cambio. Cualquier escritura (POST/PUT/DELETE) descarta todas las precargas.
+const _prefetch = new Map();            // url -> { t, p }
+const PREFETCH_TTL = 30000;
+const PREFETCH_REVALIDA = 3000;
+function prefetchGet(url) {
+  const hit = _prefetch.get(url);
+  if (hit && Date.now() - hit.t < PREFETCH_TTL) return hit.p;
+  const p = apiFetch(url).then(r => r.json());
+  _prefetch.set(url, { t: Date.now(), p });
+  p.catch(() => { if (_prefetch.get(url)?.p === p) _prefetch.delete(url); });
+  return p;
+}
+function takePrefetched(url) {          // se usa una sola vez
+  const hit = _prefetch.get(url);
+  if (!hit) return null;
+  _prefetch.delete(url);
+  const edad = Date.now() - hit.t;
+  return edad < PREFETCH_TTL ? { p: hit.p, edad } : null;
+}
+window.invalidarPrefetch = () => _prefetch.clear();
+
+// Pide `url` y la pinta con `pintar(json)`. Usa la precarga si la hay (pintando de inmediato); `vigente()` dice si
+// esta carga sigue siendo la ultima pedida.
+async function cargarConPrecarga(url, pintar, vigente) {
+  const pre = takePrefetched(url);
+  let ultimo = null;
+  if (pre) {
+    const j0 = await pre.p;
+    if (!vigente()) return;
+    ultimo = JSON.stringify(j0);
+    pintar(j0);
+    if (pre.edad < PREFETCH_REVALIDA) return;
+  }
+  const r = await apiFetch(url);
+  const j = await r.json();
+  if (!vigente()) return;
+  if (!pre || JSON.stringify(j) !== ultimo) pintar(j);
+}
+
+// Mientras llega lo nuevo la tabla se atenua en vez de vaciarse: no hay "salto" ni pantalla en blanco.
+function _marcarCargando(tbody, on) {
+  const t = tbody.closest ? tbody.closest('table') : null;
+  if (t) { t.classList.toggle('is-loading', on); t.setAttribute('aria-busy', on ? 'true' : 'false'); }
+}
+
 async function apiFetch(url, options = {}) {
   url = BASE_PATH + url.replace(/^\/reparo/, '');
   const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET') _prefetch.clear();
   if (method !== 'GET' && options.headers?.['Content-Type'] === 'application/json') {
     options.headers['X-CSRF-Token'] = CURRENT_USER.csrf;
   }
@@ -445,38 +495,50 @@ function _renderRepPagination(total, pageSize, totalPages) {
 }
 
 let _repReqSeq = 0; // solo la respuesta de la ultima carga puede pintar la lista
+let _repPintada = false; // ya hay una lista en pantalla: se atenua en vez de vaciarla al recargar
+let _warmDone   = false;
+const _urlServicios = (q, st) => `/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}${window.SUC ? SUC.qs() : ''}`;
+
+function _pintarServicios(json, q, st, tbody) {
+  if (!json.ok) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
+  const rows = json.data;
+
+  if (!q && !st) updateStats(rows);
+  document.getElementById('sub-servicios').textContent =
+    `${rows.length} resultado${rows.length!==1?'s':''}${q||st?' (filtrado)':''}`;
+  _repPintada = true;
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Sin resultados. <button class="link-btn" data-action="clear-filters">Limpiar filtros</button></td></tr>`;
+    return;
+  }
+
+  _repMap.clear();
+  rows.forEach(rep => _repMap.set(rep.id_ingreso, rep));
+  _applySortServicios();
+}
+
 async function loadServicios() {
   const seq   = ++_repReqSeq;
   const q     = document.getElementById('search-bar').value;
   const st    = document.getElementById('filter-status').value;
   const tbody = document.getElementById('tbl-servicios');
-  tbody.innerHTML = `<tr><td colspan="8" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
+  if (_repPintada) _marcarCargando(tbody, true);
+  else tbody.innerHTML = `<tr><td colspan="8" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
 
   try {
     if (window.SUC) await SUC.ready;
     if (seq !== _repReqSeq) return;
-    const r = await apiFetch(`/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}${window.SUC ? SUC.qs() : ''}`);
-    const json = await r.json();
-    if (seq !== _repReqSeq) return; // otra sucursal o busqueda se pidio mientras tanto
-    if (!json.ok) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
-    const rows = json.data;
-
-    if (!q && !st) updateStats(rows);
-    document.getElementById('sub-servicios').textContent =
-      `${rows.length} resultado${rows.length!==1?'s':''}${q||st?' (filtrado)':''}`;
-
-    if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Sin resultados. <button class="link-btn" data-action="clear-filters">Limpiar filtros</button></td></tr>`;
-      return;
-    }
-
-    _repMap.clear();
-    rows.forEach(rep => _repMap.set(rep.id_ingreso, rep));
-    _applySortServicios();
+    // otra sucursal o busqueda puede pedirse mientras tanto: solo la ultima pinta
+    await cargarConPrecarga(_urlServicios(q, st), json => _pintarServicios(json, q, st, tbody), () => seq === _repReqSeq);
+    // con la lista ya pintada se precarga el inventario para que la vista abra al instante
+    if (!_warmDone && seq === _repReqSeq) { _warmDone = true; setTimeout(() => prefetchView('inventario'), 800); }
   } catch(e) {
     _handleErr('loadServicios', e);
     if (e?.message !== 'session_expired' && seq === _repReqSeq)
       tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error de red.</td></tr>`;
+  } finally {
+    if (seq === _repReqSeq) _marcarCargando(tbody, false);
   }
 }
 
@@ -1057,36 +1119,54 @@ function _renderInvPagination(total, pageSize, totalPages) {
 }
 
 let _invReqSeq = 0; // solo la respuesta de la ultima carga puede pintar la tabla
+let _invPintada = false; // ya hay una lista en pantalla: se atenua en vez de vaciarla al recargar
+const _urlInventario = q => `/reparo/api/inventario.php?q=${encodeURIComponent(q)}${window.SUC ? SUC.invQs() : ''}`;
+
+function _pintarInventario(j, tbody) {
+  if (!j.ok) { tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
+  _invPintada = true;
+  if (!j.data.length) {
+    const addBtn = CURRENT_USER.role === 'Admin'
+      ? ' <button class="link-btn" data-action="open-modal-repuesto">Agregar el primero</button>' : '';
+    tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Sin repuestos registrados.${addBtn}</td></tr>`;
+    _invMap.clear();
+    document.getElementById('inv-filtro-info')?.classList.add('hidden');
+    const pagV = document.getElementById('inv-pagination'); if (pagV) pagV.innerHTML = '';
+    return;
+  }
+  _invMap.clear();
+  j.data.forEach(rep => _invMap.set(rep.id_repuesto, rep));
+  _applySortInventario();
+}
+
 async function loadInventario() {
   const seq   = ++_invReqSeq;
   const q     = document.getElementById('search-inv').value;
   const tbody = document.getElementById('tbl-inventario');
-  tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
+  if (_invPintada) _marcarCargando(tbody, true);
+  else tbody.innerHTML = `<tr><td colspan="6" class="tbl-loading"><span class="material-icons-round spin">sync</span> Cargando...</td></tr>`;
   try {
     if (window.SUC) await SUC.ready;
     if (seq !== _invReqSeq) return;
-    const r = await apiFetch(`/reparo/api/inventario.php?q=${encodeURIComponent(q)}${window.SUC ? SUC.invQs() : ''}`);
-    const j = await r.json();
     // Si mientras llegaba la respuesta se pidio otra sucursal u otra busqueda, esta ya no corresponde.
-    if (seq !== _invReqSeq) return;
-    if (!j.ok) { tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
-    if (!j.data.length) {
-      const addBtn = CURRENT_USER.role === 'Admin'
-        ? ' <button class="link-btn" data-action="open-modal-repuesto">Agregar el primero</button>' : '';
-      tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Sin repuestos registrados.${addBtn}</td></tr>`;
-      _invMap.clear();
-      document.getElementById('inv-filtro-info')?.classList.add('hidden');
-      const pagV = document.getElementById('inv-pagination'); if (pagV) pagV.innerHTML = '';
-      return;
-    }
-    _invMap.clear();
-    j.data.forEach(rep => _invMap.set(rep.id_repuesto, rep));
-    _applySortInventario();
+    await cargarConPrecarga(_urlInventario(q), j => _pintarInventario(j, tbody), () => seq === _invReqSeq);
   } catch(e) {
     _handleErr('loadInventario', e);
     if (e?.message !== 'session_expired' && seq === _invReqSeq)
       tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">Error de red.</td></tr>`;
+  } finally {
+    if (seq === _invReqSeq) _marcarCargando(tbody, false);
   }
+}
+
+// Precarga la lista de una vista (la misma URL que usara al abrirse). No hace nada si ya esta abierta.
+function prefetchView(name) {
+  try {
+    if (window.SUC && !SUC.list.length) return;   // aun no se conocen las sucursales: la URL podria diferir
+    if (document.getElementById('view-' + name)?.classList.contains('active')) return;
+    if (name === 'servicios')  prefetchGet(_urlServicios(document.getElementById('search-bar').value, document.getElementById('filter-status').value));
+    if (name === 'inventario') prefetchGet(_urlInventario(document.getElementById('search-inv').value));
+  } catch (e) { /* la precarga es solo una optimizacion */ }
 }
 
 // Los botones +/- envian un DELTA: el servidor lo suma de forma atomica y devuelve la cantidad real, asi
@@ -1847,6 +1927,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelectorAll('.nav-link[data-view]').forEach(link => {
     link.addEventListener('click', () => switchView(link.dataset.view, link));
+    // Precarga: al pasar el mouse (con una pausa para ignorar roces) o al presionar/tocar, antes de soltar el clic.
+    let espera = null;
+    link.addEventListener('pointerenter', () => { clearTimeout(espera); espera = setTimeout(() => prefetchView(link.dataset.view), 60); }, { passive: true });
+    link.addEventListener('pointerleave', () => clearTimeout(espera), { passive: true });
+    link.addEventListener('pointerdown',  () => { clearTimeout(espera); prefetchView(link.dataset.view); }, { passive: true });
+    link.addEventListener('touchstart',   () => prefetchView(link.dataset.view), { passive: true });
   });
 
   document.getElementById('btn-abrir-nuevo')?.addEventListener('click', () => {
@@ -2222,14 +2308,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('form-edit-repuesto').addEventListener('submit', submitEditRepuesto);
 
-  setupMarcaModeloPair();
-  await loadMarcasSearchable();
-  loadMarcasDatalist('dl-marcas-inv');
+  // Lo que el usuario ve primero (la lista de servicios) se pide YA, en paralelo con las marcas: antes esperaba
+  // a que terminara la peticion de marcas (~0,3 s) para empezar.
+  loadServicios();
 
   // Pre-cargar inventario para los selects de repuesto
   (async () => { if (window.SUC) await SUC.ready; refrescarRepuestosNuevo(); })();
 
-  loadServicios();
+  setupMarcaModeloPair();
+  await loadMarcasSearchable();
+  loadMarcasDatalist('dl-marcas-inv');
 
   // ── Configuración: tabs ──────────────────────────────────────
   document.querySelectorAll('.cfg-tab').forEach(btn => {

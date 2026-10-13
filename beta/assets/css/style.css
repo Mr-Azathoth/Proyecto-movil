@@ -1701,3 +1701,8 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 
 /* Stock minimo por repuesto */
 .hint-min { font-weight: 400; color: var(--txt2); font-size: 11px; }
+
+/* Navegacion rapida: la tabla se atenua mientras se actualiza en vez de vaciarse */
+.tbl.is-loading tbody { opacity: .55; transition: opacity .15s ease; }
+.tbl tbody { transition: opacity .15s ease; }
+@media (prefers-reduced-motion: reduce) { .tbl tbody, .tbl.is-loading tbody { transition: none; } }

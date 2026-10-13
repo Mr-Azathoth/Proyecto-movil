@@ -1,0 +1,99 @@
+# ── Bloquear listado de directorios ──────────────────────────
+Options -Indexes
+
+# --- Indice por defecto ---
+DirectoryIndex index.php index.html index.htm
+
+# ── Bloquear acceso directo a archivos sensibles ─────────────
+<FilesMatch "\.(sql|log|env|md|gitignore|ini|bak|old|example)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── Config de BD del hosting (no forma parte del repo) ───────
+<Files "config-db.php">
+    Order allow,deny
+    Deny from all
+</Files>
+<Files "config-db.ejemplo.php">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# ── Permitir .well-known (Digital Asset Links para TWA/Play Store) ──
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^\.well-known/ - [L]
+</IfModule>
+
+# ── URL amigable: /seguimiento → seguimiento.php ──────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^seguimiento/?$ seguimiento.php [L,QSA]
+</IfModule>
+
+# ── Bloquear acceso a la carpeta includes/ ───────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^includes/ - [F,L]
+</IfModule>
+
+# ── Bloquear archivos de semilla (solo uso local, nunca en prod) ─
+<FilesMatch "^seed_">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── Bloquear scripts de debug/test (no deben ser accesibles en server) ─
+<FilesMatch "^(_test_patch|_del_test|delete_test_rep)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ── Bloquear ejecución PHP en uploads (logos) ────────────────
+<IfModule mod_rewrite.c>
+    RewriteRule ^assets/uploads/.*\.php$ - [F,L]
+</IfModule>
+
+# ── Service Worker: nunca cachear (CloudFlare y navegador) ───
+<IfModule mod_headers.c>
+    <FilesMatch "^sw\.js$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+    <FilesMatch "^manifest\.php$">
+        Header set Cache-Control "no-cache, must-revalidate"
+    </FilesMatch>
+</IfModule>
+
+# --- Codificacion ---
+AddDefaultCharset UTF-8
+
+# --- Cache de estaticos ---
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp  "access plus 1 month"
+    ExpiresByType image/png   "access plus 1 month"
+    ExpiresByType image/jpeg  "access plus 1 month"
+    ExpiresByType text/css    "access plus 1 week"
+    ExpiresByType text/javascript "access plus 1 week"
+</IfModule>
+
+# ── Ocultar versión del servidor ─────────────────────────────
+ServerSignature Off
+
+# ── Forzar HTTPS en producción (Cloudflare ya termina TLS; activar solo si hace falta) ─
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ── Cache de scripts y estilos versionados ───────────────────
+# app.php los pide con ?v=<fecha de modificacion>: al cambiar el archivo cambia la URL, asi que el navegador
+# puede guardarlos un año sin volver a preguntar al servidor. Los que no llevan ?v= no se tocan.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css)$">
+        <If "%{QUERY_STRING} =~ /^v=[0-9]+$/">
+            Header set Cache-Control "public, max-age=31536000, immutable"
+        </If>
+    </FilesMatch>
+</IfModule>

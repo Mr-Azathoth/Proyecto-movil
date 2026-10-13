@@ -33,7 +33,13 @@
     qs()    { const p = this.param(); return p ? '&sucursal=' + encodeURIComponent(p) : ''; },
 
     async load() {
-      const j = await (await fetch(BASE + '/api/sucursales.php')).json();
+      // La primera vez los datos vienen dentro del HTML (sin ida y vuelta al servidor); las siguientes se piden.
+      let j = null;
+      if (!this._bootUsado) {
+        this._bootUsado = true;
+        try { const b = document.getElementById('boot-sucursales'); if (b) j = { ok: true, data: JSON.parse(b.textContent) }; } catch (e) { j = null; }
+      }
+      if (!j) j = await (await fetch(BASE + '/api/sucursales.php')).json();
       if (!j.ok) return;
       this.list      = j.data.sucursales;
       this.base      = j.data.base;
@@ -274,6 +280,7 @@
       if (id) body.id_sucursal = Number(id);
       const j = await api(id ? 'PUT' : 'POST', body);
       if (!j.ok) { toast(j.msg, 'err'); return; }
+      this.cambio();
       toast('✔ ' + j.data.msg, 'ok');
       if (typeof window.closeModal === 'function') window.closeModal('modal-sucursal');
       this.renderAdmin();
@@ -282,9 +289,13 @@
     async cambiarActiva(id, activa) {
       const j = await api('PUT', { id_sucursal: Number(id), activa });
       if (!j.ok) { toast(j.msg, 'err'); return; }
+      this.cambio();
       toast('✔ ' + j.data.msg, 'ok');
       this.renderAdmin();
     },
+
+    // Tras escribir (sucursales, usuarios, traspasos) se descartan las listas precargadas: ya no son vigentes.
+    cambio() { if (typeof window.invalidarPrefetch === 'function') window.invalidarPrefetch(); },
 
     // ── Asignacion de sucursal a un usuario ────────────────────
     async abrirAsignacion(uid) {
@@ -328,6 +339,7 @@
       });
       const j = await r.json();
       if (!j.ok) { toast(j.msg, 'err'); return; }
+      this.cambio();
       toast('✔ ' + j.data.msg, 'ok');
       if (typeof window.closeModal === 'function') window.closeModal('modal-usr-sucursal');
       if (typeof window.loadUsuarios === 'function') window.loadUsuarios();
@@ -490,6 +502,7 @@
         const r = await fetch(BASE + '/api/traspasos.php', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, body: JSON.stringify(body) });
         const j = await r.json();
         if (!j.ok) { toast(j.msg, 'err'); return; }
+        this.cambio();
         toast('✔ ' + j.data.msg, 'ok');
         if (typeof window.closeModal === 'function') window.closeModal('modal-traspaso');
         try { _repuestosCache = null; } catch (e) {}
