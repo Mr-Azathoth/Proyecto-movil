@@ -52,6 +52,20 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   r = await adm.get('/api/sucursales.php');
   ok('las respuestas dinamicas (API) no llevan cache de assets', !/immutable/.test(r.headers['cache-control'] || ''), r.headers['cache-control']);
 
+  // ── Librerias pesadas bajo demanda ─────────────────────────
+  r = await adm.get('/app.php');
+  const pesadas = ['chart.umd.min.js', 'qrcode.min.js', 'jsqr.min.js', 'xlsx.mini.min.js'];
+  ok('app.php YA NO descarga las 4 librerias pesadas al arrancar', pesadas.every(f => !r.text.includes('<script src') || !new RegExp('<script[^>]+' + f.replace(/\./g, '\\.')).test(r.text)), '');
+  const libs = JSON.parse(r.text.match(/data-libs="([^"]*)"/)[1].replace(/&quot;/g, '"'));
+  ok('...pero entrega la version de cada una para cargarlas despues', ['chart', 'qrcode', 'jsqr', 'xlsx'].every(k => Number.isInteger(libs[k]) && libs[k] > 1e9), JSON.stringify(libs));
+  const arch = { chart: 'chart.umd.min.js', qrcode: 'qrcode.min.js', jsqr: 'jsqr.min.js', xlsx: 'xlsx.mini.min.js' };
+  for (const k of Object.keys(arch)) {
+    const f = await adm.get('/assets/js/' + arch[k] + '?v=' + libs[k]);
+    ok('la libreria ' + k + ' se sirve con su version y cache de un año', f.status === 200 && /immutable/.test(f.headers['cache-control'] || '') && f.text.length > 5000, f.status + ' ' + f.headers['cache-control']);
+  }
+  r = await adm.get('/assets/js/app.js?v=1');
+  ok('app.js define cargarLib y la usa en graficos, QR, lector y Excel', ['function cargarLib', "cargarLib('chart')", "cargarLib('qrcode')", "cargarLib('jsqr')", "cargarLib('xlsx')"].every(t => r.text.includes(t)), '');
+
   console.log(`\n${pass} OK, ${fail} fallos`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack.split('\n').slice(0, 4).join('\n')); process.exit(2); });

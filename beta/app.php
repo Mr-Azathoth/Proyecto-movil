@@ -75,6 +75,12 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       data-nombre="<?= htmlspecialchars(unombre()) ?>"
       data-uid="<?= uid() ?>"
       data-base="<?= BASE ?>"
+      data-libs="<?= htmlspecialchars(json_encode([
+          'chart'  => filemtime(__DIR__.'/assets/js/chart.umd.min.js'),
+          'qrcode' => filemtime(__DIR__.'/assets/js/qrcode.min.js'),
+          'jsqr'   => filemtime(__DIR__.'/assets/js/jsqr.min.js'),
+          'xlsx'   => filemtime(__DIR__.'/assets/js/xlsx.mini.min.js'),
+      ]), ENT_QUOTES) ?>"
       data-plan-estado="<?= htmlspecialchars($_plan_estado) ?>"
       data-plan-dias="<?= $_plan_dias !== null ? (int)$_plan_dias : '' ?>">
 
@@ -1495,10 +1501,6 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <?php /* Datos de arranque de sucursales: bloque de datos (no se ejecuta, el CSP no lo toca). JSON_HEX_* impide cerrar la etiqueta desde un nombre. */ ?>
 <script type="application/json" id="boot-sucursales"><?= json_encode(sucursales_payload(getDB(), eid()), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 <script src="<?= BASE ?>/assets/js/sw-register.js"></script>
-<script src="<?= BASE ?>/assets/js/chart.umd.min.js"></script>
-<script src="<?= BASE ?>/assets/js/qrcode.min.js"></script>
-<script src="<?= BASE ?>/assets/js/jsqr.min.js"></script>
-<script src="<?= BASE ?>/assets/js/xlsx.mini.min.js"></script>
 <script src="<?= BASE ?>/assets/js/sucursales.js?v=<?= filemtime(__DIR__.'/assets/js/sucursales.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/rep_fotos.js?v=<?= filemtime(__DIR__.'/assets/js/rep_fotos.js') ?>"></script>

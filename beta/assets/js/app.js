@@ -296,6 +296,26 @@ function takePrefetched(url) {          // se usa una sola vez
 }
 window.invalidarPrefetch = () => _prefetch.clear();
 
+// ── Librerias pesadas bajo demanda ────────────────────────────
+// Excel (280 KB), gráficos (205 KB), lector QR (130 KB) y generador QR se descargaban y ejecutaban en CADA carga, antes
+// de que la app arrancara. Ahora se piden la primera vez que se usan (o antes, al pasar el mouse por su acceso).
+// Llevan ?v=<fecha> igual que app.js, así quedan en la caché del navegador.
+const _LIB_ARCHIVO = { chart: 'chart.umd.min.js', qrcode: 'qrcode.min.js', jsqr: 'jsqr.min.js', xlsx: 'xlsx.mini.min.js' };
+const _libPromesa  = {};
+function cargarLib(nombre) {
+  if (!_libPromesa[nombre]) {
+    _libPromesa[nombre] = new Promise((ok, falla) => {
+      let v = ''; try { v = JSON.parse(document.body.dataset.libs || '{}')[nombre] || ''; } catch (e) {}
+      const s = document.createElement('script');
+      s.src = `${BASE_PATH}/assets/js/${_LIB_ARCHIVO[nombre]}${v ? '?v=' + v : ''}`;
+      s.onload = () => ok();
+      s.onerror = () => { delete _libPromesa[nombre]; s.remove(); falla(new Error('No se pudo cargar la libreria ' + nombre)); };
+      document.head.appendChild(s);
+    });
+  }
+  return _libPromesa[nombre];
+}
+
 // Pide `url` y la pinta con `pintar(json)`. Usa la precarga si la hay (pintando de inmediato); `vigente()` dice si
 // esta carga sigue siendo la ultima pedida.
 async function cargarConPrecarga(url, pintar, vigente) {
@@ -532,7 +552,7 @@ async function loadServicios() {
     // otra sucursal o busqueda puede pedirse mientras tanto: solo la ultima pinta
     await cargarConPrecarga(_urlServicios(q, st), json => _pintarServicios(json, q, st, tbody), () => seq === _repReqSeq);
     // con la lista ya pintada se precarga el inventario para que la vista abra al instante
-    if (!_warmDone && seq === _repReqSeq) { _warmDone = true; setTimeout(() => prefetchView('inventario'), 800); }
+    if (!_warmDone && seq === _repReqSeq) { _warmDone = true; setTimeout(() => { prefetchView('inventario'); cargarLib('qrcode').catch(() => {}); }, 800); }
   } catch(e) {
     _handleErr('loadServicios', e);
     if (e?.message !== 'session_expired' && seq === _repReqSeq)
@@ -1162,6 +1182,7 @@ async function loadInventario() {
 // Precarga la lista de una vista (la misma URL que usara al abrirse). No hace nada si ya esta abierta.
 function prefetchView(name) {
   try {
+    if (name === 'estadisticas') cargarLib('chart').catch(() => {});   // los gráficos se necesitan al abrir esa vista
     if (window.SUC && !SUC.list.length) return;   // aun no se conocen las sucursales: la URL podria diferir
     if (document.getElementById('view-' + name)?.classList.contains('active')) return;
     if (name === 'servicios')  prefetchGet(_urlServicios(document.getElementById('search-bar').value, document.getElementById('filter-status').value));
@@ -2725,6 +2746,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function cargarEstadisticas() {
     var seq = ++_estSeq;
     var r = getRango();
+    var libChart = cargarLib('chart');   // se descarga mientras llegan los datos
     try {
       if (window.SUC) await SUC.ready;
       var j = await (await apiFetch('/reparo/api/estadisticas.php?desde=' + r.desde + '&hasta=' + r.hasta + (window.SUC ? SUC.qs() : ''))).json();
@@ -2739,13 +2761,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('est-k-cerradas').textContent = d.kpis.ordenes_cerradas;
       document.getElementById('est-k-dias').textContent     = parseFloat(d.kpis.dias_promedio).toFixed(1) + ' días';
 
+      await libChart;
+      if (seq !== _estSeq) return;
       renderIngresos(d.por_mes);
       renderFlujo(d.flujo_mes);
       renderMarcas(d.marcas);
       renderFallas(d.fallas);
       renderModelos(d.modelos);
     } catch(e) {
-      if (e.message !== 'session_expired') toast('Error al cargar estadísticas.', 'err');
+      if (e.message !== 'session_expired') toast(/libreria/.test(e.message) ? 'No se pudieron cargar los gráficos. Revisa tu conexión.' : 'Error al cargar estadísticas.', 'err');
     }
   }
 
@@ -2832,12 +2856,17 @@ function _qrUrl(id) {
   return location.origin + BASE_PATH + '/app.php?inv=' + id;
 }
 
-function openQRModal(item) {
+async function openQRModal(item) {
   document.getElementById('qr-item-nombre').textContent = item.nombre;
   const meta = [item.marca_compatible, item.modelo_compatible].filter(Boolean).join(' · ');
   document.getElementById('qr-item-meta').textContent = meta || 'Sin marca/modelo registrado';
 
   const wrap = document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML = '';
+  document.getElementById('modal-qr').classList.add('active');
+  document.getElementById('btn-qr-print').onclick = () => _printQR(item);
+  try { await cargarLib('qrcode'); } catch (e) { toast('No se pudo cargar el generador de QR. Revisa tu conexión.', 'err'); return; }
+  if (!document.getElementById('modal-qr').classList.contains('active')) return;   // se cerró mientras cargaba
   wrap.innerHTML = '';
   new QRCode(wrap, {
     text:         _qrUrl(item.id_repuesto),
@@ -2847,12 +2876,10 @@ function openQRModal(item) {
     colorLight:   '#ffffff',
     correctLevel: QRCode.CorrectLevel.M,
   });
-
-  document.getElementById('modal-qr').classList.add('active');
-  document.getElementById('btn-qr-print').onclick = () => _printQR(item);
 }
 
-function _printQR(item) {
+async function _printQR(item) {
+  try { await cargarLib('qrcode'); } catch (e) { toast('No se pudo cargar el generador de QR.', 'err'); return; }
   let label = document.getElementById('print-qr-label');
   if (!label) {
     label = document.createElement('div');
@@ -2933,6 +2960,7 @@ async function openScanner() {
   document.getElementById('scanner-wrap').classList.remove('hidden');
 
   try {
+    await cargarLib('jsqr');
     _scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     var video = document.getElementById('scanner-video');
     video.srcObject = _scannerStream;
@@ -3022,7 +3050,8 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     if (ext === 'xlsx' || ext === 'xls') {
       _sourceIsXlsx = true;
       var reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
+        try { await cargarLib('xlsx'); } catch (err) { toast('No se pudo cargar el lector de Excel. Revisa tu conexión.', 'err'); return; }
         var wb   = XLSX.read(e.target.result, { type: 'array' });
         var ws   = wb.Sheets[wb.SheetNames[0]];
         var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
@@ -3068,6 +3097,7 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
     document.getElementById('btn-importar-confirm').disabled = true;
     if (fileInput) fileInput.value = '';
     if (window.SUC) SUC.prepararImport();
+    cargarLib('xlsx').catch(function() {});   // listo para cuando se elija el archivo o la plantilla
     document.getElementById('modal-importar-inv').classList.add('active');
   });
 
@@ -3077,8 +3107,9 @@ document.getElementById('modal-scanner-close')?.addEventListener('click', _stopS
   document.getElementById('btn-importar-cancel')?.addEventListener('click', _closeImport);
 
   // Descargar plantilla
-  document.getElementById('btn-descargar-plantilla')?.addEventListener('click', function(e) {
+  document.getElementById('btn-descargar-plantilla')?.addEventListener('click', async function(e) {
     e.preventDefault();
+    try { await cargarLib('xlsx'); } catch (err) { toast('No se pudo cargar la libreria de Excel. Revisa tu conexión.', 'err'); return; }
     var wb = XLSX.utils.book_new();
     var ws = XLSX.utils.aoa_to_sheet([
       ['nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad'],
