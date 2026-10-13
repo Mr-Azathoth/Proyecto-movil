@@ -298,5 +298,35 @@ const fs=require('fs'), vm=require('vm');
   ok('si los datos de arranque estan danados, cae a pedirlos al servidor', nSuc === 1 && S.list.length === boot.sucursales.length, nSuc);
   cli.req = reqOrig;
 
+  // ── Selector de sucursal del formulario "nuevo servicio" (tecnico con varias sucursales) ──
+  const rc = await cli.post('/api/sucursales.php', { nombre: 'Sur temporal', direccion: '', telefono: '' });
+  const sur = rc.json.data.id;
+  await S.load();
+  const sel = () => ({ innerHTML: '', value: '' });
+  const guardado = { base: S.base, esc: S.escritura.slice(), act: S.active };
+  const prueba = (base, esc, activa, opciones) => { S.base = base; S.escritura = esc; S.active = activa; const x = sel(); const muestra = S.fillSelect(x, opciones); return { v: x.value, muestra, html: x.innerHTML }; };
+
+  // El tecnico es de Norte y ademas esta habilitado en Centro; en el menu esta mirando "Sur" (solo lectura para el).
+  let r1 = prueba(ids.nor, [ids.nor, ids.cen], String(sur));
+  ok('tecnico mirando una sucursal donde NO puede escribir: se preselecciona SU sucursal base (Norte), no la primera de la lista (Centro)', r1.v === String(ids.nor), r1.v);
+  ok('...y las opciones son solo las suyas (Centro y Norte), no Sur', r1.html.includes('>Centro<') && r1.html.includes('>Norte<') && !r1.html.includes('Sur temporal') && r1.muestra === true, r1.html);
+  r1 = prueba(ids.nor, [ids.nor, ids.cen], String(ids.cen));
+  ok('mirando una sucursal donde si puede escribir (Centro): se preselecciona esa', r1.v === String(ids.cen), r1.v);
+  r1 = prueba(ids.nor, [ids.nor, ids.cen], '');
+  ok('mirando "Todas las sucursales": se preselecciona su base (Norte)', r1.v === String(ids.nor), r1.v);
+  r1 = prueba(ids.nor, [ids.nor], String(sur));
+  ok('tecnico con una sola sucursal: queda Norte y el selector no se muestra', r1.v === String(ids.nor) && r1.muestra === false, JSON.stringify(r1));
+  r1 = prueba(ids.cen, [ids.cen, ids.nor, sur, ids.bod], String(sur));
+  ok('admin (puede escribir en todas) mirando Sur: se preselecciona Sur', r1.v === String(sur), r1.v);
+  r1 = prueba(ids.cen, [ids.cen, ids.nor, sur, ids.bod], '');
+  ok('...y la bodega nunca aparece como opcion de un servicio', !r1.html.includes('Bodega'), r1.html);
+  r1 = prueba(ids.nor, [ids.nor, ids.cen], String(sur), { soloEscritura: false, valor: ids.cen });
+  ok('detalle de una reparacion: se preselecciona la sucursal de ESA reparacion', r1.v === String(ids.cen), r1.v);
+  r1 = prueba(ids.bod, [ids.cen, ids.nor], '');
+  ok('si la base no atiende servicios (caso viejo con bodega), se usa la primera permitida en vez de dejarlo vacio', r1.v === String(ids.cen), r1.v);
+  S.base = guardado.base; S.escritura = guardado.esc; S.active = guardado.act;
+  await cli.put('/api/sucursales.php', { id_sucursal: sur, activa: 0 });
+  await S.load();
+
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

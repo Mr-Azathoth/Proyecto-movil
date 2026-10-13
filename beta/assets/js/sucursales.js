@@ -86,9 +86,13 @@
         if (actual) opts.unshift(actual);
       }
       sel.innerHTML = opts.map(s => `<option value="${s.id_sucursal}">${esc(s.nombre)}</option>`).join('');
-      const pref = valor != null ? Number(valor)
-                 : (this.active ? Number(this.active) : this.base);
-      if (opts.some(s => s.id_sucursal === pref)) sel.value = String(pref);
+      // Preseleccion: la sucursal indicada (detalle de una reparacion) o, en un servicio nuevo, la que se esta mirando
+      // en el menu y, si esa no esta entre las permitidas (un tecnico solo la ve en lectura), SU sucursal base.
+      // Antes, en ese caso quedaba la primera de la lista (por orden alfabetico), que podia ser otra sucursal.
+      const candidatas = valor != null ? [Number(valor)] : [this.active ? Number(this.active) : 0, this.base];
+      const elegida = candidatas.find(id => id && opts.some(s => s.id_sucursal === id));
+      if (elegida !== undefined) sel.value = String(elegida);
+      else if (opts.length) sel.value = String(opts[0].id_sucursal);
       return opts.length > 1;
     },
 
