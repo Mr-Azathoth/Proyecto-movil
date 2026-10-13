@@ -34,9 +34,6 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   ok('...y al leerlo como JSON el nombre llega intacto', parsed.sucursales.some(s => s.nombre === feo.slice(0, 80)), '');
   if (c.json?.data?.id) await adm.put('/api/sucursales.php', { id_sucursal: c.json.data.id, activa: 0 });
 
-  // Preconexion a las fuentes
-  ok('app.php precarga la conexion a las fuentes (preconnect)', /rel="preconnect" href="https:\/\/fonts\.googleapis\.com"/.test(r.text) && /rel="preconnect" href="https:\/\/fonts\.gstatic\.com" crossorigin/.test(r.text), '');
-
   // ── Cache de assets versionados ────────────────────────────
   const js = (await adm.get('/app.php')).text.match(/assets\/js\/app\.js\?v=\d+/)[0];
   r = await adm.get('/' + js);
@@ -65,6 +62,39 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   }
   r = await adm.get('/assets/js/app.js?v=1');
   ok('app.js define cargarLib y la usa en graficos, QR, lector y Excel', ['function cargarLib', "cargarLib('chart')", "cargarLib('qrcode')", "cargarLib('jsqr')", "cargarLib('xlsx')"].every(t => r.text.includes(t)), '');
+
+  // ── Fuentes alojadas en el servidor ────────────────────────
+  const fs = require('fs'), path = require('path');
+  const raiz = path.resolve(__dirname, '..');
+  const archivos = [];
+  const recorrer = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+    if (['vendor', 'tests', 'node_modules', 'sesiones', 'uploads', '.git', 'fonts'].includes(e.name)) continue;
+    const f = path.join(d, e.name); if (e.isDirectory()) recorrer(f); else if (/\.(php|css|html|js)$/.test(e.name)) archivos.push(f);
+  } };
+  recorrer(raiz);
+  const conGoogle = archivos.filter(f => /fonts\.(googleapis|gstatic)\.com/.test(fs.readFileSync(f, 'utf8')) && !/config\.example/.test(f)).map(f => path.relative(raiz, f));
+  ok('ningun archivo del proyecto pide fuentes a Google', conGoogle.length === 0, conGoogle.join(', '));
+
+  const fcss = (await adm.get('/assets/css/fonts.css')).text;
+  const urls = [...fcss.matchAll(/url\('\.\.\/fonts\/([^']+)'\)/g)].map(m => m[1]);
+  ok('fonts.css declara las 5 fuentes (Inter, Outfit y los iconos)', urls.length === 5 && /Inter/.test(fcss) && /Outfit/.test(fcss) && /Material Icons Round/.test(fcss), urls.join(','));
+  for (const u of urls) {
+    const f = await adm.get('/assets/fonts/' + u);
+    ok('fuente ' + u + ': existe, es woff2 y se guarda un año', f.status === 200 && /font\/woff2/.test(f.headers['content-type'] || '') && /immutable/.test(f.headers['cache-control'] || '') && f.text.length > 1000, f.status + ' ' + f.headers['content-type']);
+  }
+  ok('los iconos se muestran sin parpadeo del nombre (font-display: block)', /Material Icons Round[^}]*font-display:block/.test(fcss.replace(/\s+/g, ' ')), '');
+  ok('y el texto usa swap (se ve de inmediato con la fuente del sistema)', /Inter[^}]*font-display:swap/.test(fcss.replace(/\s+/g, ' ')), '');
+  ok('la clase .material-icons-round viene en fonts.css', /\.material-icons-round\s*\{[^}]*font-family:'Material Icons Round'/.test(fcss), '');
+
+  for (const pg of ['/ingresar.php', '/registro.php', '/recuperar.php', '/seguimiento.php']) {
+    const h = (await new Client().get(pg));
+    ok('pagina publica ' + pg + ' usa fonts.css y ninguna fuente externa', h.status === 200 && /assets\/css\/fonts\.css\?v=\d+/.test(h.text) && !/fonts\.(googleapis|gstatic)/.test(h.text), h.status);
+  }
+  r = await adm.get('/app.php');
+  ok('app.php precarga las tres fuentes del primer dibujo', ['inter-v20-latin', 'outfit-v15-latin', 'material-icons-round-v109'].every(n => new RegExp('rel="preload" href="[^"]*' + n + '\\.woff2" as="font" type="font/woff2" crossorigin').test(r.text)), '');
+  ok('la politica de seguridad ya no permite ningun origen externo de fuentes ni estilos', /font-src 'self';/.test(r.headers['content-security-policy'] || '') && !/google/.test(r.headers['content-security-policy'] || ''), r.headers['content-security-policy']);
+  const st = (await adm.get('/assets/css/style.css')).text;
+  ok('style.css ya no importa estilos externos', !/@import\s+url\(['"]?https?:/.test(st), '');
 
   console.log(`\n${pass} OK, ${fail} fallos`);
   process.exit(fail ? 1 : 0);

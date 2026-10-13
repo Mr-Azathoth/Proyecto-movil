@@ -53,7 +53,7 @@ function hh(string $v): string { return htmlspecialchars($v ?? '', ENT_QUOTES, '
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Orden #<?= $numFmt ?></title>
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/fonts.css?v=<?= filemtime(__DIR__.'/assets/css/fonts.css') ?>">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/orden.css">
 </head>
 <body>

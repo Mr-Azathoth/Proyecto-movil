@@ -56,10 +56,10 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <link rel="apple-touch-icon" sizes="180x180" href="<?= BASE ?>/assets/img/apple-touch-icon.png">
 <meta name="theme-color" content="#030507">
 <style nonce="<?= CSP_NONCE ?>">html,body{background:#0d1117;margin:0}</style>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link rel="preload" href="<?= BASE ?>/assets/fonts/inter-v20-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<?= BASE ?>/assets/fonts/outfit-v15-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<?= BASE ?>/assets/fonts/material-icons-round-v109.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/fonts.css?v=<?= filemtime(__DIR__.'/assets/css/fonts.css') ?>">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/style.css?v=<?= filemtime(__DIR__.'/assets/css/style.css') ?>">
 <link rel="manifest" href="<?= BASE ?>/manifest.php">
 <meta name="theme-color" content="#7c3aed">

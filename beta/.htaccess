@@ -87,6 +87,13 @@ ServerSignature Off
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# ── Fuentes: el nombre del archivo lleva la version (inter-v20-..., outfit-v15-...), asi que se guardan un año
+<IfModule mod_headers.c>
+    <FilesMatch "\.woff2$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
 # ── Cache de scripts y estilos versionados ───────────────────
 # app.php los pide con ?v=<fecha de modificacion>: al cambiar el archivo cambia la URL, asi que el navegador
 # puede guardarlos un año sin volver a preguntar al servidor. Los que no llevan ?v= no se tocan.

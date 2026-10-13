@@ -149,8 +149,7 @@ function fmt_fecha(string $fecha): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Seguimiento de reparación — Centrotec.cl</title>
 <meta name="robots" content="noindex">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/fonts.css?v=<?= filemtime(__DIR__.'/assets/css/fonts.css') ?>">
 <link rel="stylesheet" href="<?= BASE ?>/assets/css/seguimiento.css?v=<?= filemtime(__DIR__.'/assets/css/seguimiento.css') ?>">
 <link rel="manifest" href="<?= BASE ?>/manifest.php">
 <meta name="theme-color" content="#7c3aed">

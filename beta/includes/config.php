@@ -96,10 +96,10 @@ header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 if (IS_HTTPS) header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
-// Google Fonts y Material Icons necesitan fonts.googleapis.com / fonts.gstatic.com
+// Las fuentes (Inter, Outfit, Material Icons) se sirven desde assets/fonts: no se permite ningun origen externo
 $_csp_nonce = base64_encode(random_bytes(16));
 define('CSP_NONCE', $_csp_nonce);
-header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'nonce-" . CSP_NONCE . "' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'");
+header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'nonce-" . CSP_NONCE . "'; font-src 'self'; img-src 'self' data:; connect-src 'self'");
 
 function getDB(): PDO {
     static $pdo = null;

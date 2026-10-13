@@ -1,0 +1,333 @@
+﻿<?php
+require_once __DIR__ . '/includes/config.php';
+if (logueado()) { header('Location: '.BASE.'/app.php'); exit; }
+
+$plan_pre = preg_replace('/[^a-z0-9]/', '', $_GET['plan'] ?? 'trial');
+$csrf     = csrf_token();
+
+$planes = [
+    ['key' => '1mes',    'nombre' => '1 mes',    'meses' => 1,  'precio' => 4990,  'featured' => false],
+    ['key' => '3meses',  'nombre' => '3 meses',  'meses' => 3,  'precio' => 13990, 'featured' => false],
+    ['key' => '6meses',  'nombre' => '6 meses',  'meses' => 6,  'precio' => 25990, 'featured' => false],
+    ['key' => '12meses', 'nombre' => '12 meses', 'meses' => 12, 'precio' => 49990, 'featured' => true],
+];
+$precio_mensual = 4990;
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crear cuenta — Centrotec</title>
+<link rel="icon" type="image/x-icon" href="<?= BASE ?>/assets/img/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="<?= BASE ?>/assets/img/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="<?= BASE ?>/assets/img/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="<?= BASE ?>/assets/img/apple-touch-icon.png">
+<link rel="manifest" href="<?= BASE ?>/manifest.php">
+<meta name="theme-color" content="#030507">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/fonts.css?v=<?= filemtime(__DIR__.'/assets/css/fonts.css') ?>">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/landing.css?v=<?= filemtime(__DIR__.'/assets/css/landing.css') ?>">
+<link rel="stylesheet" href="<?= BASE ?>/assets/css/registro.css?v=<?= filemtime(__DIR__.'/assets/css/registro.css') ?>">
+</head>
+<body>
+
+<canvas id="gl-canvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none;"></canvas>
+
+<!-- Navbar -->
+<nav class="reg-nav-bar">
+  <a href="<?= BASE ?>/landing.php" style="display:block;line-height:0">
+    <svg class="nav-logo-svg" viewBox="0 0 680 210" xmlns="http://www.w3.org/2000/svg" aria-label="Centrotec">
+      <path d="M 120 75 A 38 38 0 1 0 120 127" stroke="#50d2ff" stroke-width="11" fill="none" stroke-linecap="round"/>
+      <line x1="120" y1="75" x2="138" y2="75" stroke="#50d2ff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="141" cy="75" r="3" fill="#50d2ff"/>
+      <line x1="141" y1="75" x2="141" y2="59" stroke="rgba(80,210,255,.5)" stroke-width="1.4"/>
+      <line x1="120" y1="127" x2="138" y2="127" stroke="#50d2ff" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="141" cy="127" r="3" fill="#50d2ff"/>
+      <line x1="141" y1="127" x2="141" y2="143" stroke="rgba(80,210,255,.5)" stroke-width="1.4"/>
+      <line x1="54" y1="95" x2="72" y2="95" stroke="rgba(80,210,255,.45)" stroke-width="1.4"/>
+      <circle cx="51" cy="95" r="3" fill="rgba(80,210,255,.6)"/>
+      <line x1="54" y1="109" x2="72" y2="109" stroke="rgba(80,210,255,.45)" stroke-width="1.4"/>
+      <circle cx="51" cy="109" r="3" fill="rgba(80,210,255,.6)"/>
+      <g transform="translate(79,86) scale(0.62)">
+        <path d="M-1 7 Q11 -3 23 7" stroke="rgba(80,210,255,.92)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+        <rect x="-1" y="7" width="24" height="2.5" rx="1" fill="rgba(80,210,255,.7)"/>
+        <rect x="3" y="9" width="16" height="12" rx="2.5" fill="none" stroke="rgba(210,235,255,.8)" stroke-width="1.5"/>
+        <rect x="1" y="22" width="20" height="16" rx="2" fill="none" stroke="rgba(80,210,255,.75)" stroke-width="1.5"/>
+        <rect x="2" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="12" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="-8" y="24" width="9" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+        <rect x="21" y="23" width="9" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+      </g>
+      <text x="148" y="150" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="82" font-weight="400" letter-spacing="4" fill="#e8f4ff">ENTR</text>
+      <rect x="337" y="52" width="60" height="96" rx="3" fill="none" stroke="rgba(80,210,255,.58)" stroke-width="1.6"/>
+      <rect x="343" y="59" width="48" height="72" rx="2" fill="#030507"/>
+      <rect x="352" y="55" width="28" height="2.5" rx="1" fill="rgba(80,210,255,.35)"/>
+      <circle cx="367" cy="80" r="8.5" fill="none" stroke="rgba(80,210,255,.52)" stroke-width="1.4"/>
+      <circle cx="367" cy="80" r="3.5" fill="rgba(80,210,255,.45)"/>
+      <line x1="355" y1="95" x2="379" y2="95" stroke="rgba(80,210,255,.32)" stroke-width="1.2"/>
+      <line x1="355" y1="101" x2="367" y2="101" stroke="rgba(80,210,255,.22)" stroke-width="1.2"/>
+      <circle cx="355" cy="117" r="4" fill="rgba(80,210,255,.65)"/>
+      <circle cx="379" cy="117" r="4" fill="none" stroke="rgba(80,210,255,.45)" stroke-width="1.4"/>
+      <line x1="351" y1="148" x2="341" y2="160" stroke="rgba(80,210,255,.35)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="385" y1="148" x2="395" y2="160" stroke="rgba(80,210,255,.35)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="337" y1="160" x2="356" y2="160" stroke="rgba(80,210,255,.3)" stroke-width="1.4" stroke-linecap="round"/>
+      <line x1="378" y1="160" x2="399" y2="160" stroke="rgba(80,210,255,.3)" stroke-width="1.4" stroke-linecap="round"/>
+      <text x="408" y="150" font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-size="82" font-weight="400" letter-spacing="4" fill="#e8f4ff">TEC</text>
+      <line x1="563" y1="162" x2="544" y2="53" stroke="rgba(80,210,255,.42)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="576" y1="162" x2="557" y2="53" stroke="rgba(80,210,255,.42)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="546" y1="64" x2="559" y2="64" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="548" y1="81" x2="561" y2="81" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="549" y1="98" x2="562" y2="98" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="551" y1="115" x2="564" y2="115" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="553" y1="132" x2="566" y2="132" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <line x1="556" y1="149" x2="569" y2="149" stroke="rgba(80,210,255,.5)" stroke-width="1.6"/>
+      <g transform="translate(539,68) scale(0.62)">
+        <path d="M-1 7 Q11 -3 23 7" stroke="rgba(80,210,255,.92)" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+        <rect x="-1" y="7" width="24" height="2.5" rx="1" fill="rgba(80,210,255,.7)"/>
+        <rect x="3" y="9" width="16" height="12" rx="2.5" fill="none" stroke="rgba(210,235,255,.8)" stroke-width="1.5"/>
+        <rect x="1" y="22" width="20" height="16" rx="2" fill="none" stroke="rgba(80,210,255,.75)" stroke-width="1.5"/>
+        <rect x="2" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="12" y="38" width="8" height="15" rx="2" fill="none" stroke="rgba(210,235,255,.6)" stroke-width="1.3"/>
+        <rect x="-9" y="23" width="10" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+        <rect x="21" y="23" width="10" height="4" rx="2" fill="none" stroke="rgba(210,235,255,.52)" stroke-width="1.2"/>
+      </g>
+    </svg>
+  </a>
+  <a href="<?= BASE ?>/" class="reg-nav-login">
+    <span>¿Ya tienes cuenta?</span>
+    <span class="material-icons-round">login</span>
+    Ingresar
+  </a>
+</nav>
+
+<!-- Página -->
+<div class="reg-page">
+  <div class="reg-container">
+
+    <!-- Indicador de pasos -->
+    <div class="reg-steps" id="reg-steps" aria-label="Progreso">
+      <div class="reg-step-item active" id="step-ind-1">
+        <div class="reg-step-num"><span>1</span></div>
+        <div class="reg-step-label">Tus datos</div>
+      </div>
+      <div class="reg-step-connector" id="conn-1"></div>
+      <div class="reg-step-item" id="step-ind-2">
+        <div class="reg-step-num"><span>2</span></div>
+        <div class="reg-step-label">Tu empresa</div>
+      </div>
+      <div class="reg-step-connector" id="conn-2"></div>
+      <div class="reg-step-item" id="step-ind-3">
+        <div class="reg-step-num"><span>3</span></div>
+        <div class="reg-step-label">Tu plan</div>
+      </div>
+    </div>
+
+    <!-- Tarjeta wizard -->
+    <div class="reg-card">
+
+      <div id="rg-err" class="rg-err" role="alert"></div>
+
+      <form id="reg-form" novalidate>
+        <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+        <input type="hidden" name="plan" id="plan-hidden" value="<?= htmlspecialchars($plan_pre) ?>">
+
+        <!-- ── Paso 1: Tus datos ────────────────────────────── -->
+        <div class="reg-panel active" id="panel-1">
+          <h2 class="reg-panel-title">Tus datos</h2>
+          <p class="reg-panel-sub">Crea el acceso de administrador para tu cuenta.</p>
+
+          <div class="rg">
+            <label for="nombre_admin">Tu nombre completo</label>
+            <input type="text" name="nombre_admin" id="nombre_admin"
+                   autocomplete="name">
+          </div>
+
+          <div class="rg">
+            <label for="email_personal">Email</label>
+            <input type="email" name="email_personal" id="email_personal"
+                   autocomplete="email">
+          </div>
+
+          <div class="rg">
+            <label for="tel_personal_num">Teléfono <span class="rg-opt">(opcional)</span></label>
+            <div class="rg-phone">
+              <span class="rg-phone-prefix">
+                <span class="material-icons-round" style="font-size:14px" aria-hidden="true">smartphone</span>
+                +56
+              </span>
+              <input type="tel" id="tel_personal_num"
+                     maxlength="11" autocomplete="tel-national">
+            </div>
+            <input type="hidden" name="telefono_personal" id="telefono_personal">
+          </div>
+
+          <div class="rg">
+            <label for="pass">Contraseña</label>
+            <div class="rg-pass">
+              <input type="password" name="pass" id="pass"
+                     placeholder="Mínimo 8 caracteres" minlength="8"
+                     autocomplete="new-password">
+              <button type="button" id="toggle-pass" class="rg-eye" aria-label="Mostrar contraseña">
+                <span class="material-icons-round">visibility</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="rg-nav">
+            <button type="button" class="rg-btn-next" id="btn-next-1">
+              Siguiente <span class="material-icons-round">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Paso 2: Tu empresa ───────────────────────────── -->
+        <div class="reg-panel" id="panel-2">
+          <h2 class="reg-panel-title">Tu empresa</h2>
+          <p class="reg-panel-sub">Los datos de tu local o servicio técnico.</p>
+
+          <div class="rg">
+            <label for="nombre_local">Nombre del local</label>
+            <input type="text" name="nombre_local" id="nombre_local"
+                   autocomplete="organization">
+          </div>
+
+          <div class="rg">
+            <label for="rut">RUT del local</label>
+            <input type="text" name="rut" id="rut"
+                   placeholder="Ej: 76.123.456-0" maxlength="12" autocomplete="off">
+          </div>
+
+          <div class="rg-row">
+            <div class="rg">
+              <label for="direccion">Dirección</label>
+              <input type="text" name="direccion" id="direccion"
+                     autocomplete="street-address">
+            </div>
+            <div class="rg">
+              <label for="comuna">Comuna</label>
+              <input type="text" name="comuna" id="comuna"
+                     autocomplete="address-level2">
+            </div>
+          </div>
+
+          <div class="rg-row">
+            <div class="rg">
+              <div class="rg-label-row">
+                <label for="email_local">Email del local</label>
+                <label class="rg-inline-check active" id="use-same-email-lbl">
+                  <input type="checkbox" id="use-same-email" checked>
+                  <span>← mis datos</span>
+                </label>
+              </div>
+              <input type="email" name="email_local" id="email_local"
+                     autocomplete="email">
+            </div>
+            <div class="rg">
+              <div class="rg-label-row">
+                <label for="tel_local_num">Teléfono <span class="rg-opt">(opcional)</span></label>
+                <label class="rg-inline-check" id="use-same-tel-lbl">
+                  <input type="checkbox" id="use-same-tel">
+                  <span>← mis datos</span>
+                </label>
+              </div>
+              <div class="rg-phone">
+                <span class="rg-phone-prefix">+56</span>
+                <input type="tel" id="tel_local_num" maxlength="11">
+              </div>
+              <input type="hidden" name="telefono_local" id="telefono_local">
+            </div>
+          </div>
+
+          <div class="rg-nav">
+            <button type="button" class="rg-btn-prev" id="btn-prev-2">
+              <span class="material-icons-round">arrow_back</span> Anterior
+            </button>
+            <button type="button" class="rg-btn-next" id="btn-next-2">
+              Siguiente <span class="material-icons-round">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Paso 3: Tu plan ──────────────────────────────── -->
+        <div class="reg-panel" id="panel-3">
+          <h2 class="reg-panel-title">Elige tu plan</h2>
+          <p class="reg-panel-sub">Sin límite de usuarios ni órdenes. Todas las funciones incluidas.</p>
+
+          <!-- Tarjeta trial -->
+          <label class="rg-plan rg-plan-trial <?= $plan_pre === 'trial' ? 'selected' : '' ?>" id="plan-card-trial">
+            <input type="radio" name="plan_radio" value="trial" <?= $plan_pre === 'trial' ? 'checked' : '' ?>>
+            <div class="rg-plan-dot"><span class="material-icons-round">check</span></div>
+            <div class="rg-plan-badge rg-plan-badge-trial">✨ Recomendado para empezar</div>
+            <div class="rg-trial-body">
+              <div>
+                <div class="rg-plan-nombre">Prueba gratuita</div>
+                <div class="rg-plan-precio">$0</div>
+                <div class="rg-trial-dias">
+                <span class="material-icons-round">schedule</span>
+                <span class="rg-trial-dias-label">7 días gratis</span>
+                <span class="rg-trial-dias-sub">· Sin tarjeta de crédito</span>
+              </div>
+              </div>
+              <ul class="rg-trial-feats">
+                <li><span class="material-icons-round">check_circle</span>Acceso completo a todas las funciones</li>
+                <li><span class="material-icons-round">check_circle</span>Sin compromiso de permanencia</li>
+                <li><span class="material-icons-round">check_circle</span>Elige tu plan al terminar</li>
+              </ul>
+            </div>
+          </label>
+
+          <div class="rg-planes-sep"><span>o elige un plan directamente</span></div>
+
+          <div class="rg-planes" id="rg-planes">
+            <?php foreach ($planes as $p):
+              $por_mes = (int) round($p['precio'] / $p['meses']);
+              $ahorro  = $p['meses'] > 1 ? (int) round((1 - $por_mes / $precio_mensual) * 100) : 0;
+              $isSel   = $p['key'] === $plan_pre;
+            ?>
+            <label class="rg-plan <?= $p['featured'] ? 'featured' : '' ?> <?= $isSel ? 'selected' : '' ?>"
+                   id="plan-card-<?= $p['key'] ?>">
+              <input type="radio" name="plan_radio" value="<?= $p['key'] ?>"
+                     <?= $isSel ? 'checked' : '' ?>>
+              <div class="rg-plan-dot">
+                <span class="material-icons-round">check</span>
+              </div>
+              <?php if ($p['featured']): ?>
+                <div class="rg-plan-badge rg-plan-badge-top">⭐ Mejor valor</div>
+              <?php elseif ($ahorro > 0): ?>
+                <div class="rg-plan-badge rg-plan-badge-save">Ahorra <?= $ahorro ?>%</div>
+              <?php else: ?>
+                <div class="rg-plan-badge-spacer"></div>
+              <?php endif; ?>
+              <div class="rg-plan-nombre"><?= $p['nombre'] ?></div>
+              <div class="rg-plan-precio">$<?= number_format($p['precio'], 0, ',', '.') ?></div>
+              <div class="rg-plan-pormes">$<?= number_format($por_mes, 0, ',', '.') ?> / mes</div>
+            </label>
+            <?php endforeach; ?>
+          </div>
+
+          <p class="rg-security" id="rg-security" <?= $plan_pre === 'trial' ? 'style="display:none"' : '' ?>>
+            <span class="material-icons-round">lock</span>
+            Pago seguro vía Mercado Pago. Tus datos de tarjeta nunca pasan por nosotros.
+          </p>
+
+          <div class="rg-nav">
+            <button type="button" class="rg-btn-prev" id="btn-prev-3">
+              <span class="material-icons-round">arrow_back</span> Anterior
+            </button>
+            <button type="submit" class="rg-btn-next" id="btn-submit">
+              <span class="material-icons-round">rocket_launch</span>
+              Comenzar prueba gratis
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script src="<?= BASE ?>/assets/js/registro.js?v=<?= filemtime(__DIR__.'/assets/js/registro.js') ?>"></script>
+<script src="<?= BASE ?>/assets/js/landing.js?v=<?= filemtime(__DIR__.'/assets/js/landing.js') ?>"></script>
+</body>
+</html>
