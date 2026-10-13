@@ -128,6 +128,12 @@ if ($method === 'POST') {
         else if (empty($f['tipo_ingreso'])) $f['tipo_ingreso'] = 'Otro';
     }
 
+    // Vendedor (mostrador): ingresa el equipo, pero elegir repuesto y pasarlo a reparacion es trabajo del taller.
+    if (isVendedor()) {
+        if (!empty($_POST['id_repuesto_usado'])) json_err('Un vendedor no puede asignar repuestos: eso lo hace el técnico.', 403);
+        $f['status'] = 'Ingresado';
+    }
+
     // Sucursal: la indicada o la base del usuario; con permiso de escritura, activa y que atienda servicios.
     $id_sucursal = sucursal_para_escritura($db, $eid, $_POST['id_sucursal'] ?? null, true);
 
@@ -237,6 +243,17 @@ if ($method === 'PUT') {
     $id_repuesto_nuevo = isset($in['id_repuesto_usado'])
         ? ($in['id_repuesto_usado'] ? (int) $in['id_repuesto_usado'] : null)
         : ($row['id_repuesto_usado'] ?? null);
+
+    // Vendedor: solo puede entregar el equipo o recibirlo en garantia; no cambia el diagnostico ni los repuestos.
+    if (isVendedor()) {
+        if ($nuevo_status !== $row['status'] && !in_array($nuevo_status, ESTADOS_VENDEDOR, true)) {
+            json_err('Un vendedor solo puede marcar un servicio como Entregado o en Garantía.', 403);
+        }
+        $rep_anterior = $row['id_repuesto_usado'] !== null ? (int) $row['id_repuesto_usado'] : null;
+        if ($id_repuesto_nuevo !== $rep_anterior) {
+            json_err('Un vendedor no puede cambiar el repuesto de un servicio.', 403);
+        }
+    }
 
     // Validar pertenencia del repuesto a esta empresa ANTES de guardarlo — de lo contrario un
     // id_repuesto de otra empresa quedaba escrito en reparaciones.id_repuesto_usado cuando el

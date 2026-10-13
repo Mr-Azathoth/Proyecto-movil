@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "SELECT u.*, e.activa AS empresa_activa, e.plan_estado FROM usuarios u
                  LEFT JOIN empresas e ON e.id_empresa = u.id_empresa
                  WHERE (u.user = ? OR e.correo = ?)
-                 ORDER BY FIELD(u.cargo, 'Admin', 'Tecnico') LIMIT 1"
+                 ORDER BY FIELD(u.cargo, 'Admin', 'Tecnico', 'Vendedor') LIMIT 1"
             );
             $st->execute([$u, $u]);
             $row = $st->fetch();

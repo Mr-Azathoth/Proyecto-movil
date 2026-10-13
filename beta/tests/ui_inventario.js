@@ -328,5 +328,36 @@ const fs=require('fs'), vm=require('vm');
   await cli.put('/api/sucursales.php', { id_sucursal: sur, activa: 0 });
   await S.load();
 
+  // ── Rol Vendedor en la pantalla ──
+  const rol = r => vm.runInContext("CURRENT_USER.role='" + r + "'", ctx);
+  rol('Vendedor');
+  const perm = JSON.stringify(vm.runInContext("_estadosPermitidos('Ingresado')", ctx));
+  ok('vendedor: solo puede dejar el estado como esta, Entregado o Garantia', perm === '["Ingresado","Entregado","Garantia"]', perm);
+  ok('vendedor con un servicio En Reparacion: puede dejarlo, entregarlo o garantia (no volver atras)', JSON.stringify(vm.runInContext("_estadosPermitidos('En Reparacion')", ctx)) === '["En Reparacion","Entregado","Garantia"]', '');
+  const opcEstado = ['Ingresado', 'En Reparacion', 'Reparado', 'Entregado', 'Garantia'].map(v => ({ value: v, disabled: false }));
+  const qaOrig = ctx.document.querySelectorAll; ctx.document.querySelectorAll = sel => sel === '#det-status option' ? opcEstado : qaOrig(sel);
+  vm.runInContext("_restringirEstadosPorCargo('Ingresado')", ctx);
+  ok('...y las demas opciones del selector de estado quedan deshabilitadas', JSON.stringify(opcEstado.map(o => o.disabled)) === '[false,true,true,false,false]', JSON.stringify(opcEstado.map(o => o.disabled)));
+  rol('Tecnico'); vm.runInContext("_restringirEstadosPorCargo('Ingresado')", ctx);
+  ok('tecnico: puede elegir cualquier estado (ninguna opcion deshabilitada)', opcEstado.every(o => !o.disabled), JSON.stringify(opcEstado.map(o => o.disabled)));
+  ctx.document.querySelectorAll = qaOrig;
+
+  rol('Vendedor'); msgs.length = 0; els['edit-rep-id'] = els['edit-rep-id'] || mk('edit-rep-id'); els['edit-rep-id'].value = 'intacto';
+  T.openInvEdit(T.inv[0]);
+  ok('vendedor: abrir la edicion de un repuesto se bloquea con aviso', msgs.some(m => /err: Tu cargo \(vendedor\) puede consultar el inventario/.test(m)) && els['edit-rep-id'].value === 'intacto', JSON.stringify(msgs));
+  rol('Admin');
+
+  // Lista de usuarios con cargos (la ve el admin)
+  els['tbl-usuarios'] = els['tbl-usuarios'] || mk('tbl-usuarios'); els['cfg-tecnicos-count'] = els['cfg-tecnicos-count'] || mk('cfg-tecnicos-count'); els['btn-nuevo-tecnico'] = els['btn-nuevo-tecnico'] || mk('btn-nuevo-tecnico');
+  await vm.runInContext('loadUsuarios()', ctx); await sleep(300);
+  const th = els['tbl-usuarios'].innerHTML;
+  ok('usuarios: los contadores muestran tecnicos y vendedores por separado', els['cfg-tecnicos-count'].textContent === '3 / 5 técnicos · 1 / 5 vendedores', els['cfg-tecnicos-count'].textContent);
+  ok('usuarios: el vendedor aparece con su etiqueta propia', /pill-green">Vendedor</.test(th) && /pill-orange">Técnico</.test(th) && /pill-blue">Admin</.test(th), '');
+  const nSel = (th.match(/class="usr-cargo-sel"/g) || []).length, nFilas = (th.match(/<tr>/g) || []).length;
+  ok('usuarios: cada usuario (menos uno mismo) tiene su selector de cargo con las 3 opciones', nSel === nFilas - 1 && /<option value="Vendedor"/.test(th) && /<option value="Admin"/.test(th) && /<option value="Tecnico"/.test(th), nSel + ' de ' + nFilas);
+  ok('usuarios: el cargo actual viene seleccionado', /data-actual="Vendedor"[^>]*>\s*<option value="Admin">Admin<\/option>\s*<option value="Tecnico">Técnico<\/option>\s*<option value="Vendedor" selected>/.test(th), '');
+  ok('usuarios: el boton de eliminar sabe si es tecnico o vendedor', /data-cargo="Vendedor" title="Eliminar vendedor"/.test(th) && /data-cargo="Tecnico" title="Eliminar técnico"/.test(th), '');
+  ok('usuarios: ya no existe el boton "Pasar a Admin/Tecnico"', !/toggle-cargo/.test(th), '');
+
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

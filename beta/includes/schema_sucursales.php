@@ -33,13 +33,16 @@ function schema_sucursales_completo(PDO $db): bool {
                 AND ((table_name = 'reparaciones' AND column_name = 'id_sucursal')
                   OR (table_name = 'usuarios'     AND column_name = 'id_sucursal')
                   OR (table_name = 'sucursales'   AND column_name = 'telefono')
-                  OR (table_name = 'inventario'   AND column_name = 'stock_minimo'))) AS c"
+                  OR (table_name = 'inventario'   AND column_name = 'stock_minimo'))) AS c,
+            (SELECT COUNT(*) FROM information_schema.columns
+              WHERE table_schema = DATABASE() AND table_name = 'usuarios' AND column_name = 'cargo'
+                AND column_type LIKE '%Vendedor%') AS v"
     )->fetch();
-    return (int) $r['t'] === 4 && (int) $r['c'] === 4;
+    return (int) $r['t'] === 4 && (int) $r['c'] === 4 && (int) $r['v'] === 1;
 }
 
 // Sube cuando el esquema agrega algo: las sesiones abiertas antes vuelven a comprobarlo una vez.
-const SCHEMA_SUC_VERSION = 2;
+const SCHEMA_SUC_VERSION = 3;
 
 function schema_sucursales_asegurar(PDO $db): void {
     if (($_SESSION['_schema_suc_ok'] ?? 0) === SCHEMA_SUC_VERSION) return;
@@ -87,6 +90,18 @@ function schema_sucursales_migrar(PDO $db): array {
         "ALTER TABLE usuarios     ADD COLUMN id_sucursal INT NULL",
     ] as $sql) {
         try { $db->exec($sql); } catch (PDOException $e) {}
+    }
+
+    // Cargo 'Vendedor' (mostrador): se agrega al final del ENUM, asi que los valores existentes no cambian y MySQL
+    // lo aplica sin reconstruir la tabla. Se conserva la collation que ya tenga la columna.
+    $col = $db->query("SELECT COLLATION_NAME, IS_NULLABLE FROM information_schema.columns
+                        WHERE table_schema = DATABASE() AND table_name = 'usuarios' AND column_name = 'cargo'")->fetch();
+    if ($col && !(bool) $db->query("SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE()
+                                       AND table_name = 'usuarios' AND column_name = 'cargo' AND column_type LIKE '%Vendedor%'")->fetchColumn()) {
+        $coll = preg_match('/^[a-z0-9_]+$/', (string) $col['COLLATION_NAME']) ? " COLLATE {$col['COLLATION_NAME']}" : '';
+        $nul  = $col['IS_NULLABLE'] === 'NO' ? ' NOT NULL' : '';
+        $db->exec("ALTER TABLE usuarios MODIFY COLUMN cargo ENUM('Admin','Tecnico','Vendedor'){$coll}{$nul} DEFAULT 'Tecnico'");
+        $log[] = "Cargo 'Vendedor' agregado a usuarios.cargo";
     }
 
     $n = 0;

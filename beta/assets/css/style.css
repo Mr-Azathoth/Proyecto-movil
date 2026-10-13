@@ -1704,3 +1704,9 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 .tbl.is-loading tbody { opacity: .55; transition: opacity .15s ease; }
 .tbl tbody { transition: opacity .15s ease; }
 @media (prefers-reduced-motion: reduce) { .tbl tbody, .tbl.is-loading tbody { transition: none; } }
+
+/* Cargo de cada usuario (Admin / Técnico / Vendedor) */
+.usr-cargo-sel { background: var(--bg3); color: var(--txt); border: 1px solid var(--border); border-radius: 8px;
+                 padding: 5px 8px; font-family: inherit; font-size: 12px; cursor: pointer; }
+.usr-cargo-sel:focus { outline: none; border-color: var(--accent); }
+.fg p.hint-min { margin: 5px 0 0; line-height: 1.35; }

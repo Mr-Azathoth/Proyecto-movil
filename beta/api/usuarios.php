@@ -34,6 +34,18 @@ if ($method === 'GET') {
     json_ok($rows);
 }
 
+// Maximo de usuarios por cargo y empresa (tecnicos y vendedores se cuentan por separado).
+const LIMITE_POR_CARGO = 5;
+const NOMBRE_CARGO = ['Tecnico' => 'técnicos', 'Vendedor' => 'vendedores'];
+
+// Corta con error si la empresa ya tiene el maximo de usuarios con ese cargo ($excluir: el usuario que cambia de cargo).
+function usr_limite_cargo(PDO $db, int $eid, string $cargo, int $excluir = 0): void {
+    if (!isset(NOMBRE_CARGO[$cargo])) return;
+    $c = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE id_empresa = ? AND cargo = ? AND id_usuario <> ?");
+    $c->execute([$eid, $cargo, $excluir]);
+    if ((int) $c->fetchColumn() >= LIMITE_POR_CARGO) json_err('Límite alcanzado: máximo ' . LIMITE_POR_CARGO . ' ' . NOMBRE_CARGO[$cargo] . ' por cuenta.');
+}
+
 // Valida que la sucursal sea activa y de esta empresa; devuelve su id. Como sucursal BASE debe atender
 // publico: una bodega solo se admite como sucursal extra (para ajustar su stock).
 function usr_sucursal_valida(PDO $db, int $eid, $id, bool $comoBase = false): int {
@@ -63,7 +75,8 @@ if ($method === 'PUT') {
         if (!isAdmin()) json_err('Sin permisos.', 403);
         if ($uid === $me) json_err('No puedes cambiar tu propio cargo.');
         $cargo = $in['cargo'];
-        if (!in_array($cargo, ['Admin', 'Tecnico'])) json_err('Cargo inválido.');
+        if (!in_array($cargo, CARGOS, true)) json_err('Cargo inválido.');
+        usr_limite_cargo($db, $eid, $cargo, $uid);
         $db->prepare("UPDATE usuarios SET cargo = ? WHERE id_usuario = ? AND id_empresa = ?")
            ->execute([$cargo, $uid, $eid]);
         log_accion($db, 'usuario_cargo_cambiado', null, ['id_usuario' => $uid, 'cargo_nuevo' => $cargo]);
@@ -149,14 +162,15 @@ if ($method === 'DELETE') {
     $chk->execute([$uid, $eid]);
     $target = $chk->fetch();
     if (!$target) json_err('Usuario no encontrado.', 404);
-    if ($target['cargo'] !== 'Tecnico') json_err('Solo se pueden eliminar técnicos.');
+    if (!in_array($target['cargo'], ['Tecnico', 'Vendedor'], true)) json_err('Solo se pueden eliminar técnicos y vendedores.');
 
     $db->prepare("DELETE FROM usuarios WHERE id_usuario = ? AND id_empresa = ?")->execute([$uid, $eid]);
-    log_accion($db, 'tecnico_eliminado', null, ['id_usuario' => $uid, 'nombre' => $target['nombre']]);
-    json_ok(['msg' => "Técnico {$target['nombre']} eliminado."]);
+    $etq = $target['cargo'] === 'Vendedor' ? 'Vendedor' : 'Técnico';
+    log_accion($db, $target['cargo'] === 'Vendedor' ? 'vendedor_eliminado' : 'tecnico_eliminado', null, ['id_usuario' => $uid, 'nombre' => $target['nombre']]);
+    json_ok(['msg' => "{$etq} {$target['nombre']} eliminado."]);
 }
 
-// ── POST: crear técnico ───────────────────────────────────
+// ── POST: crear técnico o vendedor ────────────────────────
 if ($method === 'POST') {
     if (!isAdmin()) json_err('Sin permisos.', 403);
     csrf_check();
@@ -170,10 +184,10 @@ if ($method === 'POST') {
     if (strlen($user) < 3)            json_err('El usuario debe tener al menos 3 caracteres.');
     if (strlen($pass) < 6)            json_err('La contraseña debe tener al menos 6 caracteres.');
 
-    // Límite de 5 técnicos activos por empresa
-    $cnt = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE id_empresa = ? AND cargo = 'Tecnico'");
-    $cnt->execute([$eid]);
-    if ((int)$cnt->fetchColumn() >= 5) json_err('Límite alcanzado: máximo 5 técnicos por cuenta.');
+    // Cargo del nuevo usuario (por defecto Técnico) y límite por cargo
+    $cargo = (string) ($in['cargo'] ?? 'Tecnico');
+    if (!in_array($cargo, ['Tecnico', 'Vendedor'], true)) json_err('Cargo inválido.');
+    usr_limite_cargo($db, $eid, $cargo);
 
     // Usuario único en toda la plataforma
     $dup = $db->prepare("SELECT 1 FROM usuarios WHERE user = ?");
@@ -187,10 +201,11 @@ if ($method === 'POST') {
     $hash = password_hash($pass, PASSWORD_BCRYPT);
     $ins  = $db->prepare(
         "INSERT INTO usuarios (id_empresa, nombre, user, pass, cargo, activo, id_sucursal)
-         VALUES (?, ?, ?, ?, 'Tecnico', 1, ?)"
+         VALUES (?, ?, ?, ?, ?, 1, ?)"
     );
-    $ins->execute([$eid, $nombre, $user, $hash, $sucId]);
+    $ins->execute([$eid, $nombre, $user, $hash, $cargo, $sucId]);
     $newUid = (int)$db->lastInsertId();
-    log_accion($db, 'tecnico_creado', null, ['nombre' => $nombre, 'user' => $user], ['id' => $newUid]);
-    json_ok(['msg' => "Técnico {$nombre} creado correctamente.", 'id' => $newUid]);
+    log_accion($db, $cargo === 'Vendedor' ? 'vendedor_creado' : 'tecnico_creado', null, ['nombre' => $nombre, 'user' => $user], ['id' => $newUid]);
+    $etq = $cargo === 'Vendedor' ? 'Vendedor' : 'Técnico';
+    json_ok(['msg' => "{$etq} {$nombre} creado correctamente.", 'id' => $newUid, 'cargo' => $cargo]);
 }

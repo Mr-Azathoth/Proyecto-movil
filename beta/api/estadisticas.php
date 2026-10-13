@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../includes/config.php';
 header('Content-Type: application/json; charset=utf-8');
 guard();
-if (!isAdmin()) { http_response_code(403); json_err('Acceso denegado.'); }
+if (!isAdmin()) json_err('Acceso denegado.', 403);   // json_err fija el codigo HTTP: antes respondia 400
 
 $db  = getDB();
 $eid = eid();

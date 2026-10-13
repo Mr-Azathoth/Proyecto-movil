@@ -321,6 +321,12 @@ function uname(): string      { return $_SESSION['user']   ?? ''; }
 function unombre(): string    { return $_SESSION['nombre'] ?? ''; }
 function ucargo(): string     { return $_SESSION['cargo']  ?? ''; }
 function isAdmin(): bool      { return ucargo() === 'Admin'; }
+// Vendedor (mostrador): ingresa servicios, entrega equipos y consulta el inventario; no repara ni toca el stock.
+function isVendedor(): bool   { return ucargo() === 'Vendedor'; }
+// Estados que un vendedor puede asignar a un servicio (los tecnicos y admin pueden todos).
+const ESTADOS_VENDEDOR = ['Entregado', 'Garantia'];
+
+const CARGOS = ['Admin', 'Tecnico', 'Vendedor'];
 
 function json_ok(mixed $d): void {
     header('Content-Type: application/json');
@@ -341,14 +347,23 @@ function guard(): void {
     schema_sucursales_asegurar($db);
 
     // Verificar que el usuario sigue activo
-    $u = $db->prepare("SELECT activo FROM usuarios WHERE id_usuario = ? LIMIT 1");
+    $u = $db->prepare("SELECT activo, cargo FROM usuarios WHERE id_usuario = ? LIMIT 1");
     $u->execute([uid()]);
     $urow = $u->fetch();
-    if ($urow && !(bool)$urow['activo']) {
+    // Un usuario eliminado ya no tiene sesion valida (antes seguia operando hasta que expiraba).
+    if (!$urow) {
+        remember_clear();
+        session_unset(); session_destroy();
+        json_err('No autorizado', 401);
+    }
+    if (!(bool)$urow['activo']) {
         remember_clear();
         session_unset(); session_destroy();
         json_err('Cuenta desactivada.', 403);
     }
+    // El cargo se lee de la BD en cada peticion: si el admin cambia a alguien de Tecnico a Vendedor, rige de inmediato
+    // y no cuando esa persona vuelva a iniciar sesion.
+    if (in_array($urow['cargo'], CARGOS, true)) $_SESSION['cargo'] = $urow['cargo'];
 
     $s = $db->prepare("SELECT activa, plan_estado, plan_vencimiento FROM empresas WHERE id_empresa = ? LIMIT 1");
     $s->execute([eid()]);

@@ -515,7 +515,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
               </div>
               <span class="cfg-tecnicos-count hidden" id="cfg-tecnicos-count"></span>
               <button type="button" class="btn-primary btn-sm" id="btn-nuevo-tecnico">
-                <span class="material-icons-round">person_add</span> Agregar técnico
+                <span class="material-icons-round">person_add</span> Agregar usuario
               </button>
             </div>
           </div>
@@ -606,10 +606,18 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       <div class="modal-bg" id="modal-nuevo-tecnico">
         <div class="modal-box modal-box-sm">
           <div class="modal-hd">
-            <h3>Agregar técnico</h3>
+            <h3>Agregar usuario</h3>
             <button type="button" class="modal-close" id="modal-tecnico-close" aria-label="Cerrar"><span class="material-icons-round">close</span></button>
           </div>
           <div class="modal-body">
+            <div class="fg">
+              <label for="usuario-cargo">Cargo</label>
+              <select id="usuario-cargo">
+                <option value="Tecnico">Técnico</option>
+                <option value="Vendedor">Vendedor</option>
+              </select>
+              <p class="hint-min" id="usuario-cargo-ayuda">Repara equipos, cambia su estado y puede ajustar el stock de su sucursal.</p>
+            </div>
             <div class="fg"><label>Nombre completo</label><input type="text" id="tecnico-nombre" placeholder="Ej: Juan Pérez" maxlength="80" autocomplete="off"></div>
             <div class="fg"><label>Nombre de usuario</label><input type="text" id="tecnico-user" placeholder="Ej: juan.perez" maxlength="40" autocomplete="off"></div>
             <div class="fg"><label>Contraseña</label><input type="password" id="tecnico-pass" placeholder="Mínimo 6 caracteres" maxlength="60" autocomplete="new-password"></div>
@@ -1004,11 +1012,11 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="fg"><label>Estado inicial</label>
             <select name="status">
               <option value="Ingresado">Ingresado</option>
-              <option value="En Reparacion">En Reparación</option>
+              <?php if (!isVendedor()): ?><option value="En Reparacion">En Reparación</option><?php endif; ?>
             </select>
           </div>
           <div class="fg fg-full"><label>Observación inicial</label><textarea name="obs" placeholder="Sin Observaciones" class="textarea-compact"></textarea></div>
-          <div class="fg fg-full">
+          <div class="fg fg-full<?= isVendedor() ? ' hidden' : '' ?>" id="fg-rep-nuevo">
             <label>Repuesto a utilizar <span class="lbl-opt">(opcional)</span></label>
             <div id="sel-rep-nuevo"></div>
             <input type="hidden" id="hid-rep-nuevo">
@@ -1073,7 +1081,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="rep-section" id="det-rep-section">
             <p class="section-label">Repuestos</p>
             <div id="det-rep-list"></div>
-            <div class="rep-add-row" id="rep-add-row">
+            <div class="rep-add-row<?= isAdmin() ? '' : ' hidden' ?>" id="rep-add-row">
               <div id="sel-rep-adicional" class="flex-grow"></div>
               <input type="hidden" id="hid-rep-adicional">
               <input type="number" id="inp-rep-cant" min="1" value="1" title="Cantidad">

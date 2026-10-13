@@ -583,6 +583,14 @@ function _waDonde(idSucursal) {
   return { local, donde };
 }
 
+// Un vendedor (mostrador) solo deja el servicio como esta, lo entrega o lo recibe en garantia; el resto del estado es del taller.
+const ESTADOS_VENDEDOR = ['Entregado', 'Garantia'];
+function _estadosPermitidos(actual) { return CURRENT_USER.role === 'Vendedor' ? [actual, ...ESTADOS_VENDEDOR] : null; }   // null = todos
+function _restringirEstadosPorCargo(actual) {
+  const permitidos = _estadosPermitidos(actual);
+  document.querySelectorAll('#det-status option').forEach(o => { o.disabled = permitidos ? !permitidos.includes(o.value) : false; });
+}
+
 // Retorna link de WhatsApp: incluye mensaje con código de seguimiento cuando está disponible
 function waLink(rep) {
   const phone      = (rep.telefono_cliente||'').replace(/[^0-9]/g,'');
@@ -639,6 +647,7 @@ function openDetalle(rep) {
   document.getElementById('det-codigo').textContent  = rep.codigo_seguimiento || '—';
   document.getElementById('det-hidden-id').value     = rep.id_ingreso;
   document.getElementById('det-status').value        = rep.status;
+  _restringirEstadosPorCargo(rep.status);
   document.getElementById('det-obs').value           = '';
 
   const valInput = document.getElementById('det-valor');
@@ -1255,6 +1264,7 @@ async function deleteServicio(id) {
 
 // ── Abrir modal edición repuesto ─────────────────────────
 function openInvEdit(item) {
+  if (CURRENT_USER.role === 'Vendedor') { toast('Tu cargo (vendedor) puede consultar el inventario, no modificarlo.', 'err'); return; }
   const isAdmin = CURRENT_USER.role === 'Admin';
   document.getElementById('edit-rep-id').value      = item.id_repuesto;
   document.getElementById('edit-rep-cantidad').value = item.cantidad;
@@ -1883,17 +1893,21 @@ async function loadUsuarios() {
     const j = await r.json();
     if (!j.ok) { tbody.innerHTML = `<tr><td colspan="5" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
     if (window.SUC) await SUC.ready;
-    // Actualizar contador de técnicos y estado del botón
+    // Contadores por cargo (maximo 5 de cada uno) y estado del boton
+    const LIMITE   = 5;
     const tecnicos = j.data.filter(u => u.cargo === 'Tecnico').length;
+    const vendedores = j.data.filter(u => u.cargo === 'Vendedor').length;
+    window._cargosLlenos = { Tecnico: tecnicos >= LIMITE, Vendedor: vendedores >= LIMITE };
     const countEl  = document.getElementById('cfg-tecnicos-count');
     const btnNuevo = document.getElementById('btn-nuevo-tecnico');
     if (countEl) {
-      countEl.textContent = `${tecnicos} / 5 técnicos`;
+      countEl.textContent = `${tecnicos} / ${LIMITE} técnicos · ${vendedores} / ${LIMITE} vendedores`;
       countEl.classList.remove('hidden');
     }
     if (btnNuevo) {
-      btnNuevo.disabled = tecnicos >= 5;
-      btnNuevo.title    = tecnicos >= 5 ? 'Límite alcanzado: máximo 5 técnicos' : '';
+      const todoLleno = tecnicos >= LIMITE && vendedores >= LIMITE;
+      btnNuevo.disabled = todoLleno;
+      btnNuevo.title    = todoLleno ? 'Límite alcanzado: máximo 5 técnicos y 5 vendedores' : '';
     }
     const me = CURRENT_USER.user;
     const lista = window.SUC ? SUC.filtrarLista(j.data) : j.data;
@@ -1907,11 +1921,13 @@ async function loadUsuarios() {
       const esAdmin = u.cargo === 'Admin';
       const badge   = esAdmin
         ? '<span class="pill pill-blue">Admin</span>'
-        : '<span class="pill pill-orange">Técnico</span>';
-      const nuevoC  = esAdmin ? 'Tecnico' : 'Admin';
-      const lblC    = esAdmin ? 'Pasar a Técnico' : 'Pasar a Admin';
+        : (u.cargo === 'Vendedor' ? '<span class="pill pill-green">Vendedor</span>' : '<span class="pill pill-orange">Técnico</span>');
       const btnCargo = esSelf ? '' :
-        `<button class="btn-sm btn-sec" data-action="toggle-cargo" data-uid="${u.id_usuario}" data-cargo="${nuevoC}">${lblC}</button>`;
+        `<select class="usr-cargo-sel" data-uid="${u.id_usuario}" data-actual="${esc(u.cargo)}" aria-label="Cargo de ${esc(u.nombre)}" title="Cambiar el cargo">
+           <option value="Admin"${u.cargo === 'Admin' ? ' selected' : ''}>Admin</option>
+           <option value="Tecnico"${u.cargo === 'Tecnico' ? ' selected' : ''}>Técnico</option>
+           <option value="Vendedor"${u.cargo === 'Vendedor' ? ' selected' : ''}>Vendedor</option>
+         </select>`;
       const btnPass =
         `<button class="btn-sm btn-sec" data-action="reset-pass" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}">
            <span class="material-icons-round" style="font-size:15px">lock_reset</span> Contraseña
@@ -1922,7 +1938,7 @@ async function loadUsuarios() {
            </button>`
         : '';
       const btnDel = (!esSelf && !esAdmin)
-        ? `<button class="btn-sm btn-danger" data-action="delete-tecnico" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}" title="Eliminar técnico">
+        ? `<button class="btn-sm btn-danger" data-action="delete-tecnico" data-uid="${u.id_usuario}" data-nombre="${esc(u.nombre)}" data-cargo="${esc(u.cargo)}" title="Eliminar ${u.cargo === 'Vendedor' ? 'vendedor' : 'técnico'}">
              <span class="material-icons-round" style="font-size:15px">delete</span>
            </button>`
         : '';
@@ -2444,27 +2460,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch(e) { _handleErr('apicall', e); }
   });
 
+  // Cambio de cargo desde la tabla de usuarios (Admin / Técnico / Vendedor): rige de inmediato en el servidor.
+  document.getElementById('tbl-usuarios')?.addEventListener('change', async e => {
+    const sel = e.target.closest('.usr-cargo-sel');
+    if (!sel) return;
+    const nuevo = sel.value;
+    if (nuevo === sel.dataset.actual) return;
+    try {
+      const r = await apiFetch('/reparo/api/usuarios.php', {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id_usuario: parseInt(sel.dataset.uid), cargo: nuevo })
+      });
+      const j = await r.json();
+      j.ok ? toast(`✔ ${j.data.msg}`, 'ok') : toast(j.msg, 'err');
+    } catch(err) { _handleErr('apicall', err); }
+    loadUsuarios();   // vuelve a pintar con el cargo real (tambien si el cambio fue rechazado)
+  });
+
   // ── Event delegation tabla Usuarios ─────────────────────────
   document.getElementById('tbl-usuarios')?.addEventListener('click', async e => {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
     const buid = parseInt(btn.dataset.uid);
 
-    if (btn.dataset.action === 'toggle-cargo') {
-      const nuevoCargo = btn.dataset.cargo;
-      try {
-        const r = await apiFetch('/reparo/api/usuarios.php', {
-          method: 'PUT', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ id_usuario: buid, cargo: nuevoCargo })
-        });
-        const j = await r.json();
-        j.ok ? (toast(`✔ ${j.data.msg}`, 'ok'), loadUsuarios()) : toast(j.msg, 'err');
-      } catch(e) { _handleErr('apicall', e); }
-    }
-
     if (btn.dataset.action === 'delete-tecnico') {
       const nombre = btn.dataset.nombre;
-      showConfirm('Eliminar técnico', `¿Eliminar al técnico "${nombre}"? Esta acción no se puede deshacer.`, async () => {
+      const etq = btn.dataset.cargo === 'Vendedor' ? 'vendedor' : 'técnico';
+      showConfirm(`Eliminar ${etq}`, `¿Eliminar al ${etq} "${nombre}"? Esta acción no se puede deshacer.`, async () => {
         try {
           const r = await apiFetch('/reparo/api/usuarios.php', {
             method: 'DELETE', headers: {'Content-Type': 'application/json'},
@@ -2805,6 +2827,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('tecnico-user').value   = '';
     document.getElementById('tecnico-pass').value   = '';
     document.getElementById('tecnico-pass2').value  = '';
+    // El cargo por defecto es el primero que todavia tenga cupo
+    const selCargo = document.getElementById('usuario-cargo');
+    if (selCargo) {
+      const lleno = window._cargosLlenos || {};
+      selCargo.value = lleno.Tecnico && !lleno.Vendedor ? 'Vendedor' : 'Tecnico';
+      selCargo.dispatchEvent(new Event('change'));
+    }
     document.getElementById('modal-nuevo-tecnico').classList.add('active');
     document.getElementById('tecnico-nombre').focus();
   }
@@ -2812,6 +2841,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('modal-nuevo-tecnico').classList.remove('active');
   }
 
+  document.getElementById('usuario-cargo')?.addEventListener('change', e => {
+    const ayuda = document.getElementById('usuario-cargo-ayuda');
+    if (ayuda) ayuda.textContent = e.target.value === 'Vendedor'
+      ? 'Atiende el mostrador: ingresa equipos, los entrega y consulta el inventario. No repara ni modifica el stock.'
+      : 'Repara equipos, cambia su estado y puede ajustar el stock de su sucursal.';
+  });
   document.getElementById('btn-nuevo-tecnico')?.addEventListener('click', openModalTecnico);
   document.getElementById('modal-tecnico-close')?.addEventListener('click', closeModalTecnico);
   document.getElementById('modal-tecnico-cancel')?.addEventListener('click', closeModalTecnico);
@@ -2831,7 +2866,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const r = await apiFetch('/reparo/api/usuarios.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, user, password: pass, id_sucursal: document.getElementById('tecnico-sucursal')?.value || '' })
+        body: JSON.stringify({ nombre, user, password: pass, cargo: document.getElementById('usuario-cargo')?.value || 'Tecnico', id_sucursal: document.getElementById('tecnico-sucursal')?.value || '' })
       });
       const j = await r.json();
       if (j.ok) {

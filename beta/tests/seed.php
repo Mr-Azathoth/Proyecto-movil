@@ -44,6 +44,7 @@ $cen = $mkSuc($A, 'Centro'); $nor = $mkSuc($A, 'Norte'); $bod = $mkSuc($A, 'Bode
 $mkUser($A, 'adminA', 'Admin A', 'Admin', $cen);
 $mkUser($A, 'tecCentro', 'Tec Centro', 'Tecnico', $cen);
 $mkUser($A, 'tecNorte',  'Tec Norte',  'Tecnico', $nor);
+$mkUser($A, 'vendCentro', 'Vend Centro', 'Vendedor', $cen);
 $tm = $mkUser($A, 'tecMulti', 'Tec Multi', 'Tecnico', $cen);
 $db->prepare("INSERT INTO usuario_sucursales VALUES (?,?)")->execute([$tm, $nor]);
 

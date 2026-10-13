@@ -150,6 +150,7 @@ if ($method === 'PUT') {
         if (strlen($nombre) > 100) json_err('Nombre demasiado largo (máx. 100).');
     }
     // Se valida el permiso sobre la sucursal ANTES de escribir cualquier cosa.
+    if ($datosStock && isVendedor()) json_err('Un vendedor puede consultar el inventario, no modificar el stock.', 403);
     if ($datosStock) {
         $delta = $esDelta ? max(-1000000, min(1000000, (int) $in['cantidad_delta'])) : 0;
         $qty   = $esDelta ? 0 : max(0, (int) $in['cantidad']);
