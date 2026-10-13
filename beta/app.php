@@ -1163,7 +1163,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" name="precio_venta" placeholder="0" value="0" min="0"></div>
           <div class="fg"><label id="lbl-rep-stock-nuevo">Stock inicial</label><input type="number" name="cantidad" placeholder="0" value="0" min="0"></div>
-          <div class="fg"><label for="rep-nuevo-minimo">Stock mínimo <span class="hint-min">(avisa al llegar a este número; 0 = sin aviso)</span></label><input type="number" id="rep-nuevo-minimo" name="stock_minimo" placeholder="0" value="0" min="0" max="1000000"></div>
+          <div class="fg"><label for="rep-nuevo-minimo">Stock mínimo <span class="hint-min">(0 = sin aviso)</span></label><input type="number" id="rep-nuevo-minimo" name="stock_minimo" placeholder="0" value="0" min="0" max="1000000"></div>
         </div>
         <datalist id="dl-marcas-inv"></datalist>
       </div>
@@ -1290,7 +1290,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <div class="tag-input-wrap" id="tag-edit-modelo"></div>
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="edit-rep-precio" placeholder="0" min="0"></div>
-          <div class="fg"><label for="edit-rep-minimo">Stock mínimo <span class="hint-min">(avisa al llegar a este número; 0 = sin aviso)</span></label><input type="number" id="edit-rep-minimo" placeholder="0" min="0" max="1000000"></div>
+          <div class="fg"><label for="edit-rep-minimo">Stock mínimo <span class="hint-min">(0 = sin aviso)</span></label><input type="number" id="edit-rep-minimo" placeholder="0" min="0" max="1000000"></div>
         </div>
         <div class="fg w-half-mt"><label id="lbl-edit-stock">Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
       </div>
