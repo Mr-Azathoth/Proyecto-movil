@@ -33,7 +33,7 @@ if ($suc !== null) {
     $sucNombre = (string) $sn->fetchColumn();
     $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(s.cantidad, 0) AS cantidad,
                       COALESCE(s.cantidad_reservada, 0) AS reservado,
-                      (COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0)) AS disponible
+                      (COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0)) AS disponible, i.stock_minimo AS minimo
                  FROM inventario i
                  LEFT JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
                 WHERE i.id_empresa = ? AND i.deleted_at IS NULL";
@@ -42,7 +42,7 @@ if ($suc !== null) {
 } else {
     $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(t.c, 0) AS cantidad,
                       COALESCE(t.r, 0) AS reservado,
-                      (COALESCE(t.c, 0) - COALESCE(t.r, 0)) AS disponible
+                      (COALESCE(t.c, 0) - COALESCE(t.r, 0)) AS disponible, i.stock_minimo AS minimo
                  FROM inventario i
                  LEFT JOIN (SELECT id_repuesto, SUM(cantidad) AS c, SUM(cantidad_reservada) AS r FROM inventario_stock WHERE id_empresa = ? GROUP BY id_repuesto) t
                         ON t.id_repuesto = i.id_repuesto
@@ -57,9 +57,12 @@ if ($q) {
     $params  = array_merge($params, [$like, $like, $like]);
 }
 // Filtro de reposicion: ?stock=bajo&umbral=N (disponible <= N, incluye los agotados) o ?stock=agotado (disponible <= 0).
-$stockFiltro = in_array($_GET['stock'] ?? '', ['bajo', 'agotado'], true) ? $_GET['stock'] : '';
+$stockFiltro = in_array($_GET['stock'] ?? '', ['bajo', 'agotado', 'minimo'], true) ? $_GET['stock'] : '';
 $umbral      = max(0, min(1000000, (int) ($_GET['umbral'] ?? 0)));
-if ($stockFiltro === 'agotado') {
+if ($stockFiltro === 'minimo') {
+    // Repuestos con minimo definido cuyo disponible esta en o bajo ese minimo.
+    $sql .= " AND i.stock_minimo > 0 AND $dispExpr <= i.stock_minimo";
+} elseif ($stockFiltro === 'agotado') {
     $sql .= " AND $dispExpr <= 0";
 } elseif ($stockFiltro === 'bajo') {
     $sql .= " AND $dispExpr <= ?";
@@ -89,13 +92,13 @@ if ($formato === 'xlsx') {
     $sheet->setTitle('Inventario');
 
     // Encabezados
-    $cols = ['A' => 'id', 'B' => 'nombre', 'C' => 'marca_compatible', 'D' => 'modelo_compatible', 'E' => 'precio_venta', 'F' => 'cantidad', 'G' => 'reservado', 'H' => 'disponible'];
+    $cols = ['A' => 'id', 'B' => 'nombre', 'C' => 'marca_compatible', 'D' => 'modelo_compatible', 'E' => 'precio_venta', 'F' => 'cantidad', 'G' => 'reservado', 'H' => 'disponible', 'I' => 'minimo'];
     foreach ($cols as $col => $label) {
         $sheet->setCellValue("{$col}1", $label);
     }
 
     // Estilo encabezado
-    $sheet->getStyle('A1:H1')->applyFromArray([
+    $sheet->getStyle('A1:I1')->applyFromArray([
         'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E293B']],
         'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
@@ -113,6 +116,7 @@ if ($formato === 'xlsx') {
         $sheet->setCellValue("F$i", $cantidad);
         $sheet->setCellValue("G$i", (int)$r['reservado']);
         $sheet->setCellValue("H$i", (int)$r['disponible']);
+        $sheet->setCellValue("I$i", (int)$r['minimo']);
         if ((int)$r['disponible'] <= 0) {
             $sheet->getStyle("H$i")->applyFromArray(['font' => ['color' => ['rgb' => 'DC2626'], 'bold' => true]]);
         }
@@ -152,7 +156,7 @@ if ($formato === 'csv') {
 
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['id', 'nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad', 'reservado', 'disponible'], ';');
+    fputcsv($out, ['id', 'nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad', 'reservado', 'disponible', 'minimo'], ';');
     foreach ($rows as $r) {
         fputcsv($out, [
             $r['id_repuesto'],
@@ -163,6 +167,7 @@ if ($formato === 'csv') {
             $r['cantidad'],
             $r['reservado'],
             $r['disponible'],
+            $r['minimo'],
         ], ';');
     }
     fclose($out);
@@ -180,6 +185,7 @@ $filtros = [];
 if ($sucNombre) $filtros[] = 'Sucursal: ' . $sucNombre; else $filtros[] = 'Sucursal: todas (stock total)';
 if ($stockFiltro === 'bajo')    $filtros[] = 'Stock disponible ≤ ' . $umbral . ' (incluye agotados)';
 if ($stockFiltro === 'agotado') $filtros[] = 'Solo agotados (disponible 0)';
+if ($stockFiltro === 'minimo')  $filtros[] = 'Bajo el stock mínimo definido por repuesto (disponible ≤ mínimo)';
 if ($q) $filtros[] = 'Búsqueda: "' . $q . '"';
 $sortLabels = ['nombre'=>'Repuesto','marca'=>'Marca','modelo'=>'Modelo','precio'=>'Precio','stock'=>'Stock'];
 $sortKey    = array_search($sort_col, $valid_sort);
@@ -230,7 +236,7 @@ header('Content-Type: text/html; charset=utf-8');
   <thead>
     <tr>
       <th>Repuesto</th><th>Marca compatible</th><th>Modelo compatible</th>
-      <th>Precio venta</th><th>Stock</th><th>Reservado</th><th>Disponible</th>
+      <th>Precio venta</th><th>Stock</th><th>Reservado</th><th>Disponible</th><th>Mínimo</th>
     </tr>
   </thead>
   <tbody>
@@ -245,6 +251,7 @@ header('Content-Type: text/html; charset=utf-8');
       <td><?= (int)$r['cantidad'] ?> un.</td>
       <td><?= (int)$r['reservado'] ?></td>
       <td class="<?= $sc ?>"><?= (int)$r['disponible'] ?> un.</td>
+      <td><?= (int)$r['minimo'] > 0 ? (int)$r['minimo'] . ' un.' : '—' ?></td>
     </tr>
   <?php endforeach; ?>
   </tbody>

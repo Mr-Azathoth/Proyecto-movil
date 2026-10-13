@@ -12,7 +12,31 @@ if ($method === 'GET') {
     $q   = trim($_GET['q'] ?? '');
     $suc = sucursal_filtro($db, $eid);
 
-    $cols = "i.id_repuesto, i.id_empresa, i.codigo, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, i.deleted_at";
+    // Alertas de reposicion (insignia del menu): cuantos repuestos con minimo definido tienen el stock
+    // DISPONIBLE en o bajo ese minimo, en la sucursal pedida o en el total.
+    if (isset($_GET['alertas'])) {
+        if ($suc !== null) {
+            $a = $db->prepare("SELECT COUNT(*), COALESCE(SUM(COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0) <= 0), 0)
+                                 FROM inventario i
+                                 LEFT JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
+                                WHERE i.id_empresa = ? AND i.deleted_at IS NULL AND i.stock_minimo > 0
+                                  AND COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0) <= i.stock_minimo");
+            $a->execute([$suc, $eid]);
+        } else {
+            $a = $db->prepare("SELECT COUNT(*), COALESCE(SUM(COALESCE(t.c, 0) - COALESCE(t.r, 0) <= 0), 0)
+                                 FROM inventario i
+                                 LEFT JOIN (SELECT id_repuesto, SUM(cantidad) AS c, SUM(cantidad_reservada) AS r
+                                              FROM inventario_stock WHERE id_empresa = ? GROUP BY id_repuesto) t
+                                        ON t.id_repuesto = i.id_repuesto
+                                WHERE i.id_empresa = ? AND i.deleted_at IS NULL AND i.stock_minimo > 0
+                                  AND COALESCE(t.c, 0) - COALESCE(t.r, 0) <= i.stock_minimo");
+            $a->execute([$eid, $eid]);
+        }
+        [$n, $ag] = $a->fetch(PDO::FETCH_NUM);
+        json_ok(['bajo_minimo' => (int) $n, 'agotados' => (int) $ag]);
+    }
+
+    $cols = "i.id_repuesto, i.id_empresa, i.codigo, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, i.stock_minimo, i.deleted_at";
     if ($suc !== null) {
         $sql = "SELECT $cols, COALESCE(s.cantidad, 0) AS cantidad, COALESCE(s.cantidad_reservada, 0) AS cantidad_reservada
                   FROM inventario i
@@ -80,6 +104,7 @@ if ($method === 'POST') {
         'modelo_compatible' => trim($_POST['modelo_compatible'] ?? ''),
         'precio_venta'      => max(0, (int) ($_POST['precio_venta'] ?? 0)),
         'cantidad'          => max(0, (int) ($_POST['cantidad']     ?? 0)),
+        'stock_minimo'      => max(0, min(1000000, (int) ($_POST['stock_minimo'] ?? 0))),
     ];
 
     if (!$f['nombre']) json_err('El nombre es obligatorio.');
@@ -95,10 +120,10 @@ if ($method === 'POST') {
     $db->beginTransaction();
     try {
         $db->prepare("INSERT INTO inventario
-            (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta)
-            VALUES (?, ?, ?, ?, ?, ?)")
+            (id_empresa, codigo, nombre, marca_compatible, modelo_compatible, precio_venta, stock_minimo)
+            VALUES (?, ?, ?, ?, ?, ?, ?)")
            ->execute([$eid, $f['codigo'], $f['nombre'], $f['marca_compatible'],
-                      $f['modelo_compatible'], $f['precio_venta']]);
+                      $f['modelo_compatible'], $f['precio_venta'], $f['stock_minimo']]);
         $newRid = (int) $db->lastInsertId();
         stock_fijar($db, $eid, $newRid, $sid, $f['cantidad']);
         $db->commit();
@@ -143,6 +168,8 @@ if ($method === 'PUT') {
         $marca  = trim($in['marca_compatible']  ?? '');
         $modelo = trim($in['modelo_compatible'] ?? '');
         $precio = max(0, (int) ($in['precio_venta'] ?? 0));
+        // Si el cliente no envia el minimo, se conserva el actual.
+        $minimo = array_key_exists('stock_minimo', $in) ? max(0, min(1000000, (int) $in['stock_minimo'])) : null;
         if (!$nombre) json_err('El nombre es obligatorio.');
         if (strlen($nombre) > 100) json_err('Nombre demasiado largo (máx. 100).');
     }
@@ -157,9 +184,9 @@ if ($method === 'PUT') {
     try {
         if ($datosCatalogo) {
             $db->prepare("UPDATE inventario
-                SET nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?
+                SET nombre=?, marca_compatible=?, modelo_compatible=?, precio_venta=?, stock_minimo=COALESCE(?, stock_minimo)
                 WHERE id_repuesto=? AND id_empresa=?")
-               ->execute([$nombre, $marca, $modelo, $precio, $rid, $eid]);
+               ->execute([$nombre, $marca, $modelo, $precio, $minimo, $rid, $eid]);
         }
         // cantidad_reservada NO se toca aqui: refleja reservas reales de trabajos activos.
         // Los botones +/- envian un delta: se acumula en la BD en vez de pisar el valor con uno que
@@ -175,7 +202,7 @@ if ($method === 'PUT') {
     }
 
     if ($datosCatalogo) {
-        log_accion($db, 'repuesto_editado_inv', null, ['id' => $rid, 'nombre' => $nombre, 'precio_venta' => $precio] + ($datosStock ? ['cantidad' => $qty, 'id_sucursal' => $sid] : []));
+        log_accion($db, 'repuesto_editado_inv', null, ['id' => $rid, 'nombre' => $nombre, 'precio_venta' => $precio, 'stock_minimo' => $minimo] + ($datosStock ? ['cantidad' => $qty, 'id_sucursal' => $sid] : []));
         json_ok(['msg' => 'Repuesto actualizado.'] + ($datosStock ? ['cantidad' => $qty] + aviso_reservas($db, $eid, $rid, $sid, $qty) : []));
     }
     log_accion($db, 'stock_actualizado_inv', null, ['id' => $rid, 'cantidad_nueva' => $qty, 'id_sucursal' => $sid] + ($esDelta ? ['delta' => $delta] : []));

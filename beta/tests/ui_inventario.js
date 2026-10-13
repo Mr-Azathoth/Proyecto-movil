@@ -5,7 +5,7 @@ const fs=require('fs'), vm=require('vm');
   const cli=await new Client().login('adminA');
   const els={};
   const mk=(id)=>els[id]||(els[id]={id,value:'',innerHTML:'',textContent:'',dataset:{},style:{},classList:{add(){},remove(){},toggle(){},contains(){return false}},
-    addEventListener(){},removeEventListener(){},querySelector(){return null},querySelectorAll(){return[]},closest(){return null},appendChild(){},focus(){},click(){}});
+    setAttribute(){},addEventListener(){},removeEventListener(){},querySelector(){return null},querySelectorAll(){return[]},closest(){return null},appendChild(){},focus(){},click(){}});
   const doc={body:{style:{},classList:{add(){},remove(){},toggle(){}},dataset:{base:'',csrf:cli.csrf,role:'Admin',user:'adminA',nombre:'Admin A',uid:'1'}},
     getElementById:mk,querySelectorAll:()=>[],querySelector:()=>null,addEventListener(){},createElement:()=>({set textContent(v){this._t=v},get innerHTML(){return String(this._t).replace(/&/g,'&amp;').replace(/</g,'&lt;')}})};
   const doFetch=async(url,opts={})=>{const m=(opts.method||'GET');
@@ -207,6 +207,37 @@ const fs=require('fs'), vm=require('vm');
   ok('busqueda sin resultados: se limpia el mapa y la paginacion', T.inv.length === 0 && els['inv-pagination'].innerHTML === '', T.inv.length);
   sb.value = '';
   await T.loadInventario(); await sleep(300);
+
+  // ── Stock minimo por repuesto + insignia del menu ──
+  await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], nombre: 'Repuesto Raro', precio_venta: 9000, stock_minimo: 2 });
+  const pc = await stock(INV['Pantalla A54'], ids.cen);
+  await cli.put('/api/inventario.php', { id: INV['Pantalla A54'], nombre: 'Pantalla A54', precio_venta: 45000, stock_minimo: pc.cantidad - pc.cantidad_reservada });
+  S.onInvChange(String(ids.cen)); await sleep(1200);
+  const raro = T.inv.find(x => x.id_repuesto === INV['Repuesto Raro']);
+  ok('la lista trae el minimo de cada repuesto', raro && Number(raro.stock_minimo) === 2, JSON.stringify(raro && raro.stock_minimo));
+  ok('bajo la cantidad se muestra "minimo N"', /mínimo 2/.test(els['tbl-inventario'].innerHTML), '');
+  ok('un repuesto en o bajo su minimo se marca en ambar aunque no haya filtro', /class="stock-qty stock-bajo"/.test(els['tbl-inventario'].innerHTML), '');
+  vm.runInContext("_invStockFiltro='minimo'", ctx); vm.runInContext('_applySortInventario()', ctx);
+  const idsMin = (els['tbl-inventario'].innerHTML.match(/data-inv-id="(\d+)"/g) || []).map(x => Number(x.match(/\d+/)[0]));
+  const esperadoMin = T.inv.filter(x => (parseInt(x.stock_minimo) || 0) > 0 && x.cantidad - x.cantidad_reservada <= parseInt(x.stock_minimo)).map(x => x.id_repuesto);
+  ok('filtro "bajo el minimo": solo los que tienen minimo y estan en o bajo el', esperadoMin.length > 0 && idsMin.length === esperadoMin.length && idsMin.every(id => esperadoMin.includes(id)), idsMin + ' vs ' + esperadoMin);
+  ok('...y el aviso lo describe', /stock mínimo/.test(els['inv-filtro-info'].innerHTML), els['inv-filtro-info'].innerHTML);
+  vm.runInContext("_invStockFiltro=''", ctx); vm.runInContext('_applySortInventario()', ctx);
+
+  // insignia
+  vm.runInContext('refrescarAlertasInventario()', ctx); await sleep(900);
+  const badge = els['nav-inv-badge'];
+  ok('la insignia muestra cuantos repuestos estan bajo su minimo', Number(badge.textContent) === esperadoMin.length, badge.textContent + ' vs ' + esperadoMin.length);
+  ok('...y su descripcion lo explica', /en o bajo su stock mínimo/.test(badge.title || ''), badge.title);
+  S.onInvChange(String(ids.nor)); await sleep(1200);
+  vm.runInContext('refrescarAlertasInventario()', ctx); await sleep(900);
+  const nNor = (await cli.get('/api/inventario.php?alertas=1&sucursal=' + ids.nor)).json.data.bajo_minimo;
+  ok('la insignia sigue la sucursal elegida en "Stock de" (Norte)', nNor >= 1 && Number(badge.textContent) === nNor, badge.textContent + ' vs ' + nNor);
+  await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], nombre: 'Repuesto Raro', precio_venta: 9000, stock_minimo: 0 });
+  await cli.put('/api/inventario.php', { id: INV['Pantalla A54'], nombre: 'Pantalla A54', precio_venta: 45000, stock_minimo: 0 });
+  S.onInvChange(String(ids.cen)); await sleep(900);
+  vm.runInContext('refrescarAlertasInventario()', ctx); await sleep(900);
+  ok('sin minimos definidos la insignia queda en 0', Number(badge.textContent) === 0, badge.textContent);
 
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

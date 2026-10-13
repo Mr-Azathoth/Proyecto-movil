@@ -16,7 +16,7 @@ const exp = (cl, q) => cl.get('/api/exportar_inventario.php?formato=csv' + q);
   // Estado inicial: Centro tiene Pantalla 10, Bateria 5, Raro 1; Norte y Bodega no tienen nada.
   let r = await exp(adm, '&sucursal=' + ids.cen);
   let rows = csv(r.text);
-  ok('el CSV trae las columnas reservado y disponible', rows[0].join(';') === 'id;nombre;marca_compatible;modelo_compatible;precio_venta;cantidad;reservado;disponible', rows[0].join(';'));
+  ok('el CSV trae las columnas reservado y disponible', rows[0].join(';') === 'id;nombre;marca_compatible;modelo_compatible;precio_venta;cantidad;reservado;disponible;minimo', rows[0].join(';'));
   ok('...y sin filtro devuelve todo', rows.length - 1 === 3, rows.length);
 
   r = await exp(adm, '&sucursal=' + ids.cen + '&stock=bajo&umbral=5');
@@ -32,7 +32,7 @@ const exp = (cl, q) => cl.get('/api/exportar_inventario.php?formato=csv' + q);
   r = await exp(adm, '&sucursal=' + ids.cen + '&stock=agotado');
   rows = csv(r.text);
   ok('Agotados usa el stock DISPONIBLE: el Raro (1 fisico, 1 reservado) aparece', JSON.stringify(nombres(rows)) === JSON.stringify(['Repuesto Raro']), nombres(rows).join('|'));
-  ok('...con cantidad 1, reservado 1 y disponible 0', rows[1].slice(5).join(',') === '1,1,0', rows[1].join(';'));
+  ok('...con cantidad 1, reservado 1 y disponible 0', rows[1].slice(5, 8).join(',') === '1,1,0', rows[1].join(';'));
 
   r = await exp(adm, '&sucursal=' + ids.nor + '&stock=agotado');
   ok('Agotados en Norte (sin stock): aparecen los 3 repuestos del catalogo', csv(r.text).length - 1 === 3, nombres(csv(r.text)).join('|'));

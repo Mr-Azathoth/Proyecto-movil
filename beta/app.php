@@ -148,6 +148,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       </a>
       <a class="nav-link" data-view="inventario">
         <span class="material-icons-round">inventory_2</span><span>Inventario</span>
+        <span class="nav-badge nav-badge-inv oculto" id="nav-inv-badge" role="status"></span>
       </a>
       <?php if(isAdmin()): ?>
       <a class="nav-link" data-view="estadisticas">
@@ -356,6 +357,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <option value="">Todos</option>
             <option value="bajo">Bajo (disponible ≤ N)</option>
             <option value="agotado">Agotados</option>
+            <option value="minimo">Bajo el mínimo de cada repuesto</option>
           </select>
           <span class="inv-umbral hidden" id="inv-umbral-wrap">≤ <input type="number" id="inv-umbral" min="0" max="100000" value="3" aria-label="Umbral de stock bajo"></span>
         </div>
@@ -1161,6 +1163,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" name="precio_venta" placeholder="0" value="0" min="0"></div>
           <div class="fg"><label id="lbl-rep-stock-nuevo">Stock inicial</label><input type="number" name="cantidad" placeholder="0" value="0" min="0"></div>
+          <div class="fg"><label for="rep-nuevo-minimo">Stock mínimo <span class="hint-min">(avisa al llegar a este número; 0 = sin aviso)</span></label><input type="number" id="rep-nuevo-minimo" name="stock_minimo" placeholder="0" value="0" min="0" max="1000000"></div>
         </div>
         <datalist id="dl-marcas-inv"></datalist>
       </div>
@@ -1287,6 +1290,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <div class="tag-input-wrap" id="tag-edit-modelo"></div>
           </div>
           <div class="fg"><label>Precio venta ($)</label><input type="number" id="edit-rep-precio" placeholder="0" min="0"></div>
+          <div class="fg"><label for="edit-rep-minimo">Stock mínimo <span class="hint-min">(avisa al llegar a este número; 0 = sin aviso)</span></label><input type="number" id="edit-rep-minimo" placeholder="0" min="0" max="1000000"></div>
         </div>
         <div class="fg w-half-mt"><label id="lbl-edit-stock">Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
       </div>

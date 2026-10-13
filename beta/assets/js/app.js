@@ -458,6 +458,7 @@ async function loadServicios() {
     const r = await apiFetch(`/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}${window.SUC ? SUC.qs() : ''}`);
     const json = await r.json();
     if (seq !== _repReqSeq) return; // otra sucursal o busqueda se pidio mientras tanto
+    refrescarAlertasInventario();   // crear/cerrar servicios reserva o descuenta repuestos
     if (!json.ok) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
     const rows = json.data;
 
@@ -943,7 +944,7 @@ function _buildInventarioRow(rep) {
   const disp       = _invDisp(rep);
   // Clases en vez de style="": el CSP de la app bloquea los estilos en linea.
   const stockCls   = disp <= 0 ? ' stock-cero'
-                   : (_invStockFiltro === 'bajo' && disp <= _invUmbral ? ' stock-bajo' : '');
+                   : (_invBajoMinimo(rep) || (_invStockFiltro === 'bajo' && disp <= _invUmbral) ? ' stock-bajo' : '');
   const actions = `<td class="action-col">
     <div class="row-actions">
       <button type="button" class="btn-qr-row btn-inv-qr" data-id="${rep.id_repuesto}" title="Ver QR">
@@ -968,9 +969,32 @@ function _buildInventarioRow(rep) {
     <td>${esc(rep.marca_compatible||'—')}</td>
     <td>${esc(rep.modelo_compatible||'—')}</td>
     <td>$${fmt(rep.precio_venta)}</td>
-    <td><strong class="stock-qty${stockCls}">${rep.cantidad}</strong>${window.SUC ? SUC.stockDesglose(rep) : ''}</td>
+    <td><strong class="stock-qty${stockCls}">${rep.cantidad}</strong>${window.SUC ? SUC.stockDesglose(rep) : ''}${_invMin(rep) > 0 ? `<div class="stock-desg">mínimo ${_invMin(rep)}</div>` : ''}</td>
     ${actions}
   </tr>`;
+}
+
+// Insignia del menu: repuestos con stock minimo definido que estan en o bajo ese minimo (stock DISPONIBLE),
+// en la sucursal elegida en "Stock de" o en total. Se pide con un pequeño retardo para agrupar llamadas.
+let _alertaTimer = null;
+function refrescarAlertasInventario() {
+  clearTimeout(_alertaTimer);
+  _alertaTimer = setTimeout(async () => {
+    const b = document.getElementById('nav-inv-badge');
+    if (!b) return;
+    try {
+      if (window.SUC) await SUC.ready;
+      const r = await apiFetch('/reparo/api/inventario.php?alertas=1' + (window.SUC ? SUC.invQs() : ''));
+      const j = await r.json();
+      if (!j.ok) return;
+      const n = j.data.bajo_minimo, ag = j.data.agotados;
+      b.textContent = n > 99 ? '99+' : String(n);
+      b.classList.toggle('oculto', n === 0);
+      b.classList.toggle('nav-badge-agotado', ag > 0);
+      const t = `${n} repuesto${n !== 1 ? 's' : ''} en o bajo su stock mínimo` + (ag ? ` (${ag} agotado${ag !== 1 ? 's' : ''})` : '');
+      b.title = t; b.setAttribute('aria-label', t);
+    } catch (e) { /* la insignia es solo informativa */ }
+  }, 250);
 }
 
 function _pintarFiltroInfo(mostrados, total) {
@@ -978,7 +1002,9 @@ function _pintarFiltroInfo(mostrados, total) {
   if (!el) return;
   if (!_invStockFiltro) { el.classList.add('hidden'); return; }
   const donde = window.SUC && SUC.multiInv() ? (SUC.invActive ? SUC.nombre(SUC.invActive) : 'todas las sucursales (total)') : '';
-  const crit  = _invStockFiltro === 'agotado' ? 'agotados (disponible 0)' : `con stock disponible ≤ ${_invUmbral} (incluye agotados)`;
+  const crit  = _invStockFiltro === 'agotado' ? 'agotados (disponible 0)'
+              : _invStockFiltro === 'minimo'  ? 'en o bajo su stock mínimo (solo repuestos con mínimo definido)'
+              : `con stock disponible ≤ ${_invUmbral} (incluye agotados)`;
   el.innerHTML = `Mostrando <strong>${mostrados}</strong> de ${total} repuestos ${crit}${donde ? ' · ' + esc(donde) : ''}. <button type="button" class="link-btn" data-inv-filtro-limpiar>Quitar filtro</button>`;
   el.classList.remove('hidden');
 }
@@ -1067,6 +1093,7 @@ async function loadInventario() {
     const j = await r.json();
     // Si mientras llegaba la respuesta se pidio otra sucursal u otra busqueda, esta ya no corresponde.
     if (seq !== _invReqSeq) return;
+    refrescarAlertasInventario();
     if (!j.ok) { tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
     if (!j.data.length) {
       const addBtn = CURRENT_USER.role === 'Admin'
@@ -1107,6 +1134,7 @@ async function alterStock(id, delta) {
     const cached = _invMap.get(id);
     if (cached) cached.cantidad = qty;
     _repuestosCache = null; // los selectores de repuesto deben releer el stock
+    refrescarAlertasInventario();
     if (j.data.aviso) toast(j.data.aviso, 'err');
 
     // Se vuelve a pintar la pagina con los datos locales (sin pedir todo de nuevo): la fila puede
@@ -1162,6 +1190,7 @@ function openInvEdit(item) {
     document.getElementById('edit-rep-nombre').value = item.nombre;
     document.getElementById('edit-rep-marca').value  = item.marca_compatible || '';
     document.getElementById('edit-rep-precio').value = item.precio_venta;
+    document.getElementById('edit-rep-minimo').value = item.stock_minimo || 0;
     _tagModeloEdit.setValue(item.modelo_compatible || '');
   } else {
     adminFields.style.display = 'none';
@@ -1192,6 +1221,7 @@ async function submitEditRepuesto(e) {
     payload.marca_compatible  = document.getElementById('edit-rep-marca').value.trim();
     payload.modelo_compatible = _tagModeloEdit.getValue();
     payload.precio_venta      = parseInt(document.getElementById('edit-rep-precio').value) || 0;
+    payload.stock_minimo      = Math.max(0, parseInt(document.getElementById('edit-rep-minimo').value) || 0);
   }
   try {
     const r = await apiFetch('/reparo/api/inventario.php', {
@@ -1210,6 +1240,7 @@ async function submitEditRepuesto(e) {
           cached.marca_compatible   = payload.marca_compatible;
           cached.modelo_compatible  = payload.modelo_compatible;
           cached.precio_venta       = payload.precio_venta;
+          cached.stock_minimo       = payload.stock_minimo;
         }
       }
       toast('✔ Repuesto actualizado.', 'ok');
@@ -1357,7 +1388,12 @@ let   _invStockFiltro   = '';
 let   _invUmbral        = 3;
 let   _invSortManual    = false;     // el usuario eligio un orden: no se fuerza "menos stock primero"
 const _invDisp          = rep => (parseInt(rep.cantidad) || 0) - (parseInt(rep.cantidad_reservada) || 0);
-const _invPasaFiltro    = rep => !_invStockFiltro || (_invStockFiltro === 'agotado' ? _invDisp(rep) <= 0 : _invDisp(rep) <= _invUmbral);
+const _invMin           = rep => parseInt(rep.stock_minimo) || 0;
+const _invBajoMinimo    = rep => _invMin(rep) > 0 && _invDisp(rep) <= _invMin(rep);
+const _invPasaFiltro    = rep => !_invStockFiltro
+  || (_invStockFiltro === 'agotado' ? _invDisp(rep) <= 0
+    : _invStockFiltro === 'minimo'  ? _invBajoMinimo(rep)
+    : _invDisp(rep) <= _invUmbral);
 let   _sortCol          = null;      // columna activa servicios: 'id' | 'cliente' | null
 let   _sortDir          = 'asc';    // 'asc' | 'desc'
 let   _invSortCol       = 'id';      // columna activa inventario
@@ -1566,6 +1602,7 @@ function openExportInvModal() {
     if (q)           parts.push(`"${q}"`);
     if (_invStockFiltro === 'bajo')    parts.push(`stock disponible ≤ ${_invUmbral}`);
     if (_invStockFiltro === 'agotado') parts.push('solo agotados');
+    if (_invStockFiltro === 'minimo')  parts.push('bajo el mínimo de cada repuesto');
     if (_invSortCol) parts.push(`orden ${_invSortCol} ${_invSortDir === 'asc' ? '↑' : '↓'}`);
     info.textContent = parts.length ? parts.join(' · ') : 'Sin filtros';
   }
@@ -1928,6 +1965,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       _applySortInventario();
     });
 
+  // Insignia del menu: al volver a la pestaña se relee y, al pulsarla, el inventario se abre filtrado.
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescarAlertasInventario(); });
+  document.getElementById('nav-inv-badge')?.addEventListener('click', () => {
+    _invStockFiltro = 'minimo'; _invPage = 1;
+    const selF = document.getElementById('inv-stock-filtro'); if (selF) selF.value = 'minimo';
+    document.getElementById('inv-umbral-wrap')?.classList.add('hidden');
+    try { localStorage.setItem('inv_stock_' + CURRENT_USER.uid, JSON.stringify({ f: 'minimo', u: _invUmbral })); } catch (e) {}
+    // el clic sigue hasta el enlace del menu, que abre la vista Inventario
+  });
+
   // ── Filtro de stock bajo / agotado del inventario ─────────────
   (function initFiltroStock() {
     const selF = document.getElementById('inv-stock-filtro');
@@ -1937,7 +1984,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const KEY = 'inv_stock_' + CURRENT_USER.uid;
     try {
       const g = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (g && ['', 'bajo', 'agotado'].includes(g.f)) _invStockFiltro = g.f;
+      if (g && ['', 'bajo', 'agotado', 'minimo'].includes(g.f)) _invStockFiltro = g.f;
       if (g && Number.isFinite(g.u) && g.u >= 0) _invUmbral = Math.min(100000, Math.floor(g.u));
     } catch (e) {}
     selF.value = _invStockFiltro; inpU.value = _invUmbral;

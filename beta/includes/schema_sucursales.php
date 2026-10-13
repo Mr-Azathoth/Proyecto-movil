@@ -13,11 +13,14 @@ function schema_inventario_base(PDO $db): void {
         modelo_compatible VARCHAR(60)  DEFAULT '',
         precio_venta      INT          DEFAULT 0,
         cantidad          INT          DEFAULT 0,
+        stock_minimo      INT          NOT NULL DEFAULT 0,
         PRIMARY KEY (id_repuesto),
         FOREIGN KEY (id_empresa) REFERENCES empresas(id_empresa) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     try { $db->exec("ALTER TABLE inventario ADD UNIQUE KEY uq_inv_codigo (id_empresa, codigo)"); } catch (PDOException $e) {}
     try { $db->exec("ALTER TABLE inventario ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL"); } catch (PDOException $e) {}
+    // Minimo por repuesto: bajo este stock DISPONIBLE (por sucursal, o en total) el repuesto genera alerta. 0 = sin alerta.
+    try { $db->exec("ALTER TABLE inventario ADD COLUMN stock_minimo INT NOT NULL DEFAULT 0"); } catch (PDOException $e) {}
 }
 
 function schema_sucursales_completo(PDO $db): bool {
@@ -29,13 +32,17 @@ function schema_sucursales_completo(PDO $db): bool {
               WHERE table_schema = DATABASE()
                 AND ((table_name = 'reparaciones' AND column_name = 'id_sucursal')
                   OR (table_name = 'usuarios'     AND column_name = 'id_sucursal')
-                  OR (table_name = 'sucursales'   AND column_name = 'telefono'))) AS c"
+                  OR (table_name = 'sucursales'   AND column_name = 'telefono')
+                  OR (table_name = 'inventario'   AND column_name = 'stock_minimo'))) AS c"
     )->fetch();
-    return (int) $r['t'] === 4 && (int) $r['c'] === 3;
+    return (int) $r['t'] === 4 && (int) $r['c'] === 4;
 }
 
+// Sube cuando el esquema agrega algo: las sesiones abiertas antes vuelven a comprobarlo una vez.
+const SCHEMA_SUC_VERSION = 2;
+
 function schema_sucursales_asegurar(PDO $db): void {
-    if (!empty($_SESSION['_schema_suc_ok'])) return;
+    if (($_SESSION['_schema_suc_ok'] ?? 0) === SCHEMA_SUC_VERSION) return;
     if (!schema_sucursales_completo($db)) {
         $lock = (bool) $db->query("SELECT GET_LOCK('centrotec_schema_sucursales', 60)")->fetchColumn();
         try {
@@ -44,7 +51,7 @@ function schema_sucursales_asegurar(PDO $db): void {
             if ($lock) $db->query("SELECT RELEASE_LOCK('centrotec_schema_sucursales')");
         }
     }
-    $_SESSION['_schema_suc_ok'] = 1;
+    $_SESSION['_schema_suc_ok'] = SCHEMA_SUC_VERSION;
 }
 
 function schema_sucursales_migrar(PDO $db): array {
