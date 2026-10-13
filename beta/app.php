@@ -148,7 +148,6 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       </a>
       <a class="nav-link" data-view="inventario">
         <span class="material-icons-round">inventory_2</span><span>Inventario</span>
-        <span class="nav-badge nav-badge-inv oculto" id="nav-inv-badge" role="status"></span>
       </a>
       <?php if(isAdmin()): ?>
       <a class="nav-link" data-view="estadisticas">

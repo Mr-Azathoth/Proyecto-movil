@@ -12,30 +12,6 @@ if ($method === 'GET') {
     $q   = trim($_GET['q'] ?? '');
     $suc = sucursal_filtro($db, $eid);
 
-    // Alertas de reposicion (insignia del menu): cuantos repuestos con minimo definido tienen el stock
-    // DISPONIBLE en o bajo ese minimo, en la sucursal pedida o en el total.
-    if (isset($_GET['alertas'])) {
-        if ($suc !== null) {
-            $a = $db->prepare("SELECT COUNT(*), COALESCE(SUM(COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0) <= 0), 0)
-                                 FROM inventario i
-                                 LEFT JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
-                                WHERE i.id_empresa = ? AND i.deleted_at IS NULL AND i.stock_minimo > 0
-                                  AND COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0) <= i.stock_minimo");
-            $a->execute([$suc, $eid]);
-        } else {
-            $a = $db->prepare("SELECT COUNT(*), COALESCE(SUM(COALESCE(t.c, 0) - COALESCE(t.r, 0) <= 0), 0)
-                                 FROM inventario i
-                                 LEFT JOIN (SELECT id_repuesto, SUM(cantidad) AS c, SUM(cantidad_reservada) AS r
-                                              FROM inventario_stock WHERE id_empresa = ? GROUP BY id_repuesto) t
-                                        ON t.id_repuesto = i.id_repuesto
-                                WHERE i.id_empresa = ? AND i.deleted_at IS NULL AND i.stock_minimo > 0
-                                  AND COALESCE(t.c, 0) - COALESCE(t.r, 0) <= i.stock_minimo");
-            $a->execute([$eid, $eid]);
-        }
-        [$n, $ag] = $a->fetch(PDO::FETCH_NUM);
-        json_ok(['bajo_minimo' => (int) $n, 'agotados' => (int) $ag]);
-    }
-
     $cols = "i.id_repuesto, i.id_empresa, i.codigo, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, i.stock_minimo, i.deleted_at";
     if ($suc !== null) {
         $sql = "SELECT $cols, COALESCE(s.cantidad, 0) AS cantidad, COALESCE(s.cantidad_reservada, 0) AS cantidad_reservada

@@ -1699,12 +1699,5 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 [data-theme="light"] .stock-qty.stock-bajo, [data-theme="medium"] .stock-qty.stock-bajo { color: #b45309; }
 [data-theme="light"] .stock-qty.stock-cero, [data-theme="medium"] .stock-qty.stock-cero { color: #dc2626; }
 
-/* Stock minimo por repuesto e insignia del menu */
+/* Stock minimo por repuesto */
 .hint-min { font-weight: 400; color: var(--txt2); font-size: 11px; }
-.nav-link .nav-badge-inv { margin-left: auto; }
-.nav-badge-inv.nav-badge-agotado { background: #dc2626; }
-@media (max-width: 900px) {
-  /* Con el menu colapsado (solo iconos) la insignia se superpone al icono */
-  .nav-link { position: relative; }
-  .nav-link span.nav-badge-inv:not(.oculto) { display: flex; position: absolute; top: 2px; right: 2px; margin: 0; }
-}

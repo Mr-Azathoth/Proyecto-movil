@@ -1,4 +1,4 @@
-// Stock minimo por repuesto: alta/edicion, alertas (insignia del menu) y filtro/exportacion "bajo el minimo".
+// Stock minimo por repuesto: alta/edicion y filtro/exportacion "bajo el minimo".
 const { Client, ids, fixtures } = require('./lib');
 const INV = fixtures().inv;
 let pass = 0, fail = 0;
@@ -7,12 +7,10 @@ const csv = (txt) => txt.replace(/^﻿/, '').split(/\r?\n/).filter(Boolean).map(
 
 (async () => {
   const adm = await new Client().login('adminA'), tc = await new Client().login('tecCentro'), adb = await new Client().login('adminB');
-  const al = (cl, q = '') => cl.get('/api/inventario.php?alertas=1' + q);
   const nuevaRep = (cl, e) => cl.postForm('/api/reparaciones.php', { nombre_cliente: 'T', telefono_cliente: '+56977777777', dano_ingreso: 'x', marca_ingreso: 'X', modelo_ingreso: 'Y', tipo_ingreso: 'Telefono', ...e });
 
   // Estado inicial: Centro tiene Pantalla 10, Bateria 5, Raro 1; ninguno tiene minimo.
-  let r = await al(adm);
-  ok('sin minimos definidos no hay alertas', r.json?.ok && r.json.data.bajo_minimo === 0 && r.json.data.agotados === 0, r.text);
+  let r;
   r = await adm.get('/api/inventario.php?sucursal=' + ids.cen);
   ok('el inventario trae stock_minimo (0 por defecto)', r.json.data.every(x => Number(x.stock_minimo) === 0), JSON.stringify(r.json.data[0]));
 
@@ -40,30 +38,11 @@ const csv = (txt) => txt.replace(/^﻿/, '').split(/\r?\n/).filter(Boolean).map(
   r = await tc.put('/api/inventario.php', { id: INV['Pantalla A54'], nombre: 'X', stock_minimo: 0 });
   ok('un tecnico NO puede cambiar el minimo (403)', r.status === 403, r.status);
 
-  // Alertas por sucursal y en total
-  r = await al(adm, '&sucursal=' + ids.cen);
-  ok('alertas en Centro: Pantalla (10<=10) y Raro (1<=2), sin Bateria (5>3)', r.json.data.bajo_minimo === 2 && r.json.data.agotados === 0, r.text);
-  r = await al(adm, '&sucursal=' + ids.nor);
-  ok('alertas en Norte (sin stock): los 3 con minimo, los 3 agotados', r.json.data.bajo_minimo === 3 && r.json.data.agotados === 3, r.text);
-  r = await al(adm);
-  ok('alertas en total: Pantalla y Raro', r.json.data.bajo_minimo === 2, r.text);
-  r = await al(tc, '&sucursal=' + ids.cen);
-  ok('un tecnico tambien ve las alertas', r.json?.ok && r.json.data.bajo_minimo === 2, r.text);
-
-  // El stock DISPONIBLE es el que cuenta: reservar la unica unidad del Raro lo deja agotado
+  // El stock DISPONIBLE es el que cuenta: reservar la unica unidad del Raro lo deja con disponible 0
   const rep = (await nuevaRep(tc, { id_repuesto_usado: INV['Repuesto Raro'] })).json.data.id;
-  r = await al(adm, '&sucursal=' + ids.cen);
-  ok('reservar el Raro (1 fisico, disponible 0) lo cuenta como agotado', r.json.data.bajo_minimo === 2 && r.json.data.agotados === 1, r.text);
-  await adm.put('/api/inventario.php', { id: INV['Bateria X'], cantidad_delta: -3, id_sucursal: ids.cen });
-  r = await al(adm, '&sucursal=' + ids.cen);
-  ok('bajar la Bateria de 5 a 2 (minimo 3) suma una alerta', r.json.data.bajo_minimo === 3, r.text);
-  await adm.put('/api/inventario.php', { id: INV['Bateria X'], cantidad_delta: 3, id_sucursal: ids.cen });
-
-  // Aislamiento
-  r = await al(adb);
-  ok('la empresa B no ve alertas de A', r.json?.ok && r.json.data.bajo_minimo === 0, r.text);
-  r = await al(adb, '&sucursal=' + ids.cen);
-  ok('...y no puede pedirlas con una sucursal de A (400)', r.status === 400, r.status);
+  r = await adm.get('/api/inventario.php?sucursal=' + ids.cen);
+  const raro = r.json.data.find(x => x.id_repuesto === INV['Repuesto Raro']);
+  ok('el Raro reservado queda con 1 fisico, 1 reservado y minimo 2', raro.cantidad === 1 && raro.cantidad_reservada === 1 && Number(raro.stock_minimo) === 2, JSON.stringify(raro));
 
   // Exportacion
   r = await adm.get('/api/exportar_inventario.php?formato=csv&sucursal=' + ids.cen + '&stock=minimo');
@@ -81,11 +60,11 @@ const csv = (txt) => txt.replace(/^﻿/, '').split(/\r?\n/).filter(Boolean).map(
   r = await adm.get('/api/inventario.php?sucursal=' + ids.cen);
   const nuevo = r.json.data.find(x => x.nombre === 'Con minimo');
   ok('...queda guardado y con stock 4', nuevo && Number(nuevo.stock_minimo) === 6 && nuevo.cantidad === 4, JSON.stringify(nuevo));
-  r = await al(adm, '&sucursal=' + ids.cen);
-  ok('...y ya cuenta como alerta (4<=6)', r.json.data.bajo_minimo === 3, r.text);
+  r = await adm.get('/api/exportar_inventario.php?formato=csv&sucursal=' + ids.cen + '&stock=minimo');
+  ok('...y ya aparece en "bajo el minimo" (4 <= 6)', csv(r.text).slice(1).some(x => x[1] === 'Con minimo'), '');
   if (nuevo) await adm.req('DELETE', '/api/inventario.php?id=' + nuevo.id_repuesto, { json: {} });
-  r = await al(adm, '&sucursal=' + ids.cen);
-  ok('un repuesto eliminado deja de contar', r.json.data.bajo_minimo === 2, r.text);
+  r = await adm.get('/api/exportar_inventario.php?formato=csv&sucursal=' + ids.cen + '&stock=minimo');
+  ok('un repuesto eliminado deja de aparecer', !csv(r.text).slice(1).some(x => x[1] === 'Con minimo'), '');
 
   await adm.req('DELETE', '/api/reparaciones.php', { json: { id: rep } });
   console.log(`\n${pass} OK, ${fail} fallos`);

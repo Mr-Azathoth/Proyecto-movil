@@ -208,7 +208,7 @@ const fs=require('fs'), vm=require('vm');
   sb.value = '';
   await T.loadInventario(); await sleep(300);
 
-  // ── Stock minimo por repuesto + insignia del menu ──
+  // ── Stock minimo por repuesto ──
   await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], nombre: 'Repuesto Raro', precio_venta: 9000, stock_minimo: 2 });
   const pc = await stock(INV['Pantalla A54'], ids.cen);
   await cli.put('/api/inventario.php', { id: INV['Pantalla A54'], nombre: 'Pantalla A54', precio_venta: 45000, stock_minimo: pc.cantidad - pc.cantidad_reservada });
@@ -224,20 +224,6 @@ const fs=require('fs'), vm=require('vm');
   ok('...y el aviso lo describe', /stock mínimo/.test(els['inv-filtro-info'].innerHTML), els['inv-filtro-info'].innerHTML);
   vm.runInContext("_invStockFiltro=''", ctx); vm.runInContext('_applySortInventario()', ctx);
 
-  // insignia
-  vm.runInContext('refrescarAlertasInventario()', ctx); await sleep(900);
-  const badge = els['nav-inv-badge'];
-  ok('la insignia muestra cuantos repuestos estan bajo su minimo', Number(badge.textContent) === esperadoMin.length, badge.textContent + ' vs ' + esperadoMin.length);
-  ok('...y su descripcion lo explica', /en o bajo su stock mínimo/.test(badge.title || ''), badge.title);
-  S.onInvChange(String(ids.nor)); await sleep(1200);
-  vm.runInContext('refrescarAlertasInventario()', ctx); await sleep(900);
-  const nNor = (await cli.get('/api/inventario.php?alertas=1&sucursal=' + ids.nor)).json.data.bajo_minimo;
-  ok('la insignia sigue la sucursal elegida en "Stock de" (Norte)', nNor >= 1 && Number(badge.textContent) === nNor, badge.textContent + ' vs ' + nNor);
-  await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], nombre: 'Repuesto Raro', precio_venta: 9000, stock_minimo: 0 });
-  await cli.put('/api/inventario.php', { id: INV['Pantalla A54'], nombre: 'Pantalla A54', precio_venta: 45000, stock_minimo: 0 });
-  S.onInvChange(String(ids.cen)); await sleep(900);
-  vm.runInContext('refrescarAlertasInventario()', ctx); await sleep(900);
-  ok('sin minimos definidos la insignia queda en 0', Number(badge.textContent) === 0, badge.textContent);
 
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

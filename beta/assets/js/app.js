@@ -458,7 +458,6 @@ async function loadServicios() {
     const r = await apiFetch(`/reparo/api/reparaciones.php?q=${encodeURIComponent(q)}&status=${encodeURIComponent(st)}${window.SUC ? SUC.qs() : ''}`);
     const json = await r.json();
     if (seq !== _repReqSeq) return; // otra sucursal o busqueda se pidio mientras tanto
-    refrescarAlertasInventario();   // crear/cerrar servicios reserva o descuenta repuestos
     if (!json.ok) { tbody.innerHTML = `<tr><td colspan="8" class="tbl-empty">Error: ${esc(json.msg)}</td></tr>`; return; }
     const rows = json.data;
 
@@ -974,29 +973,6 @@ function _buildInventarioRow(rep) {
   </tr>`;
 }
 
-// Insignia del menu: repuestos con stock minimo definido que estan en o bajo ese minimo (stock DISPONIBLE),
-// en la sucursal elegida en "Stock de" o en total. Se pide con un pequeño retardo para agrupar llamadas.
-let _alertaTimer = null;
-function refrescarAlertasInventario() {
-  clearTimeout(_alertaTimer);
-  _alertaTimer = setTimeout(async () => {
-    const b = document.getElementById('nav-inv-badge');
-    if (!b) return;
-    try {
-      if (window.SUC) await SUC.ready;
-      const r = await apiFetch('/reparo/api/inventario.php?alertas=1' + (window.SUC ? SUC.invQs() : ''));
-      const j = await r.json();
-      if (!j.ok) return;
-      const n = j.data.bajo_minimo, ag = j.data.agotados;
-      b.textContent = n > 99 ? '99+' : String(n);
-      b.classList.toggle('oculto', n === 0);
-      b.classList.toggle('nav-badge-agotado', ag > 0);
-      const t = `${n} repuesto${n !== 1 ? 's' : ''} en o bajo su stock mínimo` + (ag ? ` (${ag} agotado${ag !== 1 ? 's' : ''})` : '');
-      b.title = t; b.setAttribute('aria-label', t);
-    } catch (e) { /* la insignia es solo informativa */ }
-  }, 250);
-}
-
 function _pintarFiltroInfo(mostrados, total) {
   const el = document.getElementById('inv-filtro-info');
   if (!el) return;
@@ -1093,7 +1069,6 @@ async function loadInventario() {
     const j = await r.json();
     // Si mientras llegaba la respuesta se pidio otra sucursal u otra busqueda, esta ya no corresponde.
     if (seq !== _invReqSeq) return;
-    refrescarAlertasInventario();
     if (!j.ok) { tbody.innerHTML=`<tr><td colspan="6" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
     if (!j.data.length) {
       const addBtn = CURRENT_USER.role === 'Admin'
@@ -1134,7 +1109,6 @@ async function alterStock(id, delta) {
     const cached = _invMap.get(id);
     if (cached) cached.cantidad = qty;
     _repuestosCache = null; // los selectores de repuesto deben releer el stock
-    refrescarAlertasInventario();
     if (j.data.aviso) toast(j.data.aviso, 'err');
 
     // Se vuelve a pintar la pagina con los datos locales (sin pedir todo de nuevo): la fila puede
@@ -1965,17 +1939,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       _applySortInventario();
     });
 
-  // Insignia del menu: al volver a la pestaña se relee y, al pulsarla, el inventario se abre filtrado.
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) refrescarAlertasInventario(); });
-  document.getElementById('nav-inv-badge')?.addEventListener('click', () => {
-    _invStockFiltro = 'minimo'; _invPage = 1;
-    const selF = document.getElementById('inv-stock-filtro'); if (selF) selF.value = 'minimo';
-    document.getElementById('inv-umbral-wrap')?.classList.add('hidden');
-    try { localStorage.setItem('inv_stock_' + CURRENT_USER.uid, JSON.stringify({ f: 'minimo', u: _invUmbral })); } catch (e) {}
-    // el clic sigue hasta el enlace del menu, que abre la vista Inventario
-  });
-
-  // ── Filtro de stock bajo / agotado del inventario ─────────────
+    // ── Filtro de stock bajo / agotado del inventario ─────────────
   (function initFiltroStock() {
     const selF = document.getElementById('inv-stock-filtro');
     const inpU = document.getElementById('inv-umbral');
