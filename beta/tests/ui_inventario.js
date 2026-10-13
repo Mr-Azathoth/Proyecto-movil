@@ -140,5 +140,73 @@ const fs=require('fs'), vm=require('vm');
   ok('WhatsApp: el enlace sigue apuntando al numero del cliente y al seguimiento', /^https:\/\/wa\.me\/56988887777\?text=/.test(T.waLink({ ...base, id_sucursal: ids.cen })) && /seguimiento\.php\?codigo=ABC234/.test(m1), m1);
   ok('WhatsApp: sin codigo de seguimiento devuelve solo el enlace base', T.waLink({ ...base, codigo_seguimiento: '', id_sucursal: ids.cen }) === 'https://wa.me/56988887777', '');
 
+
+  // ── Filtro de stock bajo / agotado (sobre el disponible) ──
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const filas = () => (els['tbl-inventario'].innerHTML.match(/data-inv-id="(\d+)"/g) || []).map(x => Number(x.match(/\d+/)[0]));
+  const dsp = x => x.cantidad - x.cantidad_reservada;
+  S.onInvChange(''); await sleep(900);
+  const todos = T.inv.length;
+  ok('sin filtro: la tabla muestra todos los repuestos', filas().length === todos, filas().length + '/' + todos);
+  vm.runInContext("_invStockFiltro='bajo'; _invUmbral=3;", ctx);
+  vm.runInContext('_applySortInventario()', ctx);
+  const esperadoBajo = T.inv.filter(x => dsp(x) <= 3);
+  ok('filtro Bajo (<= 3): solo los de stock DISPONIBLE bajo', filas().length === esperadoBajo.length && esperadoBajo.length > 0 && esperadoBajo.length < todos, filas().length + ' vs ' + esperadoBajo.length + ' de ' + todos);
+  const disps = filas().map(id => dsp(T.inv.find(x => x.id_repuesto === id)));
+  ok('...ordenados de menos a mas stock disponible', disps.every((d, i) => i === 0 || disps[i - 1] <= d), disps.join(','));
+  ok('...y el aviso indica cuantos se muestran de cuantos', new RegExp('Mostrando <strong>' + esperadoBajo.length + '</strong> de ' + todos).test(els['inv-filtro-info'].innerHTML), els['inv-filtro-info'].innerHTML);
+  vm.runInContext('_invUmbral=0', ctx); vm.runInContext('_applySortInventario()', ctx);
+  const esperado0 = T.inv.filter(x => dsp(x) <= 0).length;
+  ok('umbral 0 incluye solo los agotados (disponible 0)', filas().length === esperado0, filas().length + ' vs ' + esperado0);
+  vm.runInContext("_invStockFiltro='agotado'", ctx); vm.runInContext('_applySortInventario()', ctx);
+  ok('filtro Agotados coincide con disponible <= 0', filas().length === esperado0 && /agotados/.test(els['inv-filtro-info'].innerHTML), filas().length);
+  vm.runInContext("_invStockFiltro='bajo'; _invUmbral=100000", ctx); vm.runInContext('_applySortInventario()', ctx);
+  ok('un umbral muy alto muestra todos', filas().length === todos, filas().length);
+  vm.runInContext("_invStockFiltro='bajo'; _invUmbral=-1", ctx); vm.runInContext('_applySortInventario()', ctx);
+  ok('sin ningun resultado muestra un mensaje y limpia la paginacion', filas().length === 0 && /Ningún repuesto con ese criterio/.test(els['tbl-inventario'].innerHTML) && els['inv-pagination'].innerHTML === '', els['tbl-inventario'].innerHTML.slice(0, 80));
+  vm.runInContext("_invStockFiltro=''", ctx); vm.runInContext('_applySortInventario()', ctx);
+  ok('quitar el filtro devuelve todos', filas().length === todos, filas().length);
+
+  // ── Correcciones del code review ──
+  // colores por clase (el CSP bloquea style="" en linea)
+  S.onInvChange(String(ids.cen)); await sleep(900);
+  vm.runInContext("_invStockFiltro='bajo'; _invUmbral=100000;", ctx); vm.runInContext('_applySortInventario()', ctx);
+  const htmlCls = els['tbl-inventario'].innerHTML;
+  ok('cantidades: sin style="" en linea (lo bloquea el CSP)', !/stock-qty[^>]*style=/.test(htmlCls), htmlCls.slice(0, 0));
+  vm.runInContext("_invUmbral=5", ctx); vm.runInContext('_applySortInventario()', ctx);
+  ok('cantidades: stock bajo con filtro activo lleva la clase stock-bajo', /class="stock-qty stock-bajo"/.test(els['tbl-inventario'].innerHTML), '');
+  vm.runInContext("_invStockFiltro=''", ctx); vm.runInContext('_applySortInventario()', ctx);
+  ok('cantidades: sin filtro los repuestos con stock no llevan clase de alerta', !/stock-bajo/.test(els['tbl-inventario'].innerHTML), '');
+
+  // la cache de repuestos de los selectores se invalida al cambiar el stock
+  await T.refrescarRepuestosNuevo(); await sleep(300);
+  ok('selector de repuestos: la cache esta cargada', T.cache instanceof Map && T.cache.size > 0, String(T.cache));
+  await T.alterStock(INV['Pantalla A54'], 1); await sleep(300);
+  ok('+/- invalida la cache del selector (para que un repuesto repuesto se pueda elegir)', T.cache === null, String(T.cache));
+  await T.alterStock(INV['Pantalla A54'], -1); await sleep(300);
+
+  // aviso cuando el stock queda bajo lo reservado (viene del servidor)
+  msgs.length = 0;
+  await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], cantidad: 10, id_sucursal: ids.cen });
+  const rr = await cli.postForm('/api/reparaciones.php', { nombre_cliente: 'T', telefono_cliente: '+56977777777', dano_ingreso: 'x', marca_ingreso: 'X', modelo_ingreso: 'Y', tipo_ingreso: 'Telefono', id_repuesto_usado: INV['Repuesto Raro'], id_sucursal: ids.cen });
+  const reservado = (await stock(INV['Repuesto Raro'], ids.cen)).cantidad_reservada;
+  await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], cantidad: reservado, id_sucursal: ids.cen });
+  await T.loadInventario(); await sleep(300);
+  await T.alterStock(INV['Repuesto Raro'], -1); await sleep(300);
+  ok('al bajar el stock por debajo de lo reservado se muestra el aviso', reservado > 0 && msgs.some(m => /err: Atención: hay \d+ unidades? reservadas? /.test(m)), reservado + ' ' + JSON.stringify(msgs));
+  await cli.req('DELETE', '/api/reparaciones.php', { json: { id: rr.json.data.id } });
+  await cli.put('/api/inventario.php', { id: INV['Repuesto Raro'], cantidad: 1, id_sucursal: ids.cen });
+
+  // WhatsApp: el texto de "donde esta el equipo" es el mismo en el mensaje del detalle y en el del ingreso
+  const dd = vm.runInContext('_waDonde(' + ids.cen + ')', ctx);
+  ok('_waDonde: incluye sucursal y direccion/telefono', /Sucursal Centro/.test(dd.local) && typeof dd.donde === 'string', JSON.stringify(dd));
+
+  // Inventario vacio: no deja datos viejos
+  const sb = els['search-inv']; sb.value = 'zzzz-no-existe';
+  await T.loadInventario(); await sleep(300);
+  ok('busqueda sin resultados: se limpia el mapa y la paginacion', T.inv.length === 0 && els['inv-pagination'].innerHTML === '', T.inv.length);
+  sb.value = '';
+  await T.loadInventario(); await sleep(300);
+
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

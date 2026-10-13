@@ -31,18 +31,24 @@ if ($suc !== null) {
     $sn = $db->prepare("SELECT nombre FROM sucursales WHERE id_sucursal = ? AND id_empresa = ?");
     $sn->execute([$suc, $eid]);
     $sucNombre = (string) $sn->fetchColumn();
-    $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(s.cantidad, 0) AS cantidad
+    $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(s.cantidad, 0) AS cantidad,
+                      COALESCE(s.cantidad_reservada, 0) AS reservado,
+                      (COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0)) AS disponible
                  FROM inventario i
                  LEFT JOIN inventario_stock s ON s.id_repuesto = i.id_repuesto AND s.id_sucursal = ?
                 WHERE i.id_empresa = ? AND i.deleted_at IS NULL";
     $params = [$suc, $eid];
+    $dispExpr = '(COALESCE(s.cantidad, 0) - COALESCE(s.cantidad_reservada, 0))';
 } else {
-    $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(t.c, 0) AS cantidad
+    $sql    = "SELECT i.id_repuesto, i.nombre, i.marca_compatible, i.modelo_compatible, i.precio_venta, COALESCE(t.c, 0) AS cantidad,
+                      COALESCE(t.r, 0) AS reservado,
+                      (COALESCE(t.c, 0) - COALESCE(t.r, 0)) AS disponible
                  FROM inventario i
-                 LEFT JOIN (SELECT id_repuesto, SUM(cantidad) AS c FROM inventario_stock WHERE id_empresa = ? GROUP BY id_repuesto) t
+                 LEFT JOIN (SELECT id_repuesto, SUM(cantidad) AS c, SUM(cantidad_reservada) AS r FROM inventario_stock WHERE id_empresa = ? GROUP BY id_repuesto) t
                         ON t.id_repuesto = i.id_repuesto
                 WHERE i.id_empresa = ? AND i.deleted_at IS NULL";
     $params = [$eid, $eid];
+    $dispExpr = '(COALESCE(t.c, 0) - COALESCE(t.r, 0))';
 }
 
 if ($q) {
@@ -50,7 +56,18 @@ if ($q) {
     $sql    .= " AND (i.nombre LIKE ? OR i.marca_compatible LIKE ? OR i.modelo_compatible LIKE ?)";
     $params  = array_merge($params, [$like, $like, $like]);
 }
-$sql .= " ORDER BY $sort_col $sort_dir";
+// Filtro de reposicion: ?stock=bajo&umbral=N (disponible <= N, incluye los agotados) o ?stock=agotado (disponible <= 0).
+$stockFiltro = in_array($_GET['stock'] ?? '', ['bajo', 'agotado'], true) ? $_GET['stock'] : '';
+$umbral      = max(0, min(1000000, (int) ($_GET['umbral'] ?? 0)));
+if ($stockFiltro === 'agotado') {
+    $sql .= " AND $dispExpr <= 0";
+} elseif ($stockFiltro === 'bajo') {
+    $sql .= " AND $dispExpr <= ?";
+    $params[] = $umbral;
+}
+// Sin orden pedido, la lista de reposicion va de menos a mas stock disponible.
+if ($stockFiltro && empty($_GET['sort_col'])) $sql .= " ORDER BY disponible ASC, i.nombre ASC";
+else                                         $sql .= " ORDER BY $sort_col $sort_dir";
 
 // Limite de seguridad: evita cargar un inventario enorme completo en memoria de una vez
 // (ver mismo fix en api/exportar.php).
@@ -72,13 +89,13 @@ if ($formato === 'xlsx') {
     $sheet->setTitle('Inventario');
 
     // Encabezados
-    $cols = ['A' => 'id', 'B' => 'nombre', 'C' => 'marca_compatible', 'D' => 'modelo_compatible', 'E' => 'precio_venta', 'F' => 'cantidad'];
+    $cols = ['A' => 'id', 'B' => 'nombre', 'C' => 'marca_compatible', 'D' => 'modelo_compatible', 'E' => 'precio_venta', 'F' => 'cantidad', 'G' => 'reservado', 'H' => 'disponible'];
     foreach ($cols as $col => $label) {
         $sheet->setCellValue("{$col}1", $label);
     }
 
     // Estilo encabezado
-    $sheet->getStyle('A1:F1')->applyFromArray([
+    $sheet->getStyle('A1:H1')->applyFromArray([
         'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E293B']],
         'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
@@ -94,6 +111,11 @@ if ($formato === 'xlsx') {
         $sheet->setCellValue("E$i", (int)$r['precio_venta']);
         $cantidad = (int)$r['cantidad'];
         $sheet->setCellValue("F$i", $cantidad);
+        $sheet->setCellValue("G$i", (int)$r['reservado']);
+        $sheet->setCellValue("H$i", (int)$r['disponible']);
+        if ((int)$r['disponible'] <= 0) {
+            $sheet->getStyle("H$i")->applyFromArray(['font' => ['color' => ['rgb' => 'DC2626'], 'bold' => true]]);
+        }
         if ($cantidad === 0) {
             $sheet->getStyle("F$i")->applyFromArray([
                 'font' => ['color' => ['rgb' => 'DC2626'], 'bold' => true],
@@ -130,7 +152,7 @@ if ($formato === 'csv') {
 
     $out = fopen('php://output', 'w');
     fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['id', 'nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad'], ';');
+    fputcsv($out, ['id', 'nombre', 'marca_compatible', 'modelo_compatible', 'precio_venta', 'cantidad', 'reservado', 'disponible'], ';');
     foreach ($rows as $r) {
         fputcsv($out, [
             $r['id_repuesto'],
@@ -139,6 +161,8 @@ if ($formato === 'csv') {
             $csvSafe($r['modelo_compatible'] ?: ''),
             $r['precio_venta'],
             $r['cantidad'],
+            $r['reservado'],
+            $r['disponible'],
         ], ';');
     }
     fclose($out);
@@ -150,9 +174,12 @@ log_accion($db, 'exportacion_inv_pdf', null, ['formato' => 'pdf', 'registros' =>
 $titulo = 'Inventario — ' . date('d/m/Y');
 $total  = count($rows);
 $stock  = array_sum(array_column($rows, 'cantidad'));
+$dispTotal = array_sum(array_column($rows, 'disponible'));
 
 $filtros = [];
 if ($sucNombre) $filtros[] = 'Sucursal: ' . $sucNombre; else $filtros[] = 'Sucursal: todas (stock total)';
+if ($stockFiltro === 'bajo')    $filtros[] = 'Stock disponible ≤ ' . $umbral . ' (incluye agotados)';
+if ($stockFiltro === 'agotado') $filtros[] = 'Solo agotados (disponible 0)';
 if ($q) $filtros[] = 'Búsqueda: "' . $q . '"';
 $sortLabels = ['nombre'=>'Repuesto','marca'=>'Marca','modelo'=>'Modelo','precio'=>'Precio','stock'=>'Stock'];
 $sortKey    = array_search($sort_col, $valid_sort);
@@ -196,25 +223,28 @@ header('Content-Type: text/html; charset=utf-8');
 <?php endif; ?>
 <p class="summary">
   <strong><?= $total ?></strong> repuestos &nbsp;&nbsp;·&nbsp;&nbsp;
-  <strong><?= $stock ?></strong> unidades en stock
+  <strong><?= $stock ?></strong> unidades en stock &nbsp;&nbsp;·&nbsp;&nbsp;
+  <strong><?= $dispTotal ?></strong> disponibles
 </p>
 <table>
   <thead>
     <tr>
       <th>Repuesto</th><th>Marca compatible</th><th>Modelo compatible</th>
-      <th>Precio venta</th><th>Stock</th>
+      <th>Precio venta</th><th>Stock</th><th>Reservado</th><th>Disponible</th>
     </tr>
   </thead>
   <tbody>
   <?php foreach ($rows as $r):
-    $sc = $r['cantidad'] > 5 ? 'stock-hi' : ($r['cantidad'] > 0 ? 'stock-md' : 'stock-lo');
+    $sc = $r['disponible'] > 5 ? 'stock-hi' : ($r['disponible'] > 0 ? 'stock-md' : 'stock-lo');
   ?>
     <tr>
       <td><?= hesc($r['nombre']) ?></td>
       <td><?= hesc($r['marca_compatible'] ?: '—') ?></td>
       <td><?= hesc($r['modelo_compatible'] ?: '—') ?></td>
       <td class="num"><?= fmtNum((int)$r['precio_venta']) ?></td>
-      <td class="<?= $sc ?>"><?= (int)$r['cantidad'] ?> un.</td>
+      <td><?= (int)$r['cantidad'] ?> un.</td>
+      <td><?= (int)$r['reservado'] ?></td>
+      <td class="<?= $sc ?>"><?= (int)$r['disponible'] ?> un.</td>
     </tr>
   <?php endforeach; ?>
   </tbody>

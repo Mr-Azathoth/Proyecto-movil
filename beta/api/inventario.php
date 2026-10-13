@@ -9,8 +9,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // ── GET: catalogo con stock de una sucursal (?sucursal=ID) o el total de todas ──
 if ($method === 'GET') {
-    schema_inventario_base($db);
-
     $q   = trim($_GET['q'] ?? '');
     $suc = sucursal_filtro($db, $eid);
 
@@ -112,6 +110,16 @@ if ($method === 'POST') {
     json_ok(['msg' => 'Repuesto agregado.']);
 }
 
+// Si el stock fisico queda por debajo de lo reservado para trabajos activos, se avisa (no se bloquea:
+// puede ser una perdida real de unidades).
+function aviso_reservas(PDO $db, int $eid, int $rid, int $sid, int $qty): array {
+    $r = $db->prepare("SELECT cantidad_reservada FROM inventario_stock WHERE id_repuesto = ? AND id_sucursal = ? AND id_empresa = ?");
+    $r->execute([$rid, $sid, $eid]);
+    $res = (int) $r->fetchColumn();
+    if ($res <= $qty) return [];
+    return ['aviso' => "Atención: hay {$res} unidad" . ($res !== 1 ? 'es' : '') . " reservada" . ($res !== 1 ? 's' : '') . " para trabajos activos y solo quedan {$qty} en stock."];
+}
+
 // ── PUT: editar catalogo (admin) y/o fijar stock de una sucursal ──
 if ($method === 'PUT') {
     csrf_check();
@@ -168,10 +176,10 @@ if ($method === 'PUT') {
 
     if ($datosCatalogo) {
         log_accion($db, 'repuesto_editado_inv', null, ['id' => $rid, 'nombre' => $nombre, 'precio_venta' => $precio] + ($datosStock ? ['cantidad' => $qty, 'id_sucursal' => $sid] : []));
-        json_ok(['msg' => 'Repuesto actualizado.'] + ($datosStock ? ['cantidad' => $qty] : []));
+        json_ok(['msg' => 'Repuesto actualizado.'] + ($datosStock ? ['cantidad' => $qty] + aviso_reservas($db, $eid, $rid, $sid, $qty) : []));
     }
     log_accion($db, 'stock_actualizado_inv', null, ['id' => $rid, 'cantidad_nueva' => $qty, 'id_sucursal' => $sid] + ($esDelta ? ['delta' => $delta] : []));
-    json_ok(['msg' => 'Stock actualizado.', 'cantidad' => $qty]);
+    json_ok(['msg' => 'Stock actualizado.', 'cantidad' => $qty] + aviso_reservas($db, $eid, $rid, $sid, $qty));
 }
 
 if ($method === 'DELETE') {

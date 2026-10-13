@@ -43,7 +43,7 @@
       try { stored = localStorage.getItem(KEY) || ''; } catch (e) {}
       const validos = this.atencion().map(s => String(s.id_sucursal));
       if (stored === 'todas' || validos.includes(stored)) this.active = stored === 'todas' ? '' : stored;
-      else this.active = ADMIN ? '' : String(this.base);
+      else this.active = ADMIN || !validos.includes(String(this.base)) ? '' : String(this.base);
       this.renderSwitch();
       this.initInv();
       this.renderUsrFiltro();
@@ -295,7 +295,8 @@
       document.getElementById('usc-nombre').textContent = u.nombre;
       const activas = this.list.filter(s => s.activa);
       const selBase = document.getElementById('usc-base');
-      selBase.innerHTML = activas.map(s => `<option value="${s.id_sucursal}">${esc(s.nombre)}</option>`).join('');
+      // La base debe atender publico; la bodega solo puede ser sucursal adicional.
+      selBase.innerHTML = this.atencion().map(s => `<option value="${s.id_sucursal}">${esc(s.nombre)}</option>`).join('');
       selBase.value = String(u.id_sucursal || this.base);
       this._usrExtras = new Set(u.sucursales_extra || []);
       this.pintarExtras();
@@ -337,7 +338,7 @@
     prepararTecnico() {
       const sel = document.getElementById('tecnico-sucursal');
       if (!sel) return;
-      sel.innerHTML = this.list.filter(s => s.activa).map(s => `<option value="${s.id_sucursal}">${esc(s.nombre)}</option>`).join('');
+      sel.innerHTML = this.atencion().map(s => `<option value="${s.id_sucursal}">${esc(s.nombre)}</option>`).join('');
       if (this.active) sel.value = this.active;
       document.getElementById('fg-tecnico-sucursal')?.classList.toggle('hidden', this.list.filter(s => s.activa).length < 2);
     },
@@ -403,13 +404,16 @@
       return t;
     },
 
+    // Bajo la cantidad fisica: lo disponible si hay reservas y, con varias sucursales, donde mas hay.
     stockDesglose(rep) {
-      if (!this.multiInv()) return '';
-      const ctx = this.invActive ? Number(this.invActive) : null;
-      const partes = (rep.stock || [])
-        .filter(x => x.cantidad > 0 && x.id_sucursal !== ctx)
-        .map(x => esc(this.nombre(x.id_sucursal)) + ' ' + x.cantidad);
-      if (ctx !== null && rep.cantidad_reservada > 0) partes.unshift(rep.cantidad_reservada + ' reservado' + (rep.cantidad_reservada !== 1 ? 's' : ''));
+      const partes = [];
+      const res = rep.cantidad_reservada || 0;
+      if (res > 0) partes.push('disponible ' + (rep.cantidad - res) + ' (' + res + ' reservado' + (res !== 1 ? 's' : '') + ')');
+      if (this.multiInv()) {
+        const ctx = this.invActive ? Number(this.invActive) : null;
+        (rep.stock || []).filter(x => x.cantidad > 0 && x.id_sucursal !== ctx)
+          .forEach(x => partes.push(esc(this.nombre(x.id_sucursal)) + ' ' + x.cantidad));
+      }
       return partes.length ? `<div class="stock-desg">${partes.join(' · ')}</div>` : '';
     },
 

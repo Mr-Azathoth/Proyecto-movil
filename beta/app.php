@@ -350,6 +350,15 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <span class="material-icons-round search-ic">search</span>
           <input id="search-inv" type="search" name="buscar-inv" class="search-input" placeholder="Buscar por nombre, marca o modelo..." autocomplete="nope" data-lpignore="true" data-bwignore="true" data-1p-ignore data-form-type="search">
         </div>
+        <div class="inv-stock-filtro" id="inv-stock-filtro-wrap">
+          <label for="inv-stock-filtro"><span class="material-icons-round">inventory</span> Stock</label>
+          <select id="inv-stock-filtro" class="inv-per-page-sel" aria-label="Filtrar por stock disponible">
+            <option value="">Todos</option>
+            <option value="bajo">Bajo (disponible ≤ N)</option>
+            <option value="agotado">Agotados</option>
+          </select>
+          <span class="inv-umbral hidden" id="inv-umbral-wrap">≤ <input type="number" id="inv-umbral" min="0" max="100000" value="3" aria-label="Umbral de stock bajo"></span>
+        </div>
         <div class="inv-suc-wrap hidden" id="suc-inv-wrap">
           <label for="inv-suc-select"><span class="material-icons-round">storefront</span> Stock de</label>
           <select id="inv-suc-select" class="inv-per-page-sel"></select>
@@ -365,6 +374,8 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           </select>
         </div>
       </div>
+
+      <p class="inv-filtro-info hidden" id="inv-filtro-info"></p>
 
       <div class="panel">
         <div class="table-scroll">

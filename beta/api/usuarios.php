@@ -34,11 +34,13 @@ if ($method === 'GET') {
     json_ok($rows);
 }
 
-// Valida que la sucursal sea activa y de esta empresa; devuelve su id.
-function usr_sucursal_valida(PDO $db, int $eid, $id): int {
+// Valida que la sucursal sea activa y de esta empresa; devuelve su id. Como sucursal BASE debe atender
+// publico: una bodega solo se admite como sucursal extra (para ajustar su stock).
+function usr_sucursal_valida(PDO $db, int $eid, $id, bool $comoBase = false): int {
     $id = (int) $id;
     $s  = sucursal_de_empresa($db, $eid, $id);
     if (!$s || !(int) $s['activa']) json_err('Sucursal inválida.');
+    if ($comoBase && (int) $s['es_bodega']) json_err('Una bodega no puede ser la sucursal base de un usuario: asígnala como sucursal adicional.');
     return $id;
 }
 
@@ -71,7 +73,7 @@ if ($method === 'PUT') {
     // Cambiar sucursal base y/o sucursales habilitadas (traslado de local)
     if (array_key_exists('id_sucursal', $in)) {
         if (!isAdmin()) json_err('Sin permisos.', 403);
-        $base   = usr_sucursal_valida($db, $eid, $in['id_sucursal']);
+        $base   = usr_sucursal_valida($db, $eid, $in['id_sucursal'], true);
         $extras = [];
         foreach ((array)($in['sucursales_extra'] ?? []) as $x) {
             $x = usr_sucursal_valida($db, $eid, $x);
@@ -179,7 +181,7 @@ if ($method === 'POST') {
     if ($dup->fetch()) json_err('Ese nombre de usuario ya está en uso.');
 
     $sucId = isset($in['id_sucursal']) && $in['id_sucursal'] !== ''
-        ? usr_sucursal_valida($db, $eid, $in['id_sucursal'])
+        ? usr_sucursal_valida($db, $eid, $in['id_sucursal'], true)
         : sucursal_default($db, $eid);
 
     $hash = password_hash($pass, PASSWORD_BCRYPT);

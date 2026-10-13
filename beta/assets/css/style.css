@@ -1680,3 +1680,21 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
   .usr-suc-filtro { flex-wrap:wrap; }
   .est-rango-custom { flex-wrap:wrap; max-width:100%; }
 }
+
+/* Filtro de stock bajo / agotado del inventario */
+.inv-stock-filtro { display: flex; align-items: center; gap: 8px; }
+.inv-stock-filtro label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--txt2); white-space: nowrap; }
+.inv-stock-filtro label .material-icons-round { font-size: 15px; }
+.inv-umbral { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--txt2); }
+.inv-umbral.hidden { display: none; }
+.inv-umbral input { width: 72px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3, rgba(255,255,255,.04)); color: var(--txt); font: inherit; }
+.inv-filtro-info { margin: 0 0 10px; font-size: 12.5px; color: var(--txt2); }
+.inv-filtro-info.hidden { display: none; }
+@media (max-width:640px) { .inv-stock-filtro { flex-wrap: wrap; } }
+
+/* Cantidad en el inventario: el CSP bloquea los style="" en linea, el color va por clase */
+.stock-qty { font-size: 16px; }
+.stock-qty.stock-bajo { color: #fbbf24; }
+.stock-qty.stock-cero { color: #f87171; }
+[data-theme="light"] .stock-qty.stock-bajo, [data-theme="medium"] .stock-qty.stock-bajo { color: #b45309; }
+[data-theme="light"] .stock-qty.stock-cero, [data-theme="medium"] .stock-qty.stock-cero { color: #dc2626; }

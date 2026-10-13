@@ -11,7 +11,7 @@ const run  = (cmd, args) => { try { return { out: execFileSync(cmd, args, { cwd:
 const fresh = () => { run(PHP, ['tests/reset.php']); const r = run(PHP, ['tests/seed.php']); if (r.code) throw new Error('seed fallo: ' + r.out); };
 
 // stock.js y ui_inventario.js comparten estado (la segunda parte del resultado de la primera).
-const grupos = [['suc.js'], ['stock.js', 'ui_inventario.js'], ['fix.js'], ['tel.js'], ['smoke.js']];
+const grupos = [['suc.js'], ['stock.js', 'ui_inventario.js'], ['fix.js'], ['tel.js'], ['smoke.js'], ['lowstock.js'], ['review.js']];
 let totalOk = 0, totalFail = 0, errores = 0;
 
 for (const g of grupos) {

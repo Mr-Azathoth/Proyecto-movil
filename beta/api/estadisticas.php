@@ -21,8 +21,9 @@ $hasta_dt = $hasta . ' 23:59:59';
 
 // Filtro opcional por sucursal (?sucursal=ID). El parametro va siempre justo despues de id_empresa.
 $suc = sucursal_filtro($db, $eid);
-$sf  = $suc !== null ? ' AND id_sucursal = ?' : '';
-$sfr = $suc !== null ? ' AND r.id_sucursal = ?' : '';
+// Las reparaciones en la papelera (deleted_at) no cuentan en ninguna cifra.
+$sf  = ' AND deleted_at IS NULL'   . ($suc !== null ? ' AND id_sucursal = ?' : '');
+$sfr = ' AND r.deleted_at IS NULL' . ($suc !== null ? ' AND r.id_sucursal = ?' : '');
 $sp  = $suc !== null ? [$suc] : [];
 
 // ── KPIs ─────────────────────────────────────────────────────────────────────
@@ -156,7 +157,7 @@ if ($suc === null) {
           FROM sucursales su
           LEFT JOIN reparaciones r
                  ON r.id_sucursal = su.id_sucursal AND r.id_empresa = su.id_empresa
-                AND r.fecha_ingreso BETWEEN ? AND ?
+                AND r.fecha_ingreso BETWEEN ? AND ? AND r.deleted_at IS NULL
          WHERE su.id_empresa = ? AND su.es_bodega = 0
            AND (su.activa = 1 OR r.id_ingreso IS NOT NULL)
          GROUP BY su.id_sucursal, su.nombre

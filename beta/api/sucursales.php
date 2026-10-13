@@ -122,6 +122,16 @@ if ($method === 'PUT') {
             json_err('Hay usuarios asignados a esta sucursal. Reasígnalos antes de ' . ($aBodega ? 'convertirla en bodega.' : 'desactivarla.'));
         }
     }
+    // El stock de una sucursal inactiva no se puede ver, ajustar ni traspasar (y seguiria sumando en los
+    // totales), asi que primero hay que moverlo a otra sucursal.
+    if ($desactiva) {
+        $st = $db->prepare("SELECT COALESCE(SUM(s.cantidad), 0) FROM inventario_stock s
+                              JOIN inventario i ON i.id_repuesto = s.id_repuesto AND i.deleted_at IS NULL
+                             WHERE s.id_empresa = ? AND s.id_sucursal = ? AND s.cantidad > 0");
+        $st->execute([$eid, $id]);
+        $uds = (int) $st->fetchColumn();
+        if ($uds > 0) json_err("Esta sucursal tiene {$uds} unidad" . ($uds !== 1 ? 'es' : '') . ' en stock. Traspásalas a otra sucursal antes de desactivarla.');
+    }
     if ($aBodega) {
         $rp = $db->prepare("SELECT COUNT(*) FROM reparaciones WHERE id_empresa = ? AND id_sucursal = ? AND deleted_at IS NULL");
         $rp->execute([$eid, $id]);

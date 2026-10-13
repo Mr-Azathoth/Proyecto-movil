@@ -491,6 +491,16 @@ function updateStats(rows) {
   document.getElementById('st-gar').textContent   = counts['Garantia'];
 }
 
+// Donde esta el equipo para los mensajes de WhatsApp: empresa (+ sucursal si hay varias) y, aparte,
+// direccion y telefono de esa sucursal (lo vacio lo hereda de la casa matriz).
+function _waDonde(idSucursal) {
+  const empresa = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+  const c       = window.SUC ? SUC.contacto(idSucursal) : null;
+  const local   = c && c.multi && c.nombre ? `${empresa} — Sucursal ${c.nombre}` : empresa;
+  const donde   = c ? [c.direccion ? `Dirección: ${c.direccion}` : '', c.telefono ? `Teléfono: ${c.telefono}` : ''].filter(Boolean).join('\n') : '';
+  return { local, donde };
+}
+
 // Retorna link de WhatsApp: incluye mensaje con código de seguimiento cuando está disponible
 function waLink(rep) {
   const phone      = (rep.telefono_cliente||'').replace(/[^0-9]/g,'');
@@ -499,12 +509,9 @@ function waLink(rep) {
   const codigo     = rep.codigo_seguimiento || '';
   if (!codigo) return base;
   const nombre = rep.nombre_cliente || 'cliente';
-  const empresa = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
   // Si la empresa tiene varias sucursales, se indica en cual esta el equipo y como llegar / llamar.
-  const c      = window.SUC ? SUC.contacto(rep.id_sucursal) : null;
-  const local  = c && c.multi && c.nombre ? `${empresa} — Sucursal ${c.nombre}` : empresa;
-  const donde  = c ? [c.direccion ? `Dirección: ${c.direccion}` : '', c.telefono ? `Teléfono: ${c.telefono}` : ''].filter(Boolean).join('\n') : '';
-  const url    = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
+  const { local, donde } = _waDonde(rep.id_sucursal);
+  const url   = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
   const msg    = `Hola ${nombre}! Tu equipo está en *${local}*.\n${donde ? donde + '\n' : ''}Código de seguimiento: *${codigo}*\nConsulta el estado en: ${url}`;
   return `${base}?text=${encodeURIComponent(msg)}`;
 }
@@ -817,6 +824,7 @@ async function submitNuevo(e) {
 
     if (j.ok) {
       _lastNuevoId = j.data.id ?? null;
+      _repuestosCache = null; // si reservo un repuesto, la disponibilidad cambio
       if (_lastNuevoId && typeof uploadNuevoFoto === 'function') await uploadNuevoFoto(_lastNuevoId);
       loadServicios();
       document.getElementById('nuevo-post-save').classList.remove('hidden');
@@ -832,9 +840,13 @@ async function submitNuevo(e) {
         const rawTel = (document.querySelector('[name="telefono_cliente"]')?.value || '').replace(/\D/g, '');
         const tel    = /^56/.test(rawTel) ? rawTel : /^9\d{8}$/.test(rawTel) ? '56' + rawTel : rawTel;
         const nombre = document.querySelector('[name="nombre_cliente"]')?.value?.trim() || 'cliente';
-        const local  = document.getElementById('sidebar-nombre')?.textContent?.trim() || 'el servicio técnico';
+        // Sucursal donde se ingresó: la elegida en el formulario (o la activa / base del usuario)
+        const selSuc = document.getElementById('nuevo-sucursal');
+        const idSuc  = (selSuc && selSuc.value) || (window.SUC ? (SUC.active || SUC.base) : null);
+        const { local, donde } = _waDonde(idSuc);
         const url    = `${location.origin}${BASE_PATH}/seguimiento.php?codigo=${encodeURIComponent(codigo)}`;
         const msg    = `Hola ${nombre}! Tu equipo ingresó a *${local}*.\n` +
+                       (donde ? donde + '\n' : '') +
                        `Código de seguimiento: *${codigo}*\n` +
                        `Consulta el estado en: ${url}`;
         const wa     = tel.length >= 11
@@ -928,7 +940,10 @@ async function submitActualizar(e) {
 // ═══════════════════════════════════════════════════════════
 function _buildInventarioRow(rep) {
   const isAdmin    = CURRENT_USER.role === 'Admin';
-  const stockColor = rep.cantidad > 0 ? 'color:#e6edf3' : 'color:#f87171';
+  const disp       = _invDisp(rep);
+  // Clases en vez de style="": el CSP de la app bloquea los estilos en linea.
+  const stockCls   = disp <= 0 ? ' stock-cero'
+                   : (_invStockFiltro === 'bajo' && disp <= _invUmbral ? ' stock-bajo' : '');
   const actions = `<td class="action-col">
     <div class="row-actions">
       <button type="button" class="btn-qr-row btn-inv-qr" data-id="${rep.id_repuesto}" title="Ver QR">
@@ -953,16 +968,37 @@ function _buildInventarioRow(rep) {
     <td>${esc(rep.marca_compatible||'—')}</td>
     <td>${esc(rep.modelo_compatible||'—')}</td>
     <td>$${fmt(rep.precio_venta)}</td>
-    <td><strong class="stock-qty" style="${stockColor};font-size:16px">${rep.cantidad}</strong>${window.SUC ? SUC.stockDesglose(rep) : ''}</td>
+    <td><strong class="stock-qty${stockCls}">${rep.cantidad}</strong>${window.SUC ? SUC.stockDesglose(rep) : ''}</td>
     ${actions}
   </tr>`;
+}
+
+function _pintarFiltroInfo(mostrados, total) {
+  const el = document.getElementById('inv-filtro-info');
+  if (!el) return;
+  if (!_invStockFiltro) { el.classList.add('hidden'); return; }
+  const donde = window.SUC && SUC.multiInv() ? (SUC.invActive ? SUC.nombre(SUC.invActive) : 'todas las sucursales (total)') : '';
+  const crit  = _invStockFiltro === 'agotado' ? 'agotados (disponible 0)' : `con stock disponible ≤ ${_invUmbral} (incluye agotados)`;
+  el.innerHTML = `Mostrando <strong>${mostrados}</strong> de ${total} repuestos ${crit}${donde ? ' · ' + esc(donde) : ''}. <button type="button" class="link-btn" data-inv-filtro-limpiar>Quitar filtro</button>`;
+  el.classList.remove('hidden');
 }
 
 function _applySortInventario() {
   const tbody = document.getElementById('tbl-inventario');
   if (!_invMap.size) return;
   let reps = Array.from(_invMap.values());
-  if (_invSortCol) {
+  const filtroActivo = !!_invStockFiltro;
+  if (filtroActivo) reps = reps.filter(_invPasaFiltro);
+  _pintarFiltroInfo(reps.length, _invMap.size);
+  if (filtroActivo && !reps.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="tbl-empty">Ningún repuesto con ese criterio de stock.</td></tr>';
+    const pag = document.getElementById('inv-pagination'); if (pag) pag.innerHTML = '';
+    return;
+  }
+  // Lista de reposicion: sin un orden elegido por el usuario, de menos a mas stock disponible.
+  if (filtroActivo && !_invSortManual) {
+    reps.sort((a, b) => _invDisp(a) - _invDisp(b) || (a.nombre || '').localeCompare(b.nombre || '', 'es'));
+  } else if (_invSortCol) {
     reps.sort((a, b) => {
       let va, vb;
       switch (_invSortCol) {
@@ -1036,6 +1072,9 @@ async function loadInventario() {
       const addBtn = CURRENT_USER.role === 'Admin'
         ? ' <button class="link-btn" data-action="open-modal-repuesto">Agregar el primero</button>' : '';
       tbody.innerHTML = `<tr><td colspan="6" class="tbl-empty">Sin repuestos registrados.${addBtn}</td></tr>`;
+      _invMap.clear();
+      document.getElementById('inv-filtro-info')?.classList.add('hidden');
+      const pagV = document.getElementById('inv-pagination'); if (pagV) pagV.innerHTML = '';
       return;
     }
     _invMap.clear();
@@ -1067,13 +1106,14 @@ async function alterStock(id, delta) {
     const qty    = j.data.cantidad;
     const cached = _invMap.get(id);
     if (cached) cached.cantidad = qty;
+    _repuestosCache = null; // los selectores de repuesto deben releer el stock
+    if (j.data.aviso) toast(j.data.aviso, 'err');
 
-    // Actualiza solo la fila afectada — sin recargar la tabla completa
+    // Se vuelve a pintar la pagina con los datos locales (sin pedir todo de nuevo): la fila puede
+    // entrar o salir del filtro de stock bajo y su "disponible" cambia.
     const row = document.querySelector(`#tbl-inventario tr[data-inv-id="${id}"]`);
-    if (!row) { loadInventario(); return; }
-    const cell  = row.querySelector('.stock-qty');
-    cell.textContent = `${qty}`;
-    cell.style.color = qty > 0 ? '#e6edf3' : '#f87171';
+    if (!row || !cached) { loadInventario(); return; }
+    _applySortInventario();
   } catch(e) {
     _handleErr('alterStock', e);
   }
@@ -1173,6 +1213,8 @@ async function submitEditRepuesto(e) {
         }
       }
       toast('✔ Repuesto actualizado.', 'ok');
+      if (j.data?.aviso) toast(j.data.aviso, 'err');
+      _repuestosCache = null;
       closeModal('modal-edit-repuesto');
       loadInventario();
     } else {
@@ -1310,6 +1352,12 @@ const _repMap           = new Map(); // id_ingreso → objeto rep completo
 let   _repPageSize      = 25;        // 0 = todos
 let   _repPage          = 1;
 const _invMap           = new Map(); // id_repuesto → objeto repuesto completo
+// Filtro de reposicion: '' | 'bajo' | 'agotado', siempre sobre el stock DISPONIBLE (fisico menos reservado).
+let   _invStockFiltro   = '';
+let   _invUmbral        = 3;
+let   _invSortManual    = false;     // el usuario eligio un orden: no se fuerza "menos stock primero"
+const _invDisp          = rep => (parseInt(rep.cantidad) || 0) - (parseInt(rep.cantidad_reservada) || 0);
+const _invPasaFiltro    = rep => !_invStockFiltro || (_invStockFiltro === 'agotado' ? _invDisp(rep) <= 0 : _invDisp(rep) <= _invUmbral);
 let   _sortCol          = null;      // columna activa servicios: 'id' | 'cliente' | null
 let   _sortDir          = 'asc';    // 'asc' | 'desc'
 let   _invSortCol       = 'id';      // columna activa inventario
@@ -1516,6 +1564,8 @@ function openExportInvModal() {
   if (info) {
     const parts = [];
     if (q)           parts.push(`"${q}"`);
+    if (_invStockFiltro === 'bajo')    parts.push(`stock disponible ≤ ${_invUmbral}`);
+    if (_invStockFiltro === 'agotado') parts.push('solo agotados');
     if (_invSortCol) parts.push(`orden ${_invSortCol} ${_invSortDir === 'asc' ? '↑' : '↓'}`);
     info.textContent = parts.length ? parts.join(' · ') : 'Sin filtros';
   }
@@ -1529,6 +1579,8 @@ function doExportInv(formato) {
   if (q) params.set('q', q);
   if (_invSortCol) { params.set('sort_col', _invSortCol); params.set('sort_dir', _invSortDir); }
   if (window.SUC && SUC.invParam()) params.set('sucursal', SUC.invParam());
+  if (_invStockFiltro) { params.set('stock', _invStockFiltro); if (_invStockFiltro === 'bajo') params.set('umbral', _invUmbral); }
+  if (_invStockFiltro && !_invSortManual) { params.delete('sort_col'); params.delete('sort_dir'); } // la lista de reposicion va de menos a mas stock
   const url = `${BASE_PATH}/api/exportar_inventario.php?${params.toString()}`;
   closeModal('modal-exportar-inv');
   if (formato === 'pdf') {
@@ -1871,9 +1923,42 @@ document.addEventListener('DOMContentLoaded', async () => {
       const col = th.dataset.sortInv;
       if (_invSortCol === col) _invSortDir = _invSortDir === 'asc' ? 'desc' : 'asc';
       else { _invSortCol = col; _invSortDir = 'asc'; }
+      _invSortManual = true;
       _invPage = 1;
       _applySortInventario();
     });
+
+  // ── Filtro de stock bajo / agotado del inventario ─────────────
+  (function initFiltroStock() {
+    const selF = document.getElementById('inv-stock-filtro');
+    const inpU = document.getElementById('inv-umbral');
+    const wrapU = document.getElementById('inv-umbral-wrap');
+    if (!selF || !inpU) return;
+    const KEY = 'inv_stock_' + CURRENT_USER.uid;
+    try {
+      const g = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (g && ['', 'bajo', 'agotado'].includes(g.f)) _invStockFiltro = g.f;
+      if (g && Number.isFinite(g.u) && g.u >= 0) _invUmbral = Math.min(100000, Math.floor(g.u));
+    } catch (e) {}
+    selF.value = _invStockFiltro; inpU.value = _invUmbral;
+    wrapU.classList.toggle('hidden', _invStockFiltro !== 'bajo');
+    const aplicar = () => {
+      wrapU.classList.toggle('hidden', _invStockFiltro !== 'bajo');
+      try { localStorage.setItem(KEY, JSON.stringify({ f: _invStockFiltro, u: _invUmbral })); } catch (e) {}
+      _invPage = 1;
+      _applySortInventario();
+    };
+    selF.addEventListener('change', () => { _invStockFiltro = selF.value; aplicar(); });
+    inpU.addEventListener('input', debounce(() => {
+      const n = parseInt(inpU.value, 10);
+      _invUmbral = Number.isFinite(n) && n >= 0 ? Math.min(100000, n) : 0;
+      aplicar();
+    }, 250));
+    document.getElementById('inv-filtro-info')?.addEventListener('click', e => {
+      if (!e.target.closest('[data-inv-filtro-limpiar]')) return;
+      _invStockFiltro = ''; selF.value = ''; aplicar();
+    });
+  })();
 
   document.querySelectorAll('.modal-close[data-modal], .btn-sec[data-modal]').forEach(btn => {
     btn.addEventListener('click', () => closeModal(btn.dataset.modal));
