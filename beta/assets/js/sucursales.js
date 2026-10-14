@@ -350,13 +350,35 @@
       this.cargarUsuarios();
     },
 
-    // Rellena el <select> de sucursal en "Agregar tecnico"
+    // "Agregar usuario": sucursal base (solo con atencion al publico) y, si hay mas de una sucursal, las adicionales donde
+    // tambien trabajara (cualquier sucursal activa, bodegas incluidas). La base no se repite entre las adicionales.
     prepararTecnico() {
       const sel = document.getElementById('tecnico-sucursal');
       if (!sel) return;
       sel.innerHTML = this.atencion().map(s => `<option value="${s.id_sucursal}">${esc(s.nombre)}</option>`).join('');
-      if (this.active) sel.value = this.active;
-      document.getElementById('fg-tecnico-sucursal')?.classList.toggle('hidden', this.list.filter(s => s.activa).length < 2);
+      if (this.active && this.atencion().some(s => String(s.id_sucursal) === String(this.active))) sel.value = this.active;
+      const varias = this.activas().length > 1;
+      document.getElementById('fg-tecnico-sucursal')?.classList.toggle('hidden', !varias);
+      document.getElementById('fg-tecnico-extras')?.classList.toggle('hidden', !varias);
+      this._extrasNuevo = new Set();
+      this.pintarExtrasNuevo();
+    },
+
+    pintarExtrasNuevo() {
+      const box = document.getElementById('tecnico-extras');
+      const sel = document.getElementById('tecnico-sucursal');
+      if (!box || !sel) return;
+      const base = Number(sel.value);
+      this._extrasNuevo.delete(base);
+      box.innerHTML = this.activas().filter(s => s.id_sucursal !== base).map(s =>
+        `<label class="usc-chk"><input type="checkbox" value="${s.id_sucursal}"${this._extrasNuevo.has(s.id_sucursal) ? ' checked' : ''}> ${esc(s.nombre)}${s.es_bodega ? ' <span>(bodega)</span>' : ''}</label>`
+      ).join('');
+    },
+
+    // Sucursales adicionales marcadas en el formulario de nuevo usuario (vacio si el bloque esta oculto).
+    extrasNuevo() {
+      if (document.getElementById('fg-tecnico-extras')?.classList.contains('hidden')) return [];
+      return [...document.querySelectorAll('#tecnico-extras input:checked')].map(i => Number(i.value));
     },
 
     // Etiqueta de sucursal para la tabla de usuarios
@@ -546,6 +568,10 @@
     document.querySelector('.cfg-tab[data-tab="sucursales"]')?.addEventListener('click', () => SUC.renderAdmin());
     document.querySelector('.cfg-tab[data-tab="usuarios"]')?.addEventListener('click', async () => { await SUC.cargarUsuarios(); });
     document.getElementById('btn-nuevo-tecnico')?.addEventListener('click', () => SUC.prepararTecnico());
+    document.getElementById('tecnico-sucursal')?.addEventListener('change', () => {
+      SUC._extrasNuevo = new Set([...document.querySelectorAll('#tecnico-extras input:checked')].map(i => Number(i.value)));
+      SUC.pintarExtrasNuevo();
+    });
     document.getElementById('btn-abrir-nuevo')?.addEventListener('click', () => SUC.prepararNuevo());
     document.getElementById('nuevo-sucursal')?.addEventListener('change', () => {
       document.getElementById('hid-rep-nuevo').value = '';

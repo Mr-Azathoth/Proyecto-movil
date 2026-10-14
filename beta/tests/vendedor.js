@@ -145,6 +145,58 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   r = await adm.req('DELETE', '/api/usuarios.php', { json: { id_usuario: ids.A ? us.find(x => x.cargo === 'Admin').id_usuario : 0 } });
   ok('a un admin no (solo tecnicos y vendedores)', r.json?.ok === false, r.text.slice(0, 100));
 
+  // ── Tecnico y vendedor en VARIAS sucursales ────────────────
+  const sur = (await adm.post('/api/sucursales.php', { nombre: 'Sur tercera', direccion: '', telefono: '' })).json.data.id;
+  const crear = async (user, cargo, extra) => {
+    creds[user] = 'Clave12345';
+    const x = await adm.post('/api/usuarios.php', { nombre: user, user, password: 'Clave12345', cargo, id_sucursal: ids.cen, ...extra });
+    return x;
+  };
+  r = await crear('vend_multi', 'Vendedor', { sucursales_extra: [ids.nor, ids.cen, ids.bod] });
+  const vmId = r.json?.data?.id;
+  ok('se crea un vendedor con sucursal base Centro y adicionales Norte y Bodega (la base repetida se descarta)', r.json?.ok === true && !!vmId, r.text.slice(0, 120));
+  let u = (await adm.get('/api/usuarios.php')).json.data.find(x => x.id_usuario === vmId);
+  ok('...y queda guardado: base Centro + extras Norte y Bodega', u.id_sucursal === ids.cen && JSON.stringify(u.sucursales_extra.slice().sort()) === JSON.stringify([ids.nor, ids.bod].sort()), JSON.stringify(u));
+  const vm = await new Client().login('vend_multi');
+  const esc = (await vm.get('/api/sucursales.php')).json.data.escritura.slice().sort();
+  ok('el vendedor puede escribir en Centro, Norte y Bodega, no en Sur', JSON.stringify(esc) === JSON.stringify([ids.cen, ids.nor, ids.bod].sort()) && !esc.includes(sur), JSON.stringify(esc));
+  r = await nuevaRep(vm, { id_sucursal: String(ids.nor) });
+  ok('...ingresa un servicio en Norte (adicional)', r.json?.ok === true && (await rep(r.json.data.id)).id_sucursal === ids.nor, r.text.slice(0, 100));
+  r = await nuevaRep(vm);
+  ok('...y sin indicar sucursal queda en su base (Centro)', r.json?.ok === true && (await rep(r.json.data.id)).id_sucursal === ids.cen, r.text.slice(0, 100));
+  r = await nuevaRep(vm, { id_sucursal: String(sur) });
+  ok('...pero NO en Sur, donde no esta habilitado (403)', prohibido(r), r.status);
+  r = await nuevaRep(vm, { id_sucursal: String(ids.bod) });
+  ok('...ni en la bodega: no atiende servicios', r.json?.ok === false, r.text.slice(0, 100));
+  r = await vm.put('/api/reparaciones.php', { id: ids.repNor1, status: 'Entregado' });
+  ok('...entrega equipos de Norte (adicional)', r.json?.ok === true, r.text.slice(0, 100));
+  r = await vm.put('/api/inventario.php', { id: INV['Pantalla A54'], cantidad_delta: 1, id_sucursal: ids.bod });
+  ok('...y aunque este habilitado en la bodega sigue sin poder tocar el stock (cargo Vendedor)', prohibido(r), r.status);
+
+  r = await crear('tec_multi2', 'Tecnico', { sucursales_extra: [ids.nor, ids.bod] });
+  const tmId = r.json?.data?.id;
+  const tm2 = await new Client().login('tec_multi2');
+  r = await tm2.put('/api/inventario.php', { id: INV['Pantalla A54'], cantidad_delta: 1, id_sucursal: ids.bod });
+  ok('un tecnico con la bodega como adicional SI ajusta el stock de la bodega', r.json?.ok === true, r.text.slice(0, 100));
+  r = await tm2.put('/api/inventario.php', { id: INV['Pantalla A54'], cantidad_delta: 1, id_sucursal: sur });
+  ok('...pero no el de Sur (403)', prohibido(r), r.status);
+  await tm2.put('/api/inventario.php', { id: INV['Pantalla A54'], cantidad_delta: -1, id_sucursal: ids.bod });
+
+  const antes = (await adm.get('/api/usuarios.php')).json.data.length;
+  r = await crear('vend_ajena', 'Vendedor', { sucursales_extra: [ids.nor, ids.b1] });
+  ok('una sucursal de OTRA empresa como adicional se rechaza...', r.json?.ok === false, r.text.slice(0, 100));
+  ok('...y no se crea el usuario a medias', (await adm.get('/api/usuarios.php')).json.data.length === antes, '');
+  await adm.put('/api/sucursales.php', { id_sucursal: sur, activa: 0 });
+  r = await crear('vend_inactiva', 'Vendedor', { sucursales_extra: [sur] });
+  ok('una sucursal inactiva como adicional tambien se rechaza', r.json?.ok === false, r.text.slice(0, 100));
+
+  // Cambiar despues las sucursales de un vendedor (modal "Sucursal")
+  r = await adm.put('/api/usuarios.php', { id_usuario: vmId, id_sucursal: ids.nor, sucursales_extra: [ids.cen] });
+  ok('el admin le cambia la base a Norte y deja Centro como adicional', r.json?.ok === true, r.text.slice(0, 100));
+  r = await nuevaRep(vm);
+  ok('...y ahora sin indicar sucursal queda en Norte (rige de inmediato)', r.json?.ok === true && (await rep(r.json.data.id)).id_sucursal === ids.nor, r.text.slice(0, 100));
+  for (const id of [vmId, tmId]) if (id) await adm.req('DELETE', '/api/usuarios.php', { json: { id_usuario: id } });
+
   // ── Login con varios cargos ────────────────────────────────
   const nuevo = await new Client().login('vendCentro');
   ok('el vendedor sigue pudiendo iniciar sesion de nuevo', (await nuevo.get('/api/reparaciones.php')).json?.ok === true, '');

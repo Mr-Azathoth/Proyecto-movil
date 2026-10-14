@@ -359,5 +359,25 @@ const fs=require('fs'), vm=require('vm');
   ok('usuarios: el boton de eliminar sabe si es tecnico o vendedor', /data-cargo="Vendedor" title="Eliminar vendedor"/.test(th) && /data-cargo="Tecnico" title="Eliminar técnico"/.test(th), '');
   ok('usuarios: ya no existe el boton "Pasar a Admin/Tecnico"', !/toggle-cargo/.test(th), '');
 
+  // ── "Agregar usuario": sucursal base + sucursales adicionales ──
+  for (const id of ['tecnico-sucursal', 'tecnico-extras', 'fg-tecnico-sucursal', 'fg-tecnico-extras']) els[id] = els[id] || mk(id);
+  await S.load();
+  S.active = ''; els['tecnico-sucursal'].value = String(ids.cen);
+  S.prepararTecnico();
+  const baseHtml = els['tecnico-sucursal'].innerHTML, extrasHtml = els['tecnico-extras'].innerHTML;
+  ok('nuevo usuario: la sucursal base ofrece solo las que atienden publico (Centro y Norte, no la bodega)', />Centro</.test(baseHtml) && />Norte</.test(baseHtml) && !/Bodega/.test(baseHtml), baseHtml);
+  ok('...las adicionales ofrecen las demas, bodega incluida, sin repetir la base (Centro)', />\s*Norte\s*</.test(extrasHtml) && /Bodega/.test(extrasHtml) && /\(bodega\)/.test(extrasHtml) && !/>\s*Centro\s*</.test(extrasHtml), extrasHtml);
+  ok('...cada una con su casilla', (extrasHtml.match(/type="checkbox"/g) || []).length === 2, extrasHtml);
+  els['tecnico-sucursal'].value = String(ids.nor); S._extrasNuevo = new Set([ids.cen]); S.pintarExtrasNuevo();
+  ok('al cambiar la base a Norte, Norte desaparece de las adicionales y Centro aparece marcada', !/>\s*Norte\s*</.test(els['tecnico-extras'].innerHTML) && /value="\d+" checked> Centro/.test(els['tecnico-extras'].innerHTML), els['tecnico-extras'].innerHTML);
+  els['tecnico-sucursal'].value = String(ids.cen); S._extrasNuevo = new Set([ids.cen]); S.pintarExtrasNuevo();
+  ok('si la base elegida estaba marcada como adicional, se quita de las adicionales', !/checked/.test(els['tecnico-extras'].innerHTML) && S._extrasNuevo.size === 0, els['tecnico-extras'].innerHTML);
+  const qs0 = ctx.document.querySelectorAll; ctx.document.querySelectorAll = sel => sel === '#tecnico-extras input:checked' ? [{ value: String(ids.nor) }, { value: String(ids.bod) }] : qs0(sel);
+  const hidden0 = els['fg-tecnico-extras'].classList.contains;
+  ok('las adicionales marcadas se envian al guardar (Norte y Bodega)', JSON.stringify(S.extrasNuevo()) === JSON.stringify([ids.nor, ids.bod]), JSON.stringify(S.extrasNuevo()));
+  els['fg-tecnico-extras'].classList.contains = () => true;
+  ok('...y si el bloque esta oculto (una sola sucursal) no se envia ninguna', JSON.stringify(S.extrasNuevo()) === '[]', '');
+  els['fg-tecnico-extras'].classList.contains = hidden0; ctx.document.querySelectorAll = qs0;
+
   console.log(`\n${pass} OK, ${fail} fallos`); process.exit(fail?1:0);
 })().catch(e=>{console.error('ERR',e.stack.split('\n').slice(0,5).join('\n'));process.exit(1)});

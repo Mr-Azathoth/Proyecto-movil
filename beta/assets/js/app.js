@@ -2866,7 +2866,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const r = await apiFetch('/reparo/api/usuarios.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, user, password: pass, cargo: document.getElementById('usuario-cargo')?.value || 'Tecnico', id_sucursal: document.getElementById('tecnico-sucursal')?.value || '' })
+        body: JSON.stringify({ nombre, user, password: pass, cargo: document.getElementById('usuario-cargo')?.value || 'Tecnico', id_sucursal: document.getElementById('tecnico-sucursal')?.value || '', sucursales_extra: window.SUC ? SUC.extrasNuevo() : [] })
       });
       const j = await r.json();
       if (j.ok) {

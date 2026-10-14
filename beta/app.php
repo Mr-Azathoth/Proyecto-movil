@@ -622,7 +622,12 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
             <div class="fg"><label>Nombre de usuario</label><input type="text" id="tecnico-user" placeholder="Ej: juan.perez" maxlength="40" autocomplete="off"></div>
             <div class="fg"><label>Contraseña</label><input type="password" id="tecnico-pass" placeholder="Mínimo 6 caracteres" maxlength="60" autocomplete="new-password"></div>
             <div class="fg"><label>Confirmar contraseña</label><input type="password" id="tecnico-pass2" placeholder="Repetir contraseña" maxlength="60" autocomplete="new-password"></div>
-            <div class="fg hidden" id="fg-tecnico-sucursal"><label>Sucursal</label><select id="tecnico-sucursal"></select></div>
+            <div class="fg hidden" id="fg-tecnico-sucursal"><label for="tecnico-sucursal">Sucursal base</label><select id="tecnico-sucursal"></select></div>
+            <div class="usc-group hidden" id="fg-tecnico-extras">
+              <span class="usc-lbl">También puede trabajar en</span>
+              <div id="tecnico-extras" class="usc-list"></div>
+              <p class="suc-nota">Puede ver todas las sucursales, pero solo modifica servicios y stock de estas. Se puede cambiar después.</p>
+            </div>
           </div>
           <div class="modal-ft">
             <button type="button" class="btn-sec" id="modal-tecnico-cancel">Cancelar</button>

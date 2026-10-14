@@ -46,6 +46,16 @@ function usr_limite_cargo(PDO $db, int $eid, string $cargo, int $excluir = 0): v
     if ((int) $c->fetchColumn() >= LIMITE_POR_CARGO) json_err('Límite alcanzado: máximo ' . LIMITE_POR_CARGO . ' ' . NOMBRE_CARGO[$cargo] . ' por cuenta.');
 }
 
+// Sucursales adicionales del usuario (ademas de la base): cada una debe ser activa y de esta empresa; la base se descarta.
+function usr_extras_validas(PDO $db, int $eid, $lista, int $base): array {
+    $extras = [];
+    foreach ((array) $lista as $x) {
+        $x = usr_sucursal_valida($db, $eid, $x);
+        if ($x !== $base) $extras[$x] = $x;
+    }
+    return $extras;
+}
+
 // Valida que la sucursal sea activa y de esta empresa; devuelve su id. Como sucursal BASE debe atender
 // publico: una bodega solo se admite como sucursal extra (para ajustar su stock).
 function usr_sucursal_valida(PDO $db, int $eid, $id, bool $comoBase = false): int {
@@ -87,11 +97,7 @@ if ($method === 'PUT') {
     if (array_key_exists('id_sucursal', $in)) {
         if (!isAdmin()) json_err('Sin permisos.', 403);
         $base   = usr_sucursal_valida($db, $eid, $in['id_sucursal'], true);
-        $extras = [];
-        foreach ((array)($in['sucursales_extra'] ?? []) as $x) {
-            $x = usr_sucursal_valida($db, $eid, $x);
-            if ($x !== $base) $extras[$x] = $x;
-        }
+        $extras = usr_extras_validas($db, $eid, $in['sucursales_extra'] ?? [], $base);
         $db->beginTransaction();
         try {
             $db->prepare("UPDATE usuarios SET id_sucursal = ? WHERE id_usuario = ? AND id_empresa = ?")
@@ -198,14 +204,26 @@ if ($method === 'POST') {
         ? usr_sucursal_valida($db, $eid, $in['id_sucursal'], true)
         : sucursal_default($db, $eid);
 
+    // Sucursales adicionales (opcional): se validan ANTES de crear al usuario
+    $extras = usr_extras_validas($db, $eid, $in['sucursales_extra'] ?? [], $sucId);
+
     $hash = password_hash($pass, PASSWORD_BCRYPT);
-    $ins  = $db->prepare(
-        "INSERT INTO usuarios (id_empresa, nombre, user, pass, cargo, activo, id_sucursal)
-         VALUES (?, ?, ?, ?, ?, 1, ?)"
-    );
-    $ins->execute([$eid, $nombre, $user, $hash, $cargo, $sucId]);
-    $newUid = (int)$db->lastInsertId();
-    log_accion($db, $cargo === 'Vendedor' ? 'vendedor_creado' : 'tecnico_creado', null, ['nombre' => $nombre, 'user' => $user], ['id' => $newUid]);
+    $db->beginTransaction();
+    try {
+        $ins  = $db->prepare(
+            "INSERT INTO usuarios (id_empresa, nombre, user, pass, cargo, activo, id_sucursal)
+             VALUES (?, ?, ?, ?, ?, 1, ?)"
+        );
+        $ins->execute([$eid, $nombre, $user, $hash, $cargo, $sucId]);
+        $newUid = (int)$db->lastInsertId();
+        $insX = $db->prepare("INSERT INTO usuario_sucursales (id_usuario, id_sucursal) VALUES (?, ?)");
+        foreach ($extras as $x) $insX->execute([$newUid, $x]);
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        throw $e;
+    }
+    log_accion($db, $cargo === 'Vendedor' ? 'vendedor_creado' : 'tecnico_creado', null, ['nombre' => $nombre, 'user' => $user, 'id_sucursal' => $sucId, 'extras' => array_values($extras)], ['id' => $newUid]);
     $etq = $cargo === 'Vendedor' ? 'Vendedor' : 'Técnico';
     json_ok(['msg' => "{$etq} {$nombre} creado correctamente.", 'id' => $newUid, 'cargo' => $cargo]);
 }
