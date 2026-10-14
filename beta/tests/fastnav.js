@@ -100,6 +100,10 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   const appJs = (await adm.get('/assets/js/app.js?v=1')).text;
   ok('app.js pide confirmacion al dar o quitar el cargo de administrador desde el selector', /Dar acceso de administrador/.test(appJs) && /Quitar acceso de administrador/.test(appJs) && /nuevo === 'Admin' \|\| actual === 'Admin'/.test(appJs), '');
 
+  // Inventario en escritorio: botones de acciones en una sola linea
+  const cssInv = (await adm.get('/assets/css/style.css')).text;
+  ok('style.css mantiene los botones de acciones del inventario en una sola linea (solo escritorio)', /@media \(min-width: 901px\)\s*\{\s*#tbl-inventario \.row-actions\s*\{\s*flex-wrap:\s*nowrap/.test(cssInv), '');
+
   console.log(`\n${pass} OK, ${fail} fallos`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack.split('\n').slice(0, 4).join('\n')); process.exit(2); });
