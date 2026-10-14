@@ -108,6 +108,8 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   const creados = [r.json?.data?.id];
   r = await adm.post('/api/usuarios.php', { nombre: 'Raro', user: 'cargo_raro', password: 'Clave12345', cargo: 'Admin' });
   ok('no se puede crear un Admin desde ahi (cargo invalido)', r.json?.ok === false, r.text.slice(0, 100));
+  r = await adm.post('/api/usuarios.php', { nombre: 'Cargo lista', user: 'cargo_lista', password: 'Clave12345', cargo: ['Vendedor'] });
+  ok('un cargo que no es texto (lista) se rechaza sin errores de PHP', r.json?.ok === false && /Cargo inválido/.test(r.json.msg || '') && !/Warning|Array to string/.test(r.text), r.text.slice(0, 160));
   r = await adm.post('/api/usuarios.php', { nombre: 'Sin cargo', user: 'sin_cargo', password: 'Clave12345' });
   ok('sin indicar cargo se crea un Tecnico (compatibilidad)', r.json?.ok === true && r.json.data.cargo === 'Tecnico', r.text.slice(0, 100));
   creados.push(r.json?.data?.id);
@@ -198,6 +200,21 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   r = await nuevaRep(vm);
   ok('...y ahora sin indicar sucursal queda en Norte (rige de inmediato)', r.json?.ok === true && (await rep(r.json.data.id)).id_sucursal === ids.nor, r.text.slice(0, 100));
   for (const id of [vmId, tmId]) if (id) await adm.req('DELETE', '/api/usuarios.php', { json: { id_usuario: id } });
+
+  // ── Servicios que YA tienen repuesto asignado (lo hizo el tecnico) ──
+  const conRep = (await nuevaRep(tc, { id_repuesto_usado: INV['Pantalla A54'] })).json.data.id;
+  r = await vd.put('/api/reparaciones.php', { id: conRep, obs: 'llamo el cliente' });
+  ok('el vendedor puede guardar una nota en un servicio con repuesto (sin enviar el repuesto)', r.json?.ok === true, r.status + ' ' + r.text.slice(0, 100));
+  r = await vd.put('/api/reparaciones.php', { id: conRep, id_repuesto_usado: INV['Bateria X'] });
+  ok('...pero NO puede cambiarlo por otro repuesto (403)', prohibido(r), r.status);
+  r = await vd.put('/api/reparaciones.php', { id: conRep, id_repuesto_usado: 0 });
+  ok('...ni quitarlo (403)', prohibido(r), r.status);
+  r = await vd.put('/api/reparaciones.php', { id: conRep, status: 'Entregado', id_repuesto_usado: INV['Pantalla A54'] });
+  ok('...y SI puede entregarlo (la pantalla reenvia el mismo repuesto) y se descuenta el stock', r.json?.ok === true && r.json.data.stock_descontado === 1, r.text.slice(0, 120));
+
+  // ── Exportaciones: la columna dice "Ingresado por" (puede ser un vendedor) ──
+  r = await adm.get('/api/exportar.php?formato=csv');
+  ok('la exportacion de servicios llama a la columna "Ingresado por", no "Tecnico"', /Ingresado por/.test(r.text) && !/Repuesto Inicial[^\n]*Técnico/.test(r.text), r.text.split('\n')[0]);
 
   // ── Login con varios cargos ────────────────────────────────
   const nuevo = await new Client().login('vendCentro');

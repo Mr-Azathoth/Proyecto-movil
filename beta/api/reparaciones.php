@@ -250,7 +250,7 @@ if ($method === 'PUT') {
             json_err('Un vendedor solo puede marcar un servicio como Entregado o en Garantía.', 403);
         }
         $rep_anterior = $row['id_repuesto_usado'] !== null ? (int) $row['id_repuesto_usado'] : null;
-        if ($id_repuesto_nuevo !== $rep_anterior) {
+        if (($id_repuesto_nuevo !== null ? (int) $id_repuesto_nuevo : null) !== $rep_anterior) {   // (int): no depender del tipo que devuelva el driver
             json_err('Un vendedor no puede cambiar el repuesto de un servicio.', 403);
         }
     }

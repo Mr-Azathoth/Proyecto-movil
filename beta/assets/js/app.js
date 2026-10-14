@@ -2464,17 +2464,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tbl-usuarios')?.addEventListener('change', async e => {
     const sel = e.target.closest('.usr-cargo-sel');
     if (!sel) return;
-    const nuevo = sel.value;
-    if (nuevo === sel.dataset.actual) return;
-    try {
-      const r = await apiFetch('/reparo/api/usuarios.php', {
-        method: 'PUT', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ id_usuario: parseInt(sel.dataset.uid), cargo: nuevo })
-      });
-      const j = await r.json();
-      j.ok ? toast(`✔ ${j.data.msg}`, 'ok') : toast(j.msg, 'err');
-    } catch(err) { _handleErr('apicall', err); }
-    loadUsuarios();   // vuelve a pintar con el cargo real (tambien si el cambio fue rechazado)
+    const nuevo = sel.value, actual = sel.dataset.actual, uidCambio = parseInt(sel.dataset.uid);
+    if (nuevo === actual) return;
+    const aplicar = async () => {
+      try {
+        const r = await apiFetch('/reparo/api/usuarios.php', {
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id_usuario: uidCambio, cargo: nuevo })
+        });
+        const j = await r.json();
+        j.ok ? toast(`✔ ${j.data.msg}`, 'ok') : toast(j.msg, 'err');
+      } catch(err) { _handleErr('apicall', err); }
+      loadUsuarios();   // vuelve a pintar con el cargo real (tambien si el cambio fue rechazado)
+    };
+    // Dar o quitar el cargo de administrador es delicado: se pide confirmar. El selector vuelve a su valor actual
+    // hasta que se confirme (si se cancela, queda como estaba).
+    if (nuevo === 'Admin' || actual === 'Admin') {
+      sel.value = actual;
+      const nombre = sel.getAttribute('aria-label').replace(/^Cargo de /, '');
+      showConfirm(
+        nuevo === 'Admin' ? 'Dar acceso de administrador' : 'Quitar acceso de administrador',
+        nuevo === 'Admin'
+          ? `¿Hacer administrador a "${nombre}"? Podrá ver y cambiar todo: precios, usuarios, sucursales, inventario y estadísticas.`
+          : `¿Cambiar a "${nombre}" a ${nuevo === 'Vendedor' ? 'Vendedor' : 'Técnico'}? Perderá el acceso de administrador de inmediato.`,
+        aplicar, 'Confirmar');
+      return;
+    }
+    aplicar();
   });
 
   // ── Event delegation tabla Usuarios ─────────────────────────

@@ -96,6 +96,10 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   const st = (await adm.get('/assets/css/style.css')).text;
   ok('style.css ya no importa estilos externos', !/@import\s+url\(['"]?https?:/.test(st), '');
 
+  // ── Cambio de cargo con confirmacion hacia/desde Admin ─────
+  const appJs = (await adm.get('/assets/js/app.js?v=1')).text;
+  ok('app.js pide confirmacion al dar o quitar el cargo de administrador desde el selector', /Dar acceso de administrador/.test(appJs) && /Quitar acceso de administrador/.test(appJs) && /nuevo === 'Admin' \|\| actual === 'Admin'/.test(appJs), '');
+
   console.log(`\n${pass} OK, ${fail} fallos`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack.split('\n').slice(0, 4).join('\n')); process.exit(2); });

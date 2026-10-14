@@ -90,7 +90,7 @@ if ($formato === 'csv') {
     fputcsv($out, [
         '#', 'Fecha Ingreso', 'Cliente', 'Teléfono', 'RUT',
         'Tipo', 'Marca', 'Modelo', 'Falla', 'Estado',
-        'Valor ($)', 'Repuesto Inicial', 'Técnico'
+        'Valor ($)', 'Repuesto Inicial', 'Ingresado por'
     ], ';');
 
     $csvSafe = fn(string $v): string => preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
@@ -203,7 +203,7 @@ header('Content-Type: text/html; charset=utf-8');
       <th>Estado</th>
       <th>Valor</th>
       <th>Repuesto</th>
-      <th>Técnico</th>
+      <th>Ingresado por</th>
     </tr>
   </thead>
   <tbody>

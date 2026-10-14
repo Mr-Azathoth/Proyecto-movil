@@ -191,8 +191,8 @@ if ($method === 'POST') {
     if (strlen($pass) < 6)            json_err('La contraseña debe tener al menos 6 caracteres.');
 
     // Cargo del nuevo usuario (por defecto Técnico) y límite por cargo
-    $cargo = (string) ($in['cargo'] ?? 'Tecnico');
-    if (!in_array($cargo, ['Tecnico', 'Vendedor'], true)) json_err('Cargo inválido.');
+    $cargo = $in['cargo'] ?? 'Tecnico';
+    if (!is_string($cargo) || !in_array($cargo, ['Tecnico', 'Vendedor'], true)) json_err('Cargo inválido.');   // (un valor no textual no debe convertirse a "Array")
     usr_limite_cargo($db, $eid, $cargo);
 
     // Usuario único en toda la plataforma
