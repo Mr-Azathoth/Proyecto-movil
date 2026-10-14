@@ -61,6 +61,10 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   r = await vd.postForm('/api/tickets.php', { action: 'nuevo', asunto: 'Asunto valido', mensaje: '<p>corto</p>' });
   ok('un mensaje demasiado corto se rechaza', r.json?.ok === false, r.text.slice(0, 80));
 
+  // Telefono: la tabla de tickets no ensancha la pagina
+  const css = (await adm.get('/assets/css/style.css')).text;
+  ok('style.css evita que la tabla de Soporte desborde en el telefono (scroll propio y fecha en dos lineas)', /#soporte-ticket-list\s*\{\s*overflow-x:\s*auto/.test(css) && /\.sop-td-fecha\s*\{\s*white-space:\s*normal/.test(css), '');
+
   console.log(`\n${pass} OK, ${fail} fallos`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack.split('\n').slice(0, 4).join('\n')); process.exit(2); });

@@ -1709,4 +1709,12 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 .usr-cargo-sel { background: var(--bg3); color: var(--txt); border: 1px solid var(--border); border-radius: 8px;
                  padding: 5px 8px; font-family: inherit; font-size: 12px; cursor: pointer; }
 .usr-cargo-sel:focus { outline: none; border-color: var(--accent); }
-.fg p.hint-min { margin: 5px 0 0; line-height: 1.35; }
+.fg p.hint-min { margin: 5px 0 10px; line-height: 1.35; }
+
+/* Soporte en el telefono: la tabla de tickets no debe ensanchar la pagina */
+#soporte-ticket-list { overflow-x: auto; }
+@media (max-width: 640px) {
+  .sop-table th, .sop-table td { padding-left: 8px; padding-right: 8px; }
+  .sop-td-fecha { white-space: normal; width: 76px; }   /* la fecha y la hora se parten en dos lineas */
+  .sop-td-id { width: 34px; }
+}
