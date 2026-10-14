@@ -821,6 +821,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
       </div>
 
     </div><!-- /view-estadisticas -->
+    <?php endif; /* fin de las vistas solo admin: Soporte es de todos los cargos */ ?>
 
     <!-- ═══════════════════════ VIEW: SOPORTE ══════════════════════════ -->
     <div id="view-soporte" class="view">
@@ -868,6 +869,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
         </div>
       </div>
     </div><!-- /modal-soporte -->
+    <?php if(isAdmin()): /* sigue lo solo admin: modales de configuracion */ ?>
 
     <!-- Modal: detalle ticket de soporte -->
     <div class="modal-bg" id="modal-sop-detalle">
