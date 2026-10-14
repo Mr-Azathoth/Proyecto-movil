@@ -174,6 +174,7 @@
       const tb = document.getElementById('tbl-sucursales');
       if (!tb) return;
       const rows = this.list;
+      const unica = this.atencion().length === 1 ? this.atencion()[0].id_sucursal : null;   // la unica con atencion al publico no se puede desactivar
       tb.innerHTML = rows.length ? rows.map(s => `<tr>
         <td><strong>${esc(s.nombre)}</strong>${s.es_bodega ? ' <span class="pill pill-gray">Bodega</span>' : ''}${s.activa ? '' : ' <span class="pill pill-orange">Inactiva</span>'}
             <div class="cell-sub">${this.contactoHtml(s)}</div></td>
@@ -181,7 +182,7 @@
         <td>${s.n_reparaciones}</td>
         <td><div class="row-actions">
           <button class="btn-sm btn-sec" data-suc-action="editar" data-id="${s.id_sucursal}">Editar</button>
-          <button class="btn-sm btn-sec" data-suc-action="${s.activa ? 'desactivar' : 'activar'}" data-id="${s.id_sucursal}">${s.activa ? 'Desactivar' : 'Activar'}</button>
+          <button class="btn-sm btn-sec" data-suc-action="${s.activa ? 'desactivar' : 'activar'}" data-id="${s.id_sucursal}"${s.id_sucursal === unica ? ' disabled title="Es tu única sucursal con atención al público: no se puede desactivar. Crea otra primero."' : ''}>${s.activa ? 'Desactivar' : 'Activar'}</button>
         </div></td></tr>`).join('')
         : '<tr><td colspan="4" class="tbl-empty">Sin sucursales.</td></tr>';
       this._admin = rows;
@@ -269,6 +270,11 @@
       document.getElementById('suc-nota-matriz').textContent =
         'La boleta usa estos datos. Lo que dejes vacío se toma de la casa matriz (los datos de tu empresa). El teléfono puede ser el mismo que el de otra sucursal.';
       document.getElementById('suc-bodega').checked  = !!(s && s.es_bodega);
+      // La unica sucursal con atencion al publico no puede pasar a ser bodega (el servidor tampoco lo permite).
+      const unica = s && this.atencion().length === 1 && this.atencion()[0].id_sucursal === s.id_sucursal;
+      const chk = document.getElementById('suc-bodega');
+      chk.disabled = !!unica;
+      chk.title = unica ? 'Es tu única sucursal con atención al público: no puede ser una bodega.' : '';
       document.getElementById('suc-modal-titulo').textContent = s ? 'Editar sucursal' : 'Nueva sucursal';
       if (typeof window.openModal === 'function') window.openModal('modal-sucursal');
     },

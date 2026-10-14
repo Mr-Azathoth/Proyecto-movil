@@ -72,6 +72,23 @@ const fs=require('fs'), vm=require('vm');
   ok('editar desde una sucursal: el stock se habilita, dice "Stock en Centro" y no hay nota', els['edit-rep-cantidad'].disabled===false && /Stock en Centro/.test(els['lbl-edit-stock'].textContent) && els['edit-stock-nota'].textContent==='', els['lbl-edit-stock'].textContent+' | '+els['edit-stock-nota'].textContent);
   S.onInvChange(''); await new Promise(r=>setTimeout(r,900));
 
+  // Config > Sucursales: la unica sucursal con atencion al publico no se puede desactivar ni pasar a bodega
+  const sv = {load:S.load, cu:S.cargarUsuarios, list:S.list};
+  S.load = async()=>{}; S.cargarUsuarios = async()=>{};
+  S.list = [{id_sucursal:1,nombre:'Principal',activa:1,es_bodega:0,n_usuarios:2,n_reparaciones:15,direccion:'',telefono:''}];
+  await S.renderAdmin();
+  ok('una sola sucursal con atencion: su boton Desactivar queda deshabilitado, con explicacion', /data-suc-action="desactivar"[^>]*disabled[^>]*title="Es tu única sucursal/.test(els['tbl-sucursales'].innerHTML), els['tbl-sucursales'].innerHTML.slice(-300));
+  S.abrirModalSucursal(S.list[0]);
+  ok('...y en su ventana de edicion no se puede marcar como bodega', els['suc-bodega'].disabled===true && /única sucursal/.test(els['suc-bodega'].title), '');
+  S.list = [S.list[0], {id_sucursal:2,nombre:'Norte',activa:1,es_bodega:0,n_usuarios:1,n_reparaciones:0,direccion:'',telefono:''}, {id_sucursal:3,nombre:'Bodega',activa:1,es_bodega:1,n_usuarios:0,n_reparaciones:0,direccion:'',telefono:''}];
+  await S.renderAdmin();
+  ok('con dos sucursales de atencion, Desactivar vuelve a estar disponible', !/disabled/.test(els['tbl-sucursales'].innerHTML), '');
+  S.abrirModalSucursal(S.list[0]);
+  ok('...y la ventana de edicion permite el cambio', els['suc-bodega'].disabled===false, '');
+  S.list = [S.list[0]]; S.abrirModalSucursal(null);
+  ok('una sucursal nueva nunca tiene el cambio bloqueado', els['suc-bodega'].disabled===false, '');
+  S.load = sv.load; S.cargarUsuarios = sv.cu; S.list = sv.list;
+
   // Traspaso por la UI
   await T.loadInventario();
   await S.abrirTraspaso(INV['Pantalla A54']);
