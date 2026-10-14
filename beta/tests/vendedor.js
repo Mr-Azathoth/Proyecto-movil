@@ -112,14 +112,16 @@ const ok = (n, c, x = '') => { c ? pass++ : fail++; console.log((c ? 'PASS ' : '
   ok('sin indicar cargo se crea un Tecnico (compatibilidad)', r.json?.ok === true && r.json.data.cargo === 'Tecnico', r.text.slice(0, 100));
   creados.push(r.json?.data?.id);
   let nVend = 2;                               // vendCentro + vend_otro
-  for (let i = 0; nVend < 5; i++, nVend++) { const x = await adm.post('/api/usuarios.php', { nombre: 'V' + i, user: 'vend_x' + i, password: 'Clave12345', cargo: 'Vendedor' }); creados.push(x.json?.data?.id); }
+  for (let i = 0; nVend < 10; i++, nVend++) { const x = await adm.post('/api/usuarios.php', { nombre: 'V' + i, user: 'vend_x' + i, password: 'Clave12345', cargo: 'Vendedor' }); creados.push(x.json?.data?.id); }
   r = await adm.post('/api/usuarios.php', { nombre: 'Sexto', user: 'vend_sexto', password: 'Clave12345', cargo: 'Vendedor' });
-  ok('el limite es de 5 vendedores', r.json?.ok === false && /máximo 5 vendedores/.test(r.json.msg || ''), r.text.slice(0, 120));
+  ok('el limite es de 10 vendedores', r.json?.ok === false && /máximo 10 vendedores/.test(r.json.msg || ''), r.text.slice(0, 120));
   r = await adm.post('/api/usuarios.php', { nombre: 'Tec', user: 'tec_extra', password: 'Clave12345', cargo: 'Tecnico' });
   ok('...y es independiente del de tecnicos (hay 4, aun cabe uno)', r.json?.ok === true, r.text.slice(0, 120));
   creados.push(r.json?.data?.id);
+  r = await adm.post('/api/usuarios.php', { nombre: 'Tec6', user: 'tec_sexto', password: 'Clave12345', cargo: 'Tecnico' });
+  ok('el limite de tecnicos sigue siendo 5', r.json?.ok === false && /máximo 5 técnicos/.test(r.json.msg || ''), r.text.slice(0, 120));
   r = await adm.put('/api/usuarios.php', { id_usuario: uid('tecNorte'), cargo: 'Vendedor' });
-  ok('pasar a alguien a Vendedor con el cupo lleno tambien se rechaza', r.json?.ok === false && /máximo 5 vendedores/.test(r.json.msg || ''), r.text.slice(0, 120));
+  ok('pasar a alguien a Vendedor con el cupo lleno tambien se rechaza', r.json?.ok === false && /máximo 10 vendedores/.test(r.json.msg || ''), r.text.slice(0, 120));
   r = await adm.put('/api/usuarios.php', { id_usuario: uid('vendCentro'), cargo: 'Superman' });
   ok('un cargo inexistente se rechaza', r.json?.ok === false, r.text.slice(0, 100));
   r = await adm.put('/api/usuarios.php', { id_usuario: ids.A, cargo: 'Tecnico' });

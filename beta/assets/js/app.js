@@ -1894,20 +1894,20 @@ async function loadUsuarios() {
     if (!j.ok) { tbody.innerHTML = `<tr><td colspan="5" class="tbl-empty">${esc(j.msg)}</td></tr>`; return; }
     if (window.SUC) await SUC.ready;
     // Contadores por cargo (maximo 5 de cada uno) y estado del boton
-    const LIMITE   = 5;
+    const LIMITE   = { Tecnico: 5, Vendedor: 10 };   // igual que LIMITE_POR_CARGO en api/usuarios.php
     const tecnicos = j.data.filter(u => u.cargo === 'Tecnico').length;
     const vendedores = j.data.filter(u => u.cargo === 'Vendedor').length;
-    window._cargosLlenos = { Tecnico: tecnicos >= LIMITE, Vendedor: vendedores >= LIMITE };
+    window._cargosLlenos = { Tecnico: tecnicos >= LIMITE.Tecnico, Vendedor: vendedores >= LIMITE.Vendedor };
     const countEl  = document.getElementById('cfg-tecnicos-count');
     const btnNuevo = document.getElementById('btn-nuevo-tecnico');
     if (countEl) {
-      countEl.textContent = `${tecnicos} / ${LIMITE} técnicos · ${vendedores} / ${LIMITE} vendedores`;
+      countEl.textContent = `${tecnicos} / ${LIMITE.Tecnico} técnicos · ${vendedores} / ${LIMITE.Vendedor} vendedores`;
       countEl.classList.remove('hidden');
     }
     if (btnNuevo) {
-      const todoLleno = tecnicos >= LIMITE && vendedores >= LIMITE;
+      const todoLleno = tecnicos >= LIMITE.Tecnico && vendedores >= LIMITE.Vendedor;
       btnNuevo.disabled = todoLleno;
-      btnNuevo.title    = todoLleno ? 'Límite alcanzado: máximo 5 técnicos y 5 vendedores' : '';
+      btnNuevo.title    = todoLleno ? `Límite alcanzado: máximo ${LIMITE.Tecnico} técnicos y ${LIMITE.Vendedor} vendedores` : '';
     }
     const me = CURRENT_USER.user;
     const lista = window.SUC ? SUC.filtrarLista(j.data) : j.data;

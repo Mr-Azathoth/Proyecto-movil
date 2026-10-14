@@ -35,7 +35,7 @@ if ($method === 'GET') {
 }
 
 // Maximo de usuarios por cargo y empresa (tecnicos y vendedores se cuentan por separado).
-const LIMITE_POR_CARGO = 5;
+const LIMITE_POR_CARGO = ['Tecnico' => 5, 'Vendedor' => 10];   // la pantalla (app.js, loadUsuarios) repite estos numeros
 const NOMBRE_CARGO = ['Tecnico' => 'técnicos', 'Vendedor' => 'vendedores'];
 
 // Corta con error si la empresa ya tiene el maximo de usuarios con ese cargo ($excluir: el usuario que cambia de cargo).
@@ -43,7 +43,7 @@ function usr_limite_cargo(PDO $db, int $eid, string $cargo, int $excluir = 0): v
     if (!isset(NOMBRE_CARGO[$cargo])) return;
     $c = $db->prepare("SELECT COUNT(*) FROM usuarios WHERE id_empresa = ? AND cargo = ? AND id_usuario <> ?");
     $c->execute([$eid, $cargo, $excluir]);
-    if ((int) $c->fetchColumn() >= LIMITE_POR_CARGO) json_err('Límite alcanzado: máximo ' . LIMITE_POR_CARGO . ' ' . NOMBRE_CARGO[$cargo] . ' por cuenta.');
+    if ((int) $c->fetchColumn() >= LIMITE_POR_CARGO[$cargo]) json_err('Límite alcanzado: máximo ' . LIMITE_POR_CARGO[$cargo] . ' ' . NOMBRE_CARGO[$cargo] . ' por cuenta.');
 }
 
 // Sucursales adicionales del usuario (ademas de la base): cada una debe ser activa y de esta empresa; la base se descarta.

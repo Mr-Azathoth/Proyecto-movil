@@ -351,7 +351,7 @@ const fs=require('fs'), vm=require('vm');
   els['tbl-usuarios'] = els['tbl-usuarios'] || mk('tbl-usuarios'); els['cfg-tecnicos-count'] = els['cfg-tecnicos-count'] || mk('cfg-tecnicos-count'); els['btn-nuevo-tecnico'] = els['btn-nuevo-tecnico'] || mk('btn-nuevo-tecnico');
   await vm.runInContext('loadUsuarios()', ctx); await sleep(300);
   const th = els['tbl-usuarios'].innerHTML;
-  ok('usuarios: los contadores muestran tecnicos y vendedores por separado', els['cfg-tecnicos-count'].textContent === '3 / 5 técnicos · 1 / 5 vendedores', els['cfg-tecnicos-count'].textContent);
+  ok('usuarios: los contadores muestran tecnicos y vendedores por separado', els['cfg-tecnicos-count'].textContent === '3 / 5 técnicos · 1 / 10 vendedores', els['cfg-tecnicos-count'].textContent);
   ok('usuarios: el vendedor aparece con su etiqueta propia', /pill-green">Vendedor</.test(th) && /pill-orange">Técnico</.test(th) && /pill-blue">Admin</.test(th), '');
   const nSel = (th.match(/class="usr-cargo-sel"/g) || []).length, nFilas = (th.match(/<tr>/g) || []).length;
   ok('usuarios: cada usuario (menos uno mismo) tiene su selector de cargo con las 3 opciones', nSel === nFilas - 1 && /<option value="Vendedor"/.test(th) && /<option value="Admin"/.test(th) && /<option value="Tecnico"/.test(th), nSel + ' de ' + nFilas);
