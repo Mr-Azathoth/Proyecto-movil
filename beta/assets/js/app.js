@@ -246,6 +246,7 @@ function switchView(name, el) {
 function openModal(id) {
   document.getElementById(id).classList.add('active');
   document.body.style.overflow = 'hidden';
+  if (_TOUR_VENTANA[id]) _tourVentana(id);
   setTimeout(() => {
     const first = document.getElementById(id).querySelector(
       'input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])'
@@ -300,7 +301,8 @@ window.invalidarPrefetch = () => _prefetch.clear();
 // Excel (280 KB), gráficos (205 KB), lector QR (130 KB) y generador QR se descargaban y ejecutaban en CADA carga, antes
 // de que la app arrancara. Ahora se piden la primera vez que se usan (o antes, al pasar el mouse por su acceso).
 // Llevan ?v=<fecha> igual que app.js, así quedan en la caché del navegador.
-const _LIB_ARCHIVO = { chart: 'chart.umd.min.js', qrcode: 'qrcode.min.js', jsqr: 'jsqr.min.js', xlsx: 'xlsx.mini.min.js' };
+const _LIB_ARCHIVO = { chart: 'chart.umd.min.js', qrcode: 'qrcode.min.js', jsqr: 'jsqr.min.js', xlsx: 'xlsx.mini.min.js', driver: 'driver.iife.js', tour: 'tour.js' };
+const _CSS_ARCHIVO = { driver_css: 'driver.css', tour_css: 'tour.css' };
 const _libPromesa  = {};
 function cargarLib(nombre) {
   if (!_libPromesa[nombre]) {
@@ -332,6 +334,91 @@ async function cargarConPrecarga(url, pintar, vigente) {
   const j = await r.json();
   if (!vigente()) return;
   if (!pre || JSON.stringify(j) !== ultimo) pintar(j);
+}
+
+function cargarCss(nombre) {
+  if (!_libPromesa[nombre]) {
+    _libPromesa[nombre] = new Promise((ok, falla) => {
+      let v = ''; try { v = JSON.parse(document.body.dataset.libs || '{}')[nombre] || ''; } catch (e) {}
+      const l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = `${BASE_PATH}/assets/css/${_CSS_ARCHIVO[nombre]}${v ? '?v=' + v : ''}`;
+      l.onload = () => ok();
+      l.onerror = () => { delete _libPromesa[nombre]; l.remove(); falla(new Error('No se pudo cargar la libreria ' + nombre)); };
+      document.head.appendChild(l);
+    });
+  }
+  return _libPromesa[nombre];
+}
+
+// ── Tour guiado ───────────────────────────────────────────────
+// El tour (Driver.js + tour.js + sus estilos, ~15 KB comprimidos) se descarga solo cuando se necesita: la primera vez
+// que el usuario ingresa o cuando pulsa el boton de ayuda. Lo que el usuario ya vio se guarda en la BD (tabla usuario_tour).
+async function iniciarTour(id, opciones) {
+  try {
+    await Promise.all([cargarLib('driver'), cargarCss('driver_css'), cargarCss('tour_css')]);
+    await cargarLib('tour');
+    return await window.TOUR.iniciar(id, opciones || {});
+  } catch (e) {
+    toast('No se pudo cargar el tour. Revisa tu conexión e inténtalo de nuevo.', 'err');
+    return false;
+  }
+}
+
+// Primer ingreso: si el usuario nunca vio el tour general, se ofrece una sola vez (no si hay un aviso o ventana abierta).
+let _tourAutoHecho = false;
+function _tourAuto() {
+  if (_tourAutoHecho) return;
+  let vistos = null;
+  try { vistos = JSON.parse(document.getElementById('boot-tour')?.textContent || 'null'); } catch (e) { vistos = null; }
+  if (!vistos || vistos.general) return;                       // sin datos o ya lo vio / lo salto
+  _tourAutoHecho = true;
+  setTimeout(() => {
+    const hayVentana = document.querySelector('.modal-bg.active') || document.querySelector('#trial-wall:not(.hidden)') || /[?&]inv=/.test(location.search);
+    if (hayVentana || document.hidden) return;
+    iniciarTour('general', { auto: true });
+  }, 1200);
+}
+
+// Ventanas con tour propio: la primera vez que se abren se ofrece (si el usuario ya vio el tour general).
+const _TOUR_VENTANA = { 'modal-nuevo': 'ingreso', 'modal-detalle': 'detalle', 'modal-repuesto': 'repuesto', 'modal-edit-repuesto': 'editrepuesto' };
+function _tourVentana(idModal) {
+  const tour = _TOUR_VENTANA[idModal];
+  let vistos = null;
+  try { vistos = JSON.parse(document.getElementById('boot-tour')?.textContent || 'null'); } catch (e) { vistos = null; }
+  if (!vistos || !vistos.general || vistos[tour] || window.TOUR?.activo) return;   // el general va primero; cada ventana, una sola vez
+  setTimeout(() => {
+    if (document.getElementById(idModal)?.classList.contains('active') && !document.hidden && !window.TOUR?.activo) iniciarTour(tour, { auto: true });
+  }, 700);
+}
+
+function _vistaActiva() { return (document.querySelector('.view.active')?.id || 'view-servicios').replace(/^view-/, ''); }
+
+function _initAyuda() {
+  const btn = document.getElementById('btn-ayuda'), menu = document.getElementById('menu-ayuda');
+  if (!btn || !menu) return;
+  const cerrar = () => { menu.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); };
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const abrir = menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !abrir);
+    btn.setAttribute('aria-expanded', String(abrir));
+    if (abrir) menu.querySelector('button')?.focus();
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('#menu-ayuda, #btn-ayuda')) cerrar(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.classList.contains('hidden')) { cerrar(); btn.focus(); } });
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('[data-ayuda]');
+    if (!b) return;
+    cerrar();
+    if (b.dataset.ayuda === 'general') iniciarTour('general');
+    else if (b.dataset.ayuda === 'vista') iniciarTour(_vistaActiva());
+    else if (b.dataset.ayuda === 'soporte') switchView('soporte', document.querySelector('.nav-link[data-view="soporte"]'));
+  });
+  document.querySelectorAll('[data-ayuda-vista]').forEach(b => b.addEventListener('click', () => iniciarTour(b.dataset.ayudaVista)));
+  document.querySelectorAll('[data-ayuda-modal]').forEach(b => b.addEventListener('click', async () => {
+    if (await iniciarTour(b.dataset.ayudaModal) === false && window.TOUR && !window.TOUR.activo) toast('No hay nada que explicar en esta parte de la ventana.', 'err');
+  }));
 }
 
 // Mientras llega lo nuevo la tabla se atenua en vez de vaciarse: no hay "salto" ni pantalla en blanco.
@@ -552,7 +639,7 @@ async function loadServicios() {
     // otra sucursal o busqueda puede pedirse mientras tanto: solo la ultima pinta
     await cargarConPrecarga(_urlServicios(q, st), json => _pintarServicios(json, q, st, tbody), () => seq === _repReqSeq);
     // con la lista ya pintada se precarga el inventario para que la vista abra al instante
-    if (!_warmDone && seq === _repReqSeq) { _warmDone = true; setTimeout(() => { prefetchView('inventario'); cargarLib('qrcode').catch(() => {}); }, 800); }
+    if (!_warmDone && seq === _repReqSeq) { _warmDone = true; setTimeout(() => { prefetchView('inventario'); cargarLib('qrcode').catch(() => {}); }, 800); _tourAuto(); }
   } catch(e) {
     _handleErr('loadServicios', e);
     if (e?.message !== 'session_expired' && seq === _repReqSeq)
@@ -1268,7 +1355,7 @@ function openInvEdit(item) {
   const isAdmin = CURRENT_USER.role === 'Admin';
   document.getElementById('edit-rep-id').value      = item.id_repuesto;
   document.getElementById('edit-rep-cantidad').value = item.cantidad;
-  if (window.SUC) SUC.prepararStockModales();
+  if (window.SUC) SUC.prepararStockModales(item);
   const adminFields = document.getElementById('edit-rep-admin-fields');
   if (isAdmin) {
     adminFields.style.display = '';
@@ -1972,6 +2059,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     link.addEventListener('touchstart',   () => prefetchView(link.dataset.view), { passive: true });
   });
 
+  _initAyuda();
+
   document.getElementById('btn-abrir-nuevo')?.addEventListener('click', () => {
     _resetModalNuevo();
     openModal('modal-nuevo');
@@ -2283,7 +2372,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Escape cierra el modal activo más reciente
   document.addEventListener('keydown', async e => {
-    if (e.key !== 'Escape') return;
+    if (e.key !== 'Escape' || window.TOUR?.activo) return;       // con un tour en curso, Escape solo cierra el tour
     const active = document.querySelector('.modal-bg.active');
     if (!active) return;
     if (active.id === 'modal-detalle') await _undoPendingChanges();

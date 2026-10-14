@@ -1723,3 +1723,30 @@ select optgroup { background:#0d1525; color:rgba(80,210,255,.85); font-style:nor
 @media (min-width: 901px) {
   #tbl-inventario .row-actions { flex-wrap: nowrap; }
 }
+
+/* Ayuda y tour guiado */
+.btn-ayuda { background:none; border:none; color:var(--sb-txt2); cursor:pointer; padding:6px; border-radius:6px;
+  display:flex; align-items:center; transition:var(--tr); flex-shrink:0; }
+.btn-ayuda:hover, .btn-ayuda[aria-expanded="true"] { color:var(--sb-accent); background:var(--sb-hover); }
+.btn-ayuda .material-icons-round { font-size:20px; }
+.menu-ayuda { position:fixed; left:12px; bottom:66px; z-index:1500; min-width:220px; padding:6px;
+  background:var(--bg2); border:1px solid var(--border); border-radius:12px; box-shadow:0 12px 36px rgba(0,0,0,.45); }
+.menu-ayuda button { display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; background:none; border:0;
+  border-radius:8px; color:var(--txt); font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.menu-ayuda button:hover, .menu-ayuda button:focus-visible { background:var(--bg3); outline:none; }
+.menu-ayuda .material-icons-round { font-size:18px; color:var(--accent); }
+.page-title-row { display:flex; align-items:center; gap:8px; }
+.btn-ayuda-vista { background:none; border:0; padding:3px; border-radius:50%; color:var(--txt3); cursor:pointer;
+  display:inline-flex; align-items:center; transition:var(--tr); }
+.btn-ayuda-vista:hover, .btn-ayuda-vista:focus-visible { color:var(--accent); background:var(--bg3); outline:none; }
+.btn-ayuda-vista .material-icons-round { font-size:20px; }
+@media (max-width: 900px) { .menu-ayuda { left:8px; bottom:76px; } }
+
+/* "?" en el encabezado de las ventanas */
+.btn-ayuda-modal { background:none; border:0; padding:3px; margin:0 auto 0 8px; border-radius:50%; color:var(--txt3); cursor:pointer;
+  display:inline-flex; align-items:center; transition:var(--tr); }
+.btn-ayuda-modal:hover, .btn-ayuda-modal:focus-visible { color:var(--accent); background:var(--bg3); outline:none; }
+.btn-ayuda-modal .material-icons-round { font-size:20px; }
+
+/* Nota bajo el stock del modal de editar repuesto */
+.nota-stock { font-size:12px; color:var(--txt2); margin:8px 0 0; line-height:1.45; }

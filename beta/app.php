@@ -80,6 +80,10 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           'qrcode' => filemtime(__DIR__.'/assets/js/qrcode.min.js'),
           'jsqr'   => filemtime(__DIR__.'/assets/js/jsqr.min.js'),
           'xlsx'   => filemtime(__DIR__.'/assets/js/xlsx.mini.min.js'),
+          'driver' => filemtime(__DIR__.'/assets/js/driver.iife.js'),
+          'tour'   => filemtime(__DIR__.'/assets/js/tour.js'),
+          'driver_css' => filemtime(__DIR__.'/assets/css/driver.css'),
+          'tour_css'   => filemtime(__DIR__.'/assets/css/tour.css'),
       ]), ENT_QUOTES) ?>"
       data-plan-estado="<?= htmlspecialchars($_plan_estado) ?>"
       data-plan-dias="<?= $_plan_dias !== null ? (int)$_plan_dias : '' ?>">
@@ -179,12 +183,20 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <span class="user-role"><?=ucargo()?></span>
         </div>
       </div>
+      <button type="button" class="btn-ayuda" id="btn-ayuda" title="Ayuda y tour guiado" aria-label="Ayuda" aria-haspopup="menu" aria-expanded="false" aria-controls="menu-ayuda">
+        <span class="material-icons-round">help_outline</span>
+      </button>
       <button class="btn-theme-toggle" id="btn-theme-toggle" title="Cambiar tema">
         <span class="material-icons-round" id="theme-icon">dark_mode</span>
       </button>
       <a href="<?= BASE ?>/logout.php" class="btn-logout" title="Salir">
         <span class="material-icons-round">logout</span>
       </a>
+    </div>
+    <div class="menu-ayuda hidden" id="menu-ayuda" role="menu" aria-label="Ayuda">
+      <button type="button" role="menuitem" data-ayuda="general"><span class="material-icons-round">tour</span> Tour de la plataforma</button>
+      <button type="button" role="menuitem" data-ayuda="vista"><span class="material-icons-round">help_center</span> Tour de esta pantalla</button>
+      <button type="button" role="menuitem" data-ayuda="soporte"><span class="material-icons-round">support_agent</span> Contactar soporte</button>
     </div>
   </aside>
 
@@ -204,7 +216,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 
       <header class="topbar">
         <div>
-          <h1 class="page-title">Reparaciones</h1>
+          <div class="page-title-row"><h1 class="page-title">Reparaciones</h1><button type="button" class="btn-ayuda-vista" data-ayuda-vista="servicios" title="Cómo funciona esta pantalla" aria-label="Ayuda de esta pantalla"><span class="material-icons-round">help_outline</span></button></div>
           <p class="page-sub" id="sub-servicios">Cargando...</p>
         </div>
         <div class="topbar-actions">
@@ -308,7 +320,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 
       <header class="topbar">
         <div>
-          <h1 class="page-title">Inventario</h1>
+          <div class="page-title-row"><h1 class="page-title">Inventario</h1><button type="button" class="btn-ayuda-vista" data-ayuda-vista="inventario" title="Cómo funciona esta pantalla" aria-label="Ayuda de esta pantalla"><span class="material-icons-round">help_outline</span></button></div>
           <p class="page-sub">Repuestos y stock disponible</p>
         </div>
         <div class="topbar-actions">
@@ -415,7 +427,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
     <?php if(isAdmin()): ?>
     <div id="view-config" class="view">
       <header class="topbar">
-        <div><h1 class="page-title">Configuración</h1></div>
+        <div><div class="page-title-row"><h1 class="page-title">Configuración</h1><button type="button" class="btn-ayuda-vista" data-ayuda-vista="config" title="Cómo funciona esta pantalla" aria-label="Ayuda de esta pantalla"><span class="material-icons-round">help_outline</span></button></div></div>
       </header>
 
       <!-- Tabs -->
@@ -736,7 +748,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
     <div id="view-estadisticas" class="view">
       <header class="topbar">
         <div>
-          <h1 class="page-title">Estadísticas</h1>
+          <div class="page-title-row"><h1 class="page-title">Estadísticas</h1><button type="button" class="btn-ayuda-vista" data-ayuda-vista="estadisticas" title="Cómo funciona esta pantalla" aria-label="Ayuda de esta pantalla"><span class="material-icons-round">help_outline</span></button></div>
           <p class="page-sub">Métricas financieras y operacionales</p>
         </div>
       </header>
@@ -827,7 +839,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
     <div id="view-soporte" class="view">
       <header class="topbar">
         <div>
-          <h1 class="page-title">Soporte</h1>
+          <div class="page-title-row"><h1 class="page-title">Soporte</h1><button type="button" class="btn-ayuda-vista" data-ayuda-vista="soporte" title="Cómo funciona esta pantalla" aria-label="Ayuda de esta pantalla"><span class="material-icons-round">help_outline</span></button></div>
           <p class="page-sub">Envía consultas o reporta problemas al equipo Centrotec</p>
         </div>
         <button class="btn btn-primary" id="btn-nuevo-ticket">
@@ -933,7 +945,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <div class="modal-bg" id="modal-nuevo">
   <div class="modal-box">
     <div class="modal-hd">
-      <h3>Registrar ingreso de equipo</h3>
+      <h3>Registrar ingreso de equipo</h3><button type="button" class="btn-ayuda-modal" data-ayuda-modal="ingreso" title="Cómo funciona esta ventana" aria-label="Ayuda de esta ventana"><span class="material-icons-round">help_outline</span></button>
       <button class="modal-close" data-modal="modal-nuevo"><span class="material-icons-round">close</span></button>
     </div>
     <!-- Panel post-guardado (oculto hasta guardar exitosamente) -->
@@ -1063,7 +1075,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <div class="modal-bg" id="modal-detalle">
   <div class="modal-box modal-box-lg">
     <div class="modal-hd">
-      <h3>Orden #<span id="det-id"></span></h3>
+      <h3>Orden #<span id="det-id"></span></h3><button type="button" class="btn-ayuda-modal" data-ayuda-modal="detalle" title="Cómo funciona esta ventana" aria-label="Ayuda de esta ventana"><span class="material-icons-round">help_outline</span></button>
       <button class="modal-close" data-modal="modal-detalle"><span class="material-icons-round">close</span></button>
     </div>
 
@@ -1171,7 +1183,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <div class="modal-bg" id="modal-repuesto">
   <div class="modal-box">
     <div class="modal-hd">
-      <h3>Agregar repuesto</h3>
+      <h3>Agregar repuesto</h3><button type="button" class="btn-ayuda-modal" data-ayuda-modal="repuesto" title="Cómo funciona esta ventana" aria-label="Ayuda de esta ventana"><span class="material-icons-round">help_outline</span></button>
       <button class="modal-close" data-modal="modal-repuesto"><span class="material-icons-round">close</span></button>
     </div>
     <form id="form-repuesto">
@@ -1299,7 +1311,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 <div class="modal-bg" id="modal-edit-repuesto">
   <div class="modal-box modal-box-sm">
     <div class="modal-hd">
-      <h3>Editar repuesto</h3>
+      <h3>Editar repuesto</h3><button type="button" class="btn-ayuda-modal" data-ayuda-modal="editrepuesto" title="Cómo funciona esta ventana" aria-label="Ayuda de esta ventana"><span class="material-icons-round">help_outline</span></button>
       <button class="modal-close" data-modal="modal-edit-repuesto"><span class="material-icons-round">close</span></button>
     </div>
     <form id="form-edit-repuesto">
@@ -1315,6 +1327,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
           <div class="fg"><label for="edit-rep-minimo">Stock mínimo <span class="hint-min">(0 = sin aviso)</span></label><input type="number" id="edit-rep-minimo" placeholder="0" min="0" max="1000000"></div>
         </div>
         <div class="fg w-half-mt"><label id="lbl-edit-stock">Stock</label><input type="number" id="edit-rep-cantidad" placeholder="0" min="0"></div>
+        <p class="nota-stock hidden" id="edit-stock-nota"></p>
       </div>
       <div class="modal-ft">
         <button type="button" class="btn-sec" data-modal="modal-edit-repuesto">Cancelar</button>
@@ -1515,6 +1528,7 @@ if (defined('MP_PLANES') && $_plan_tipo_actual && $_plan_estado === 'Activo') {
 
 <?php /* Datos de arranque de sucursales: bloque de datos (no se ejecuta, el CSP no lo toca). JSON_HEX_* impide cerrar la etiqueta desde un nombre. */ ?>
 <script type="application/json" id="boot-sucursales"><?= json_encode(sucursales_payload(getDB(), eid()), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+<script type="application/json" id="boot-tour"><?= json_encode((object) tour_vistos(getDB(), uid()), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 <script src="<?= BASE ?>/assets/js/sw-register.js"></script>
 <script src="<?= BASE ?>/assets/js/sucursales.js?v=<?= filemtime(__DIR__.'/assets/js/sucursales.js') ?>"></script>
 <script src="<?= BASE ?>/assets/js/app.js?v=<?= filemtime(__DIR__.'/assets/js/app.js') ?>"></script>

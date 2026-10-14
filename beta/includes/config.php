@@ -566,6 +566,15 @@ function sucursales_payload(PDO $db, int $eid): array {
     ];
 }
 
+// Tours guiados que el usuario ya vio: ['general' => ['version' => 1, 'estado' => 'completado'], ...]
+function tour_vistos(PDO $db, int $uid): array {
+    $s = $db->prepare("SELECT tour, version, estado FROM usuario_tour WHERE id_usuario = ?");
+    $s->execute([$uid]);
+    $out = [];
+    foreach ($s->fetchAll() as $r) $out[$r['tour']] = ['version' => (int) $r['version'], 'estado' => $r['estado']];
+    return $out;
+}
+
 // Fila de una sucursal si pertenece a la empresa; null si no existe o es de otra empresa.
 function sucursal_de_empresa(PDO $db, int $eid, int $id): ?array {
     $s = $db->prepare("SELECT id_sucursal, nombre, direccion, telefono, es_bodega, activa FROM sucursales WHERE id_sucursal = ? AND id_empresa = ?");

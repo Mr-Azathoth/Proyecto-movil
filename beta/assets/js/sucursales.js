@@ -456,15 +456,27 @@
     },
 
     // Etiquetas de los modales de alta/edicion segun la sucursal destino
-    prepararStockModales() {
+    prepararStockModales(item) {
       const multi = this.multiInv();
       const a = document.getElementById('lbl-rep-stock-nuevo');
       if (a) a.textContent = 'Stock inicial' + (multi ? ' en ' + this.nombre(this.invTargetOrBase()) : '');
       const t = this.invTarget();
       const b = document.getElementById('lbl-edit-stock');
-      if (b) b.textContent = multi ? (t === null ? 'Stock (elige una sucursal para editarlo)' : 'Stock en ' + this.nombre(t)) : 'Stock';
+      const sinPermiso = multi && t !== null && !this.puedeEscribir(t);
+      if (b) b.textContent = multi ? (t === null ? 'Stock total' : 'Stock en ' + this.nombre(t)) : 'Stock';
       const inp = document.getElementById('edit-rep-cantidad');
-      if (inp) inp.disabled = multi && (t === null || !this.puedeEscribir(t));
+      if (inp) inp.disabled = multi && (t === null || sinPermiso);
+      // Con "Todas" el numero es la suma de las sucursales: se explica por que no se edita y de donde sale.
+      const nota = document.getElementById('edit-stock-nota');
+      if (nota) {
+        let txt = '';
+        if (multi && t === null) {
+          const partes = ((item && item.stock) || []).filter(x => x.cantidad > 0).map(x => this.nombre(x.id_sucursal) + ' ' + x.cantidad);
+          txt = (partes.length ? 'Por sucursal: ' + partes.join(' · ') + '. ' : '') + 'Para corregir el stock, elige una sucursal en «Stock de», arriba de la lista.';
+        } else if (sinPermiso) txt = 'No tienes permiso para modificar el stock de ' + this.nombre(t) + '.';
+        nota.textContent = txt;
+        nota.classList.toggle('hidden', !txt);
+      }
     },
 
     prepararImport() {

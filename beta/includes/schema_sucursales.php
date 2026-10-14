@@ -27,7 +27,7 @@ function schema_sucursales_completo(PDO $db): bool {
     $r = $db->query(
         "SELECT
             (SELECT COUNT(*) FROM information_schema.tables
-              WHERE table_schema = DATABASE() AND table_name IN ('sucursales','usuario_sucursales','inventario_stock','traspasos')) AS t,
+              WHERE table_schema = DATABASE() AND table_name IN ('sucursales','usuario_sucursales','inventario_stock','traspasos','usuario_tour')) AS t,
             (SELECT COUNT(*) FROM information_schema.columns
               WHERE table_schema = DATABASE()
                 AND ((table_name = 'reparaciones' AND column_name = 'id_sucursal')
@@ -38,11 +38,11 @@ function schema_sucursales_completo(PDO $db): bool {
               WHERE table_schema = DATABASE() AND table_name = 'usuarios' AND column_name = 'cargo'
                 AND column_type LIKE '%Vendedor%') AS v"
     )->fetch();
-    return (int) $r['t'] === 4 && (int) $r['c'] === 4 && (int) $r['v'] === 1;
+    return (int) $r['t'] === 5 && (int) $r['c'] === 4 && (int) $r['v'] === 1;
 }
 
 // Sube cuando el esquema agrega algo: las sesiones abiertas antes vuelven a comprobarlo una vez.
-const SCHEMA_SUC_VERSION = 3;
+const SCHEMA_SUC_VERSION = 4;
 
 function schema_sucursales_asegurar(PDO $db): void {
     if (($_SESSION['_schema_suc_ok'] ?? 0) === SCHEMA_SUC_VERSION) return;
@@ -130,6 +130,18 @@ function schema_sucursales_migrar(PDO $db): array {
         KEY idx_stock_emp (id_empresa, id_sucursal),
         FOREIGN KEY (id_repuesto)  REFERENCES inventario(id_repuesto)  ON DELETE CASCADE,
         FOREIGN KEY (id_sucursal)  REFERENCES sucursales(id_sucursal)  ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // Tours guiados que cada usuario ya vio (o salto): evita repetirlos en cada ingreso y permite mostrarlos de nuevo
+    // cuando cambian (version). Se guarda en la BD, no en el navegador, para que valga en cualquier equipo.
+    $db->exec("CREATE TABLE IF NOT EXISTS usuario_tour (
+        id_usuario INT NOT NULL,
+        tour       VARCHAR(30) NOT NULL,
+        version    INT NOT NULL DEFAULT 1,
+        estado     ENUM('completado','saltado') NOT NULL DEFAULT 'completado',
+        visto_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id_usuario, tour),
+        FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
     $db->exec("CREATE TABLE IF NOT EXISTS traspasos (

@@ -58,12 +58,19 @@ const fs=require('fs'), vm=require('vm');
   vm.runInContext("_tagModeloEdit={setValue(){},getValue(){return 'A54'}}",ctx);
   T.openInvEdit(T.inv.find(x=>x.id_repuesto===INV['Pantalla A54']));
   ok('editar desde "Todas": el campo stock queda bloqueado', els['edit-rep-cantidad'].disabled===true, '');
-  ok('...y la etiqueta lo explica', /elige una sucursal/i.test(els['lbl-edit-stock'].textContent), els['lbl-edit-stock'].textContent);
+  ok('...la etiqueta dice que es el stock total', els['lbl-edit-stock'].textContent === 'Stock total', els['lbl-edit-stock'].textContent);
+  ok('...y la nota explica que hay que elegir una sucursal en "Stock de"', /elige una sucursal en «Stock de»/i.test(els['edit-stock-nota'].textContent), els['edit-stock-nota'].textContent);
+  ok('...y muestra de donde sale el total (Norte 20 y Centro 6)', /Por sucursal:/.test(els['edit-stock-nota'].textContent) && /Norte 20/.test(els['edit-stock-nota'].textContent) && /Centro 6/.test(els['edit-stock-nota'].textContent), els['edit-stock-nota'].textContent);
   els['edit-rep-nombre'].value='Pantalla A54'; els['edit-rep-marca'].value='Samsung'; els['edit-rep-precio'].value='46000';
   await T.submitEditRepuesto({preventDefault(){}}); await new Promise(r=>setTimeout(r,600));
   const pr=(await cli.get('/api/inventario.php?sucursal='+ids.cen)).json.data.find(x=>x.id_repuesto===INV['Pantalla A54']);
   ok('...el precio se guardo (46000) y el stock de Centro sigue en 6', pr.precio_venta===46000 && pr.cantidad===6, JSON.stringify([pr.precio_venta,pr.cantidad]));
   await cli.put('/api/inventario.php',{id:INV['Pantalla A54'],nombre:'Pantalla A54',marca_compatible:'Samsung',modelo_compatible:'A54',precio_venta:45000});
+  // Con una sucursal elegida el stock se edita y no hay nota
+  S.onInvChange(String(ids.cen)); await new Promise(r=>setTimeout(r,900));
+  T.openInvEdit(T.inv.find(x=>x.id_repuesto===INV['Pantalla A54']));
+  ok('editar desde una sucursal: el stock se habilita, dice "Stock en Centro" y no hay nota', els['edit-rep-cantidad'].disabled===false && /Stock en Centro/.test(els['lbl-edit-stock'].textContent) && els['edit-stock-nota'].textContent==='', els['lbl-edit-stock'].textContent+' | '+els['edit-stock-nota'].textContent);
+  S.onInvChange(''); await new Promise(r=>setTimeout(r,900));
 
   // Traspaso por la UI
   await T.loadInventario();
